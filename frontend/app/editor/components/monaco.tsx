@@ -5,7 +5,7 @@ export default function Monaco() {
 	return (
 		<Editor
 			height="100%"
-			defaultLanguage="javascript"
+			defaultLanguage="python"
 			defaultValue="// start typing"
 			theme="vs-dark"
 			onChange={(value) => console.log(value)}

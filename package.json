@@ -1,0 +1,17 @@
+{
+    "name": "leet-battle",
+    "scripts": {
+        "install": "npm run install-auth && npm run install-code && npm run install-frontend",
+        "install-auth": "cd service/AuthService && npm install",
+        "install-code": "cd service/CodeService && npm install",
+        "install-frontend": "cd frontend && npm install",
+        "start": "npm run start-db && concurrently --kill-others \"npm run start-auth\" \"npm run start-code\" \"npm run start-frontend\"",
+        "start-db": "cd service && docker compose up -d",
+        "start-auth": "cd service/AuthService && npm run dev",
+        "start-code": "cd service/CodeService && npm run dev",
+        "start-frontend": "cd frontend && npm run dev"
+    },
+    "devDependencies": {
+        "concurrently": "^9.1.0"
+    }
+}

@@ -1,37 +1,15 @@
 services:
   postgres:
+    container_name: leetbattle
     image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - ../.env
     ports:
       - "5432:5432"
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=postgres
     volumes:
-      - postgres-data:/var/lib/postgresql/data
       - ./CodeService/sql/databases.sql:/docker-entrypoint-initdb.d/01-databases.sql
-      - ./CodeService/sql/schema.sql:/docker-entrypoint-initdb.d/02-schema.sql
-
-  code-service:
-    build: ./CodeService
-    ports:
-      - "4001:4001"
-    environment:
-      - PORT=4001
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - CODE_POSTGRES_DB=code_service
-    depends_on:
-      - postgres
-
-  auth-service:
-    build: ./AuthService
-    ports:
-      - "4002:4002"
-    environment:
-      - PORT=4002
-
+      - ./CodeService/sql/schema.sql:/docker-entrypoint-initdb.d/02-code-service-schema.sql
+      - ./CodeService/sql/data.sql:/docker-entrypoint-initdb.d/03-code-service-data.sql
 volumes:
   postgres-data:

@@ -9,12 +9,11 @@ export function getRoot(_req: Request, res: Response) {
 }
 
 export async function getProblem(req: Request, res: Response) {
-	const { taskId } = req.params;
-
+	const { questionId } = req.params;
 	try {
 		const result = await pool.query(
-			'SELECT * FROM problems WHERE task_id = $1',
-			[taskId],
+			'SELECT * FROM problems WHERE question_id = $1',
+			[questionId],
 		);
 
 		if (result.rows.length === 0) {
@@ -25,5 +24,47 @@ export async function getProblem(req: Request, res: Response) {
 	} catch (err) {
 		console.error(err);
 		res.status(500).json({ error: 'failed to fetch problem' });
+	}
+}
+
+export async function getRandomProblem(req: Request, res: Response) {
+	const { difficulty = 'Easy', quantity = 3 } = req.query;
+	console.log(quantity);
+	try {
+		const result = await pool.query(
+			'SELECT * FROM problems WHERE difficulty = $1 ORDER BY RANDOM() LIMIT $2',
+			[difficulty, quantity],
+		);
+
+		if (result.rows.length === 0) {
+			return res.status(404).json({ error: 'problem not found' });
+		}
+		res.json(result.rows);
+	} catch (err) {
+		console.error(err);
+		res.status(500).json({ error: 'failed to fetch problem' });
+	}
+}
+
+// NOT FINISHED
+export async function checkProblem(req: Request, res: Response) {
+	const {code} = req.body;
+	const {questionId} = req.params;
+	try {
+		const result = await pool.query(
+			'SELECT test, FROM problems WHERE question_id = $1',
+			[questionId],
+		);
+		if (result.rows.length === 0) {
+			return res.status(404).json({ error: 'problem not found' });
+		};
+		
+		const answer = result.rows[0].json();
+		console.log(code, answer);
+		
+		res.json({verdict: 'pass', passed: 4, case: null, response: null});
+	} catch (err) {
+		console.error(err);
+		res.status(500).json({ error: 'internal server error' });
 	}
 }
