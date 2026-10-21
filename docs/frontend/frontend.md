@@ -6,6 +6,6 @@ app/
         components/
             componentA.tsx
             componentB.tsx
-        controller.tsx // contains api routes
-        page.tsx // contains the page layout
+        controller.tsx                      // contains api routes
+        page.tsx                            // contains the page layout
 ```

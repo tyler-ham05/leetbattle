@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# service
 
-## Getting Started
+Node.js microservice architecture template. Each microservice is a fully standalone
+Node.js/TypeScript/Express project with its own `package.json` and `node_modules`
 
-First, run the development server:
+## Layout
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+service/
+  CodeValidationService/   # code validation service, port 4001
+  AuthService/              # auth service, port 4002
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Running a service
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cd CodeValidationService   # or AuthService
+npm install
+npm run dev   # hot reload
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Running PSQL Server with Docker
+If you want to run a Docker PSQL server to test the application with, you can use
 
-## Learn More
+```bash
+cd service
+docker compose up 
+```
 
-To learn more about Next.js, take a look at the following resources:
+note that other services will have to manually add their own sql files to the docker-compose. 
+Ex.
+```
+volumes:
+      - ./CodeService/sql/databases.sql:/docker-entrypoint-initdb.d/01-databases.sql
+      - ./CodeService/sql/schema.sql:/docker-entrypoint-initdb.d/02-code-service-schema.sql
+      - ./CodeService/sql/data.sql:/docker-entrypoint-initdb.d/03-code-service-data.sql
+      - ./NewService/sql/databases.sql:/docker-entrypoint-initdb.d/04-databases.sql
+      - ./NewService/sql/schema.sql:/docker-entrypoint-initdb.d/05-new-service-schema.sql
+      - ./NewService/sql/data.sql:/docker-entrypoint-initdb.d/06-new-service-data.sql
+```
+If you make any changes to the sample data or create a new table, you will need to refresh the volume. Run
+```
+docker compose down -v
+docker compose up
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Adding a new microservice
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Copy an existing service folder (e.g. `CodeValidationService`) to a new name.
+2. Update `name` in its `package.json` and its `PORT`. Also update port within Dockerfile
+3. Run `npm install` inside the new folder (it has its own `node_modules`).
+4. Update the service-wide `docker-compose.yml` with any new data tables
+5. Include the new build command within the project-wide `package.json` (or ask claude to do it, i dont really care)
