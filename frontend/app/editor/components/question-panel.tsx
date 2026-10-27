@@ -1,6 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { APIService, Problem } from '../controller';
+import { useEditor } from '../context';
+import QuestionNavigation from './question-navigation';
 
 const DIFFICULTY_STYLES: Record<string, string> = {
 	Easy: 'text-green-600 dark:text-green-400',
@@ -16,16 +16,7 @@ function titleFromTaskId(taskId: string): string {
 }
 
 export default function QuestionPanel() {
-	const [question, setQuestion] = useState<Problem | null>(null);
-	const [error, setError] = useState<string | null>(null);
-
-	useEffect(() => {
-		const api = new APIService();
-		api
-			.generate()
-			.then((problems) => setQuestion(problems[0] ?? null))
-			.catch((err) => setError(err.message));
-	}, []);
+	const { currentQuestion, error } = useEditor();
 
 	if (error) {
 		return (
@@ -35,7 +26,7 @@ export default function QuestionPanel() {
 		);
 	}
 
-	if (!question) {
+	if (!currentQuestion) {
 		return (
 			<div className="p-6 text-sm text-zinc-500 dark:text-zinc-400">
 				Loading question...
@@ -45,28 +36,31 @@ export default function QuestionPanel() {
 
 	return (
 		<div className="h-full overflow-y-auto p-6 text-sm text-zinc-900 dark:text-zinc-100">
+			<QuestionNavigation/>
 			<h1 className="text-xl font-semibold">
-				{question.question_id}. {titleFromTaskId(question.task_id)}
+				{currentQuestion.question_id}. {titleFromTaskId(currentQuestion.task_id)}
 			</h1>
 
 			<div className="mt-2 flex items-center gap-3">
 				<span
-					className={`text-xs font-medium ${DIFFICULTY_STYLES[question.difficulty] ?? ''}`}
+					className={`text-xs font-medium ${DIFFICULTY_STYLES[currentQuestion.difficulty] ?? ''}`}
 				>
-					{question.difficulty}
+					{currentQuestion.difficulty}
 				</span>
-				{question.tags.map((tag) => (
+				
+				{/* Should tags be visible?
+					{currentQuestion.tags.map((tag) => (
 					<span
 						key={tag}
 						className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
 					>
 						{tag}
 					</span>
-				))}
+				))} */}
 			</div>
 
 			<p className="mt-4 whitespace-pre-line leading-6 text-zinc-700 dark:text-zinc-300">
-				{question.problem_description}
+				{currentQuestion.problem_description}
 			</p>
 		</div>
 	);
