@@ -1,13 +1,12 @@
-const CODESERVICE = 'http://127.0.0.1:4001';
-
+const CODESERVICE = process.env.NEXT_PUBLIC_CODE_URL ?? 'http://127.0.0.1:4001';
 export interface Problem {
-    task_id: string;
-    question_id: number;
-    difficulty: 'Easy' | 'Medium' | 'Hard';
-    tags: string[];
-    problem_description: string;
-    starter_code: string;
-    entry_point: string;
+	task_id: string;
+	question_id: number;
+	difficulty: 'Easy' | 'Medium' | 'Hard';
+	tags: string[];
+	problem_description: string;
+	starter_code: string;
+	entry_point: string;
 }
 
 export class APIService {
