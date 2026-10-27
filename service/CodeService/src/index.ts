@@ -1,7 +1,7 @@
 import app from './app';
 import { shutdown } from './db';
 
-const PORT = 4001;
+const PORT = Number(process.env.PORT) || 4001;
 const SERVICE_NAME = 'code-service';
 
 const server = app.listen(PORT, () => {
