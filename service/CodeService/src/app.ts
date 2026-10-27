@@ -1,6 +1,6 @@
 import cors from 'cors';
 import express from 'express';
-import { getRoot, getProblem, getRandomProblem, checkProblem } from './service';
+import { getRoot, getProblem, getRandomProblem,runProblem, submitProblem } from './service';
 
 const app = express();
 
@@ -10,7 +10,7 @@ app.use(express.json());
 app.get('/', getRoot);
 app.get('/problem/:questionId', getProblem);
 app.get('/problem', getRandomProblem);
-
-app.post('/problem/:questionId', checkProblem);
+app.post('/problem', runProblem);
+app.post('/problem/:questionId', submitProblem);
 
 export default app;
