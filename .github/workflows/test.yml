@@ -1,0 +1,106 @@
+name: Run Automated Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: # Allows you to trigger the test manually from the GitHub UI
+
+jobs:
+  auth-service:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: service/AuthService
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: service/AuthService/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint and check for duplication
+        run: npm run predev
+
+      - name: Run test suite
+        run: npm test
+
+  code-service:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: service/CodeService
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: code_service
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      CODE_POSTGRES_DB: code_service
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: service/CodeService/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint and check for duplication
+        run: npm run predev
+
+      - name: Run test suite
+        run: npm test
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint and check for duplication
+        run: npm run predev

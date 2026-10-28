@@ -19,7 +19,6 @@ export async function getProblem(req: Request, res: Response) {
 		if (result.rows.length === 0) {
 			return res.status(404).json({ error: 'problem not found' });
 		}
-		r
 		res.json(result.rows[0]);
 	} catch (err) {
 		console.error(err);

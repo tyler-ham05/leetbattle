@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "npm run lint",
+    "cpd": "jscpd app --silent",
+    "predev": "npm run lint && npm run cpd",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -25,6 +26,7 @@
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.35",
     "globals": "^15.13.0",
+    "jscpd": "^5.4.2",
     "tailwindcss": "^4",
     "typescript": "^5",
     "typescript-eslint": "^8.18.0"
