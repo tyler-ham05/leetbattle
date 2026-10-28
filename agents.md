@@ -44,15 +44,28 @@ state, `git status`/`log`/`diff`/`fetch`.
 - Cloud SQL instance: `leetbattle-db`, region `us-east1`, connection name
   `leetbattle-512901:us-east1:leetbattle-db`
 - Secrets: `DB_Password`, `DB_Conn_Name` (case-sensitive; granted to
-  `1040040326387-compute@developer.gserviceaccount.com` via `secretmanager.secretAccessor`)
+  `1040040326387-compute@developer.gserviceaccount.com` via `secretmanager.secretAccessor`).
+  `auth-service` also needs a `JWT_Secret` secret (not yet created in Secret Manager —
+  create it before auth-service's first real deploy) and a `FRONTEND_URL` env var set to
+  the deployed frontend's exact origin (used for CORS and for building email links).
 - Artifact Registry: `us-central1-docker.pkg.dev/leetbattle-512901/leetbattle/<service>`
 
 Known gotchas (do not re-discover these the hard way):
-- `code-service` requires `--add-cloudsql-instances` and `--set-secrets` on *every*
-  deploy, not just the first — omitting them drops that config from the new revision.
+- `code-service` and `auth-service` both require `--add-cloudsql-instances` and
+  `--set-secrets` on *every* deploy, not just the first — omitting them drops that
+  config from the new revision.
 - Frontend `NEXT_PUBLIC_*` values must be passed as `docker build --build-arg`, not
   `gcloud run deploy --set-env-vars` — Next.js bakes them in at build time.
 - Cloud Run services must listen on `process.env.PORT`, not a hardcoded port.
+- `auth-service`'s session cookie is `SameSite=Lax` locally (frontend and auth-service
+  share the `localhost` hostname there) but must be `SameSite=None; Secure` in
+  production, since frontend and auth-service are separate `*.run.app` domains —
+  cross-site. This already toggles automatically off `NODE_ENV=production`
+  (`service/AuthService/src/service.ts`), so it just needs `NODE_ENV=production` set
+  on the deployed auth-service revision — don't drop that env var in a deploy.
+- The `auth_service` Cloud SQL database doesn't exist on `leetbattle-db` yet — run
+  `service/AuthService/sql/databases.sql` then `sql/schema.sql` against the instance
+  (via `cloud-sql-proxy` or `gcloud sql connect`) before auth-service's first deploy.
 - IAM/secret grants can take a few minutes to propagate; a `PERMISSION_DENIED`
   immediately after granting access is not necessarily a real failure — wait and retry
   once before treating it as broken.

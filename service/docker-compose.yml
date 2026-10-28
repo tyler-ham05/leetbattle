@@ -11,5 +11,7 @@ services:
       - ./CodeService/sql/databases.sql:/docker-entrypoint-initdb.d/01-databases.sql
       - ./CodeService/sql/schema.sql:/docker-entrypoint-initdb.d/02-code-service-schema.sql
       - ./CodeService/sql/data.sql:/docker-entrypoint-initdb.d/03-code-service-data.sql
+      - ./AuthService/sql/databases.sql:/docker-entrypoint-initdb.d/04-databases.sql
+      - ./AuthService/sql/schema.sql:/docker-entrypoint-initdb.d/05-auth-service-schema.sql
 volumes:
   postgres-data:
