@@ -4,7 +4,6 @@ import TestCasesPanel from './components/test-cases-panel';
 import SubmitBar from './components/submit-bar';
 import TopBar from './components/top-bar';
 import { EditorProvider } from './context';
-import QuestionNavigation from './components/question-navigation';
 
 export default function editor() {
 	return (
