@@ -7,7 +7,8 @@ export interface Problem {
 	problem_description: string;
 	starter_code: string;
 	entry_point: string;
-} 
+	input_output?: unknown; // test cases from the problems table (JSONB)
+}
 
 export interface RunResult {
     verdict: string;
