@@ -4,7 +4,7 @@
   "private": true,
   "main": "dist/index.js",
   "scripts": {
-    "cpd": "jscpd src test --silent",
+    "cpd": "jscpd src --silent --reporters html -o cpd",
     "lint": "eslint .",
     "predev": "npm run lint && npm run cpd",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
