@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "cpd": "jscpd app --silent",
+    "cpd": "jscpd app --silent --reporters html -o cpd",
     "predev": "npm run lint && npm run cpd",
     "dev": "next dev",
     "build": "next build",

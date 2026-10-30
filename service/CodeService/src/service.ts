@@ -1,5 +1,14 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { pool } from './db';
+
+class HttpError extends Error {
+	status: number;
+
+	constructor(status: number, message: string) {
+		super(message);
+		this.status = status;
+	}
+}
 
 export function getRoot(_req: Request, res: Response) {
 	res.json({
@@ -8,7 +17,7 @@ export function getRoot(_req: Request, res: Response) {
 	});
 }
 
-export async function getProblem(req: Request, res: Response) {
+export async function getProblem(req: Request, res: Response, next: NextFunction) {
 	const { questionId } = req.params;
 	try {
 		const result = await pool.query(
@@ -17,16 +26,15 @@ export async function getProblem(req: Request, res: Response) {
 		);
 
 		if (result.rows.length === 0) {
-			return res.status(404).json({ error: 'problem not found' });
+			return next(new HttpError(404, 'problem not found'));
 		}
 		res.json(result.rows[0]);
 	} catch (err) {
-		console.error(err);
-		res.status(500).json({ error: 'failed to fetch problem' });
+		next(err);
 	}
 }
 
-export async function getRandomProblem(req: Request, res: Response) {
+export async function getRandomProblem(req: Request, res: Response, next: NextFunction) {
 	const { difficulty = 'Easy', quantity = 3 } = req.query;
 	console.log(quantity);
 	try {
@@ -36,32 +44,30 @@ export async function getRandomProblem(req: Request, res: Response) {
 		);
 
 		if (result.rows.length === 0) {
-			return res.status(404).json({ error: 'problem not found' });
+			return next(new HttpError(404, 'problem not found'));
 		}
 		res.json(result.rows);
 	} catch (err) {
-		console.error(err);
-		res.status(500).json({ error: 'failed to fetch problem' });
+		next(err);
 	}
 }
 
 //NOT FINISHED
-export async function runProblem(req: Request, res: Response) {
+export async function runProblem(req: Request, res: Response, next: NextFunction) {
 	const {code, cases} = req.body;
 	try {
 		// INSERT CODE RUNNER HERE
-		const responses = Array(cases.length).fill(0); 
+		const responses = Array(cases.length).fill(0);
 		console.log(code);
 		res.json({verdict: 'pass', cases, responses});
 		// CODE RUNNER ENDS HERE
 	} catch (err) {
-		console.error(err);
-		res.status(500).json({ error: 'internal server error' });
+		next(err);
 	}
 }
 
 // NOT FINISHED
-export async function submitProblem(req: Request, res: Response) {
+export async function submitProblem(req: Request, res: Response, next: NextFunction) {
 	const {code} = req.body;
 	const {questionId} = req.params;
 	try {
@@ -70,15 +76,14 @@ export async function submitProblem(req: Request, res: Response) {
 			[questionId],
 		);
 		if (result.rows.length === 0) {
-			return res.status(404).json({ error: 'problem not found' });
-		};
+			return next(new HttpError(404, 'problem not found'));
+		}
 		// INSERT CODE RUNNER HERE
 		const answer = result.rows[0];
 		console.log(code, answer);
 		res.json({verdict: 'pass', passed: 4, case: null, response: null});
 		// CODE RUNNER ENDS HERE
 	} catch (err) {
-		console.error(err);
-		res.status(500).json({ error: 'internal server error' });
+		next(err);
 	}
 }

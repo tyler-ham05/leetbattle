@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Tailwind's `dark:` variant defaults to the OS's prefers-color-scheme, which
+   ignores the in-app light/dark toggle entirely. Key it off data-mode instead,
+   so any `dark:` utility (e.g. severity colors with no theme token) tracks the
+   same toggle as the `bg-page`/`text-ink`/etc. semantic colors below. */
+@custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *));
+
 /* =========================================================
    THEME TOKENS
    Four schemes (emerald, volt, midnight, ultraviolet), each

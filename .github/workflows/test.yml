@@ -35,8 +35,7 @@ jobs:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       AUTH_POSTGRES_DB: auth_service
-      JWT_SECRET: ci-test-secret
-      FRONTEND_URL: http://localhost:3000
+      SECRET: aa81a212d6b59debb21813311ed5a7157bb71ce58b0cbf2dece5e5b625feda8f
 
     steps:
       - name: Check out repository code
