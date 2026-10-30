@@ -1,5 +1,3 @@
-import { json } from "monaco-editor";
-
 const CODESERVICE = process.env.NEXT_PUBLIC_CODE_URL ?? 'http://127.0.0.1:4001';
 export interface Problem {
 	task_id: string;
@@ -59,8 +57,8 @@ export function parseTestCases(inputOutput: unknown): TestCase[] {
 
 export async function handleResponse(res:Response){
 	if (!res.ok) {
-			throw new Error(`Request failed with status ${res.status}`);
-		}
+		throw new Error(`Request failed with status ${res.status}`);
+	}
 	return await res.json();
 }
 
@@ -82,7 +80,7 @@ export class APIService {
 		const res = await fetch(`${CODESERVICE}/problem`, {
 			method: 'GET',
 		});
-		return await handleResponse(res)
+		return await handleResponse(res);
 	}
 	public async run(code: string, cases: unknown): Promise<RunResult> {
 		const res = await fetch(`${CODESERVICE}/problem`, {
@@ -90,7 +88,7 @@ export class APIService {
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ code, cases }),
 		});
-		return await handleResponse(res)
+		return await handleResponse(res);
 	}
 	public async submit(questionId: number, code: string): Promise<SubmitResult> {
 		const res = await fetch(`${CODESERVICE}/problem/${questionId}`, {
@@ -98,6 +96,6 @@ export class APIService {
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ code }),
 		});
-		return await handleResponse(res)
+		return await handleResponse(res);
 	}
 }
