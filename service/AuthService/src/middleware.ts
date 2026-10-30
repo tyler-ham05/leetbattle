@@ -1,20 +1,21 @@
 import { NextFunction, Request, Response } from 'express';
-import { AUTH_COOKIE_NAME, verifyToken } from './jwt';
+import { decryptJwe } from './utils/jwe';
 
 export interface AuthedRequest extends Request {
 	userId?: string;
 	userEmail?: string;
 }
 
-export function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
-	const token = req.cookies?.[AUTH_COOKIE_NAME];
-	if (!token) {
+export async function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
+	const header = req.headers.authorization;
+	if (!header?.startsWith('Bearer ')) {
 		res.status(401).json({ error: 'not authenticated' });
 		return;
 	}
+
 	try {
-		const payload = verifyToken(token);
-		req.userId = payload.sub;
+		const payload = await decryptJwe(header.slice('Bearer '.length));
+		req.userId = payload.id;
 		req.userEmail = payload.email;
 		next();
 	} catch {

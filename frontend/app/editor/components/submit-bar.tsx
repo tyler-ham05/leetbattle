@@ -30,11 +30,11 @@ export default function SubmitBar() {
 	const { onRun, onSubmit, loadingAction, isLoading } = useEditor();
 
 	return (
-		<div className="flex items-center justify-end gap-2 border-b border-zinc-200 px-4 py-2 dark:border-zinc-800">
+		<div className="flex items-center justify-end gap-2 border-b border-line px-4 py-2">
 			<button
 				onClick={onRun}
 				disabled={isLoading}
-				className="flex w-20 items-center justify-center gap-1.5 rounded-md bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+				className="flex w-20 items-center justify-center gap-1.5 rounded-md bg-raised px-3 py-1.5 text-sm font-medium text-ink hover:bg-line disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				{loadingAction === 'run' && <Spinner />}
 				Run
@@ -42,7 +42,7 @@ export default function SubmitBar() {
 			<button
 				onClick={onSubmit}
 				disabled={isLoading}
-				className="flex w-20 items-center justify-center gap-1.5 rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+				className="flex w-20 items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-on-primary hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				{loadingAction === 'submit' && <Spinner />}
 				Submit

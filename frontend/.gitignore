@@ -13,6 +13,9 @@
 # testing
 /coverage
 
+# jscpd duplication report
+/cpd
+
 # next.js
 /.next/
 /out/
