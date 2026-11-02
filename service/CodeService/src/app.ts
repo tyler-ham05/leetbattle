@@ -8,6 +8,7 @@ import {
 	leaveLobby,
 	updateLobbyPlayerName,
 } from './lobby';
+import type { NextFunction, ErrorRequestHandler } from 'express';
 
 const app = express();
 
@@ -24,5 +25,15 @@ app.get('/lobby', getLobby);
 app.patch('/lobby/name', updateLobbyPlayerName);
 app.post('/lobby/join', joinLobbyTeam);
 app.delete('/lobby/leave', leaveLobby);
+
+const errorHandler: ErrorRequestHandler = (err, _req, res, _next: NextFunction) => {
+	res.status(err.status || 500).json( {
+		message: err.message,
+		errors: err.errors,
+		status: err.status,
+	});
+	_next();
+};
+app.use(errorHandler);
 
 export default app;

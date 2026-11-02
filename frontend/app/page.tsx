@@ -1,15 +1,26 @@
-import Link from 'next/link';
+'use client';
+import { useAuth } from './login/context';
+import LandingPage from './_landing/landing-page';
+import HomeActions from './_home/components/home-actions';
+import HomeTopBar from './_home/components/topbar';
 
 export default function Home() {
-	return (
-		<div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-			<main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-				<nav>
-					<Link href="lobby">Join lobby</Link>
-					{' · '}
-					<Link href="editor">Editor</Link>
-				</nav>
-			</main>
-		</div>
-	);
+	const { user, isLoading } = useAuth();
+
+	if (isLoading) {
+		return null;
+	}
+
+	if (user) {
+		return (
+			<div className="flex flex-1 flex-col">
+				<HomeTopBar />
+				<div className="flex flex-1 items-center justify-center">
+					<HomeActions />
+				</div>
+			</div>
+		);
+	}
+
+	return <LandingPage />;
 }

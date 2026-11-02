@@ -1,26 +1,287 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Tailwind's `dark:` variant defaults to the OS's prefers-color-scheme, which
+   ignores the in-app light/dark toggle entirely. Key it off data-mode instead,
+   so any `dark:` utility (e.g. severity colors with no theme token) tracks the
+   same toggle as the `bg-page`/`text-ink`/etc. semantic colors below. */
+@custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *));
+
+/* =========================================================
+   THEME TOKENS
+   Four schemes (emerald, volt, midnight, ultraviolet), each
+   with a dark and a light mode, set on <html> as
+   data-scheme / data-mode. Every text color passes WCAG AA
+   (4.5:1) on its page and raised backgrounds.
+   ========================================================= */
+
+:root,
+[data-scheme="emerald"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #0b1210;
+  --lb-surface: #111a17;
+  --lb-raised: #18231f;
+  --lb-line: #24312c;
+  --lb-ink: #e6eeea;
+  --lb-muted: #94a69e;
+  --lb-primary: #34d399;
+  --lb-on-primary: #04140d;
+  --lb-secondary: #f2c14e;
+  --lb-danger: #f2877a;
+  --lb-kw: #7fc8a9;
+  --lb-num: #f2c14e;
 }
 
+[data-scheme="emerald"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #f6f8f6;
+  --lb-surface: #ffffff;
+  --lb-raised: #edf1ee;
+  --lb-line: #d9e0dc;
+  --lb-ink: #0f1a16;
+  --lb-muted: #56665f;
+  --lb-primary: #047857;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #92600a;
+  --lb-danger: #b42318;
+  --lb-kw: #047857;
+  --lb-num: #92600a;
+}
+
+[data-scheme="volt"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #0d110a;
+  --lb-surface: #131a0f;
+  --lb-raised: #1a2214;
+  --lb-line: #27311e;
+  --lb-ink: #eef4e4;
+  --lb-muted: #9aa98b;
+  --lb-primary: #b8f53d;
+  --lb-on-primary: #0d110a;
+  --lb-secondary: #ffd43b;
+  --lb-danger: #ff8a7a;
+  --lb-kw: #ffd43b;
+  --lb-num: #b8f53d;
+}
+
+[data-scheme="volt"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #f7f9f2;
+  --lb-surface: #ffffff;
+  --lb-raised: #eef2e6;
+  --lb-line: #dbe2cf;
+  --lb-ink: #141a0e;
+  --lb-muted: #5a6650;
+  --lb-primary: #3f6212;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #8a5a00;
+  --lb-danger: #b42318;
+  --lb-kw: #3f6212;
+  --lb-num: #8a5a00;
+}
+
+[data-scheme="midnight"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #07060d;
+  --lb-surface: #110e1c;
+  --lb-raised: #1f1a2e;
+  --lb-line: #2a2438;
+  --lb-ink: #f1f1f6;
+  --lb-muted: #a29fb5;
+  --lb-primary: #28b0f3;
+  --lb-on-primary: #07060d;
+  --lb-secondary: #8f7cf0;
+  --lb-danger: #ff8a7a;
+  --lb-kw: #a99cf3;
+  --lb-num: #28b0f3;
+}
+
+[data-scheme="midnight"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #f6f6fb;
+  --lb-surface: #ffffff;
+  --lb-raised: #ecebf5;
+  --lb-line: #dcdbe8;
+  --lb-ink: #13111d;
+  --lb-muted: #5d5a70;
+  --lb-primary: #204ef1;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #6a4fd6;
+  --lb-danger: #b42318;
+  --lb-kw: #6a4fd6;
+  --lb-num: #204ef1;
+}
+
+[data-scheme="ultraviolet"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #0e0919;
+  --lb-surface: #150d24;
+  --lb-raised: #1f1433;
+  --lb-line: #2e2148;
+  --lb-ink: #f3effc;
+  --lb-muted: #ada1cc;
+  --lb-primary: #e8ff47;
+  --lb-on-primary: #0e0919;
+  --lb-secondary: #a57bff;
+  --lb-danger: #ff8a7a;
+  --lb-kw: #b99bff;
+  --lb-num: #e8ff47;
+}
+
+[data-scheme="ultraviolet"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #f8f6fc;
+  --lb-surface: #ffffff;
+  --lb-raised: #efeaf8;
+  --lb-line: #e0d9ee;
+  --lb-ink: #160f24;
+  --lb-muted: #625877;
+  --lb-primary: #6d28d9;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #6b6400;
+  --lb-danger: #b42318;
+  --lb-kw: #6d28d9;
+  --lb-num: #6b6400;
+}
+
+:root {
+  /* kept for older components that still read these */
+  --background: var(--lb-page);
+  --foreground: var(--lb-ink);
+  /* the same font stack Monaco uses, so code looks identical to the editor */
+  --lb-code-font: Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+/* Tailwind utilities: bg-page, bg-surface, text-ink, text-muted, border-line, bg-primary, ... */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-page: var(--lb-page);
+  --color-surface: var(--lb-surface);
+  --color-raised: var(--lb-raised);
+  --color-line: var(--lb-line);
+  --color-ink: var(--lb-ink);
+  --color-muted: var(--lb-muted);
+  --color-primary: var(--lb-primary);
+  --color-on-primary: var(--lb-on-primary);
+  --color-secondary: var(--lb-secondary);
+  --color-danger: var(--lb-danger);
+  --color-kw: var(--lb-kw);
+  --color-num: var(--lb-num);
+  --font-sans: var(--font-onest), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --font-code: var(--lb-code-font);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--lb-page);
+  color: var(--lb-ink);
+  font-family: var(--font-onest), system-ui, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* =========================================================
+   MOTION
+   ========================================================= */
+
+@keyframes lb-wipe {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes lb-tip {
+  from { left: 0; opacity: 1; }
+  90% { opacity: 1; }
+  to { left: 100%; opacity: 0; }
+}
+@keyframes lb-lift {
+  to { transform: translateY(-100%); visibility: hidden; }
+}
+@keyframes lb-rise {
+  from { opacity: 0; transform: translateY(22px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes lb-cue {
+  0%, 100% { transform: scaleY(0.6); opacity: 0.5; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+/* Reveals one character per step; works with any monospace font since it never measures text. */
+@keyframes lb-type {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes lb-caret {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@keyframes lb-count {
+  0% { opacity: 0; transform: scale(1.8); }
+  25% { opacity: 1; transform: scale(1); }
+  80% { opacity: 1; transform: scale(0.96); }
+  100% { opacity: 0; transform: scale(0.9); }
+}
+@keyframes lb-tick {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes lb-pop {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Intro: the wordmark draws in, then the panel lifts away (about 3.3s). */
+.lb-intro {
+  animation: lb-lift 1s cubic-bezier(0.7, 0, 0.2, 1) forwards 2.3s;
+}
+.lb-wipe {
+  clip-path: inset(0 100% 0 0);
+  animation: lb-wipe var(--dur, 1.7s) cubic-bezier(0.6, 0.05, 0.4, 0.95) forwards var(--d, 0.2s);
+}
+.lb-tip {
+  position: absolute;
+  top: -6%;
+  height: 112%;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--lb-primary);
+  animation: lb-tip var(--dur, 1.7s) cubic-bezier(0.6, 0.05, 0.4, 0.95) forwards var(--d, 0.2s);
+}
+html.lb-intro-seen .lb-intro { display: none; }
+
+/* Content fades up after the intro (or right away on repeat visits). */
+:root { --lb-intro-delay: 2.7s; }
+html.lb-intro-seen { --lb-intro-delay: 0.1s; }
+.lb-reveal {
+  opacity: 0;
+  animation: lb-rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  animation-delay: calc(var(--lb-intro-delay) + var(--d, 0s));
+}
+
+.lb-cue { transform-origin: top; animation: lb-cue 1.8s ease-in-out infinite; }
+/* Fully visible at rest. "backwards" hides the line during its delay; once the
+   animation ends it drops back to fully visible, so step rounding can't clip the last character. */
+.lb-type {
+  display: inline-block;
+  white-space: pre;
+  animation: lb-type var(--dur) steps(var(--steps)) backwards var(--d);
+}
+.lb-caret {
+  display: inline-block;
+  width: 2px;
+  height: 17px;
+  margin-left: 1px;
+  background: var(--lb-ink);
+  opacity: 0;
+  animation: lb-caret 1.06s linear infinite var(--d);
+}
+.lb-count { animation: lb-count 1s ease forwards; }
+.lb-tick { opacity: 0; animation: lb-tick 0.35s ease forwards var(--d); }
+.lb-pop { animation: lb-pop 0.4s ease both; }
+
+/* Theme picker: ring the active scheme without needing client state on first paint */
+.lb-swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--lb-page), 0 0 0 4px var(--lb-ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .lb-intro { display: none; }
+  .lb-reveal, .lb-tick, .lb-pop { opacity: 1; animation: none; }
+  .lb-type { clip-path: none; animation: none; }
+  .lb-cue, .lb-count, .lb-caret { animation: none; }
 }
