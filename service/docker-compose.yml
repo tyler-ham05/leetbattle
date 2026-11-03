@@ -11,9 +11,10 @@ services:
       - ./CodeService/sql/databases.sql:/docker-entrypoint-initdb.d/01-code-service-databases.sql
       - ./CodeService/sql/schema.sql:/docker-entrypoint-initdb.d/02-code-service-schema.sql
       - ./CodeService/sql/data.sql:/docker-entrypoint-initdb.d/03-code-service-data.sql
-      - ./CodeService/sql/lobby.sql:/docker-entrypoint-initdb.d/04-lobby.sql
-      - ./AuthService/sql/databases.sql:/docker-entrypoint-initdb.d/05-auth-service-databases.sql
-      - ./AuthService/sql/schema.sql:/docker-entrypoint-initdb.d/06-auth-service-schema.sql
-      - ./AuthService/sql/data.sql:/docker-entrypoint-initdb.d/07-auth-service-data.sql
+      - ./LobbyService/sql/databases.sql:/docker-entrypoint-initdb.d/04-lobby-service-databases.sql
+      - ./LobbyService/sql/schema.sql:/docker-entrypoint-initdb.d/05-lobby-service-schema.sql
+      - ./AuthService/sql/databases.sql:/docker-entrypoint-initdb.d/06-auth-service-databases.sql
+      - ./AuthService/sql/schema.sql:/docker-entrypoint-initdb.d/07-auth-service-schema.sql
+      - ./AuthService/sql/data.sql:/docker-entrypoint-initdb.d/08-auth-service-data.sql
 volumes:
   postgres-data:
