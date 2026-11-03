@@ -13,12 +13,16 @@ export interface LobbyPlayer {
 	displayName: string;
 	team: TeamId | null;
 	connected: boolean;
+	ready: boolean;
 }
 
 export interface LobbyState {
 	players: LobbyPlayer[];
 	playerCount: number;
+	readyCount: number;
+	canReady: boolean;
 	readyToStart: boolean;
+	countdownSecondsRemaining: number | null;
 }
 
 export interface LobbyError {

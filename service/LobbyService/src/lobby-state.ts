@@ -5,11 +5,14 @@ export interface LobbyPlayer {
 	displayName: string;
 	team: TeamId | null;
 	connected: boolean;
+	ready: boolean;
 }
 
 export interface LobbySnapshot {
 	players: LobbyPlayer[];
 	playerCount: number;
+	readyCount: number;
+	canReady: boolean;
 	readyToStart: boolean;
 }
 
@@ -62,7 +65,8 @@ export class LobbyState {
 		if (!this.store) return;
 		const members = await this.store.loadMembers();
 		for (const player of members) {
-			this.members.set(player.userId, { player: { ...player, connected: false } });
+			this.members.set(player.userId, { player: { ...player, connected: false, ready: false } });
+			this.scheduleDisconnectRemoval(player.userId);
 		}
 	}
 
@@ -73,6 +77,7 @@ export class LobbyState {
 			if (member.disconnectTimer) clearTimeout(member.disconnectTimer);
 			member.disconnectTimer = undefined;
 			member.player.connected = true;
+			member.player.ready = false;
 			this.onChange();
 		}
 	}
@@ -83,13 +88,8 @@ export class LobbyState {
 		if (!member) return;
 
 		member.player.connected = false;
-		if (member.disconnectTimer) clearTimeout(member.disconnectTimer);
-		member.disconnectTimer = setTimeout(() => {
-			void this.removeMember(userId).catch((error: unknown) => {
-				console.error('[lobby-service] could not release disconnected lobby seat', error);
-			});
-		}, this.disconnectGraceMs);
-		member.disconnectTimer.unref?.();
+		member.player.ready = false;
+		this.scheduleDisconnectRemoval(userId);
 		this.onChange();
 	}
 
@@ -103,6 +103,7 @@ export class LobbyState {
 			if (existing.disconnectTimer) clearTimeout(existing.disconnectTimer);
 			existing.disconnectTimer = undefined;
 			existing.player.connected = true;
+			existing.player.ready = false;
 			this.onChange();
 			return this.snapshot();
 		}
@@ -111,15 +112,18 @@ export class LobbyState {
 		}
 		await this.store?.addMember(userId, displayName);
 
+		this.resetReadiness();
 		this.members.set(userId, {
-			player: { userId, displayName, team: null, connected: true },
+			player: { userId, displayName, team: null, connected: true, ready: false },
 		});
 		this.onChange();
 		return this.snapshot();
 	}
 
 	async leave(userId: string): Promise<LobbySnapshot> {
+		const hadMember = this.members.has(userId);
 		await this.removeMember(userId);
+		if (hadMember) this.resetReadiness();
 		this.onChange();
 		return this.snapshot();
 	}
@@ -142,23 +146,31 @@ export class LobbyState {
 		}
 
 		await this.store?.setTeam(userId, team);
+		this.resetReadiness();
 		member.player.team = team;
 		this.onChange();
 		return this.snapshot();
 	}
 
-	requestMatch(userId: string): LobbyReadiness {
-		this.requireMember(userId);
-		if (!this.isReadyToStart()) {
-			throw new LobbyError('lobby-not-ready', 'Both teams need three connected players before match setup can begin.');
+	setReady(userId: string, ready: boolean): LobbySnapshot {
+		const member = this.requireMember(userId);
+		if (!member.player.connected) {
+			throw new LobbyError('not-connected', 'Reconnect to the lobby before readying up.');
 		}
-		return { lobbyId: 'main', players: this.snapshot().players };
+		if (ready && !this.canReady()) {
+			throw new LobbyError('lobby-not-ready', 'All six players must be connected and on full teams before readying up.');
+		}
+		member.player.ready = ready;
+		this.onChange();
+		return this.snapshot();
 	}
 
 	snapshot(): LobbySnapshot {
 		return {
 			players: [...this.members.values()].map(({ player }) => ({ ...player })),
 			playerCount: this.members.size,
+			readyCount: [...this.members.values()].filter(({ player }) => player.ready).length,
+			canReady: this.canReady(),
 			readyToStart: this.isReadyToStart(),
 		};
 	}
@@ -175,14 +187,35 @@ export class LobbyState {
 		return member;
 	}
 
-	private async removeMember(userId: string): Promise<void> {
+	private async removeMember(userId: string): Promise<boolean> {
 		const member = this.members.get(userId);
+		if (!member) return false;
 		if (member?.disconnectTimer) clearTimeout(member.disconnectTimer);
-		if (member) await this.store?.removeMember(userId);
+		await this.store?.removeMember(userId);
 		this.members.delete(userId);
+		this.resetReadiness();
+		return true;
 	}
 
-	private isReadyToStart(): boolean {
+	private resetReadiness(): void {
+		for (const { player } of this.members.values()) player.ready = false;
+	}
+
+	private scheduleDisconnectRemoval(userId: string): void {
+		const member = this.members.get(userId);
+		if (!member) return;
+		if (member.disconnectTimer) clearTimeout(member.disconnectTimer);
+		member.disconnectTimer = setTimeout(() => {
+			void this.removeMember(userId).then((removed) => {
+				if (removed) this.onChange();
+			}).catch((error: unknown) => {
+				console.error('[lobby-service] could not release disconnected lobby seat', error);
+			});
+		}, this.disconnectGraceMs);
+		member.disconnectTimer.unref?.();
+	}
+
+	private canReady(): boolean {
 		const members = [...this.members.values()];
 		const teamACount = members.filter((entry) => entry.player.team === 'a').length;
 		const teamBCount = members.filter((entry) => entry.player.team === 'b').length;
@@ -190,5 +223,10 @@ export class LobbyState {
 			&& teamACount === TEAM_CAPACITY
 			&& teamBCount === TEAM_CAPACITY
 			&& members.every(({ player }) => player.connected);
+	}
+
+	private isReadyToStart(): boolean {
+		const members = [...this.members.values()];
+		return this.canReady() && members.every(({ player }) => player.ready);
 	}
 }

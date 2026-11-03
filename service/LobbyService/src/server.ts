@@ -7,6 +7,7 @@ import type { LobbyStore } from './lobby-state';
 import type { TeamId } from './lobby-state';
 
 const LOBBY_ROOM = 'lobby:main';
+const MATCH_COUNTDOWN_MS = 5_000;
 
 interface UserData {
 	id: string;
@@ -36,9 +37,58 @@ export function createLobbyService(options: ServerOptions = {}) {
 	});
 	const io = new Server(httpServer, { cors: { origin: origins, methods: ['GET', 'POST'] } });
 	const socketsByUserId = new Map<string, Socket>();
-	const lobby = new LobbyState(options.disconnectGraceMs, () => {
-		io.to(LOBBY_ROOM).emit('lobby:state', lobby.snapshot());
-	}, options.store);
+	let countdownStartedAt: number | null = null;
+	let countdownInterval: ReturnType<typeof setInterval> | undefined;
+	let countdownTimeout: ReturnType<typeof setTimeout> | undefined;
+	let matchStarted = false;
+	const lobbyRef: { current?: LobbyState } = {};
+	const getLobby = () => {
+		if (!lobbyRef.current) throw new Error('Lobby state is not initialized.');
+		return lobbyRef.current;
+	};
+
+	const lobbyStatePayload = () => ({
+		...getLobby().snapshot(),
+		countdownSecondsRemaining: countdownStartedAt === null
+			? null
+			: Math.max(1, Math.ceil((countdownStartedAt + MATCH_COUNTDOWN_MS - Date.now()) / 1000)),
+	});
+	const emitLobbyState = () => io.to(LOBBY_ROOM).emit('lobby:state', lobbyStatePayload());
+	const clearCountdown = () => {
+		if (countdownInterval) clearInterval(countdownInterval);
+		if (countdownTimeout) clearTimeout(countdownTimeout);
+		countdownInterval = undefined;
+		countdownTimeout = undefined;
+		countdownStartedAt = null;
+	};
+	const updateCountdown = () => {
+		if (getLobby().snapshot().readyToStart && countdownStartedAt === null && !matchStarted) {
+			countdownStartedAt = Date.now();
+			countdownInterval = setInterval(emitLobbyState, 1_000);
+			countdownTimeout = setTimeout(() => {
+				if (!getLobby().snapshot().readyToStart) {
+					clearCountdown();
+					emitLobbyState();
+					return;
+				}
+				if (countdownInterval) clearInterval(countdownInterval);
+				countdownInterval = undefined;
+				countdownTimeout = undefined;
+				countdownStartedAt = null;
+				matchStarted = true;
+				emitLobbyState();
+				io.to(LOBBY_ROOM).emit('lobby:ready-for-match', {
+					lobbyId: 'main',
+					players: getLobby().snapshot().players,
+				});
+			}, MATCH_COUNTDOWN_MS);
+		} else if (!getLobby().snapshot().readyToStart && countdownStartedAt !== null) {
+			clearCountdown();
+		}
+		emitLobbyState();
+	};
+	const lobby = new LobbyState(options.disconnectGraceMs, updateCountdown, options.store);
+	lobbyRef.current = lobby;
 	const ready = lobby.initialize();
 
 	io.use(async (socket, next) => {
@@ -64,7 +114,7 @@ export function createLobbyService(options: ServerOptions = {}) {
 
 		await lobby.connect(user.id);
 		await socket.join(LOBBY_ROOM);
-		socket.emit('lobby:state', lobby.snapshot());
+		socket.emit('lobby:state', lobbyStatePayload());
 
 		socket.on('lobby:join', async () => {
 			try {
@@ -104,10 +154,11 @@ export function createLobbyService(options: ServerOptions = {}) {
 			}
 		});
 
-		socket.on('lobby:request-match', () => {
+		socket.on('lobby:set-ready', (value: unknown) => {
 			try {
-				const readiness = lobby.requestMatch(user.id);
-				io.to(LOBBY_ROOM).emit('lobby:ready-for-match', readiness);
+				if (matchStarted) throw new LobbyError('match-started', 'The lobby has already started the match.');
+				if (typeof value !== 'boolean') throw new LobbyError('invalid-ready-status', 'Choose whether you are ready.');
+				lobby.setReady(user.id, value);
 			} catch (error) {
 				emitError(socket, error);
 			}
@@ -129,6 +180,7 @@ export function createLobbyService(options: ServerOptions = {}) {
 		ready,
 		close: () => new Promise<void>((resolve) => {
 			lobby.stop();
+			clearCountdown();
 			io.close(() => resolve());
 		}),
 	};

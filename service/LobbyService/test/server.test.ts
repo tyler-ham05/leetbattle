@@ -18,9 +18,9 @@ async function tokenFor(userId: string): Promise<string> {
 		.encrypt(new TextEncoder().encode(SECRET));
 }
 
-function nextEvent<T>(socket: Socket, event: string): Promise<T> {
+function nextEvent<T>(socket: Socket, event: string, timeoutMs = 2_000): Promise<T> {
 	return new Promise((resolve, reject) => {
-		const timeout = setTimeout(() => reject(new Error(`Timed out waiting for ${event}`)), 2_000);
+		const timeout = setTimeout(() => reject(new Error(`Timed out waiting for ${event}`)), timeoutMs);
 		socket.once(event, (value: T) => {
 			clearTimeout(timeout);
 			resolve(value);
@@ -125,8 +125,10 @@ describe('LobbyService socket lifecycle', () => {
 		clients[3].emit('lobby:join-team', 'a');
 		expect(await fullTeamError).toMatchObject({ code: 'team-full' });
 
-		const readinessEvents = Promise.all(clients.map((client) => nextEvent<{ lobbyId: string; players: { userId: string }[] }>(client, 'lobby:ready-for-match')));
-		clients[0].emit('lobby:request-match');
+		const readinessEvents = Promise.all(clients.map((client) => nextEvent<{ lobbyId: string; players: { userId: string }[] }>(client, 'lobby:ready-for-match', 7_000)));
+		for (const [index, client] of clients.entries()) {
+			await emitAndWaitForState(client, 'lobby:set-ready', true, (state) => state.readyCount === index + 1);
+		}
 		const events = await readinessEvents;
 		expect(events.every((event) => event.lobbyId === 'main' && event.players.length === 6)).toBe(true);
 		expect(new Set(events.flatMap((event) => event.players.map((player) => player.userId))).size).toBe(6);

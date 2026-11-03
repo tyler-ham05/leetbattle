@@ -24,7 +24,6 @@ function LobbyContent() {
 	}, [connect]);
 
 	const currentPlayer = lobby?.players.find((player) => player.userId === user?.id);
-	const teamsReady = lobby?.readyToStart ?? false;
 
 	function send(event: string, payload?: unknown) {
 		if (!socket?.connected) return;
@@ -115,10 +114,25 @@ function LobbyContent() {
 									<ul className="mb-5 space-y-2" aria-label={`${team.name} players`}>
 										{teamPlayers.length === 0 && <li className="rounded-md border border-dashed border-line px-4 py-5 text-center text-sm text-muted">No players yet</li>}
 										{teamPlayers.map((player) => (
-											<li key={player.userId} className="flex items-center justify-between rounded-md bg-page px-4 py-3 text-sm">
-												<span>{player.displayName}</span>
-												{player.userId === user?.id && <span className="text-xs font-medium text-primary">You</span>}
-												{!player.connected && <span className="text-xs text-muted">Reconnecting…</span>}
+											<li key={player.userId} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-page px-4 py-3 text-sm">
+												<span className="flex items-center gap-2">
+													{player.displayName}
+													{player.userId === user?.id && <span className="text-xs font-medium text-primary">You</span>}
+												</span>
+												<span className="flex items-center gap-3">
+													{!player.connected
+														? <span className="text-xs text-muted">Reconnecting…</span>
+														: <span className={`text-xs font-medium ${player.ready ? 'text-primary' : 'text-muted'}`}>{player.ready ? 'Ready' : 'Not ready'}</span>}
+													{player.userId === user?.id && (
+														<button
+															onClick={() => send('lobby:set-ready', !player.ready)}
+															disabled={!connected || !lobby?.canReady}
+															className="rounded-lg border border-line px-3 py-1 text-xs font-semibold hover:bg-raised disabled:cursor-not-allowed disabled:opacity-50"
+														>
+															{player.ready ? 'Unready' : 'Ready up'}
+														</button>
+													)}
+												</span>
 											</li>
 										))}
 									</ul>
@@ -139,7 +153,13 @@ function LobbyContent() {
 					{currentPlayer && (
 						<div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-raised p-5">
 							<button onClick={() => send('lobby:leave')} disabled={!connected} className="rounded-xl border border-line px-4 py-2 text-sm font-semibold hover:bg-page disabled:opacity-50">Leave lobby</button>
-							<button onClick={() => send('lobby:request-match')} disabled={!connected || !teamsReady} className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">Start Match</button>
+							<div role="status" aria-live="polite" className="text-sm font-medium text-muted">
+								{lobby?.countdownSecondsRemaining !== null && lobby?.countdownSecondsRemaining !== undefined
+									? `Starting match in ${lobby.countdownSecondsRemaining}…`
+									: lobby?.canReady
+										? `${lobby.readyCount}/6 players ready`
+										: 'Fill both teams with connected players to ready up'}
+							</div>
 						</div>
 					)}
 
