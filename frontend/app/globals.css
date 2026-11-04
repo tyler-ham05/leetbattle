@@ -151,6 +151,7 @@
   --lb-code-font: Menlo, Monaco, Consolas, "Courier New", monospace;
 }
 
+
 /* Tailwind utilities: bg-page, bg-surface, text-ink, text-muted, border-line, bg-primary, ... */
 @theme inline {
   --color-background: var(--background);
@@ -279,9 +280,69 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 /* Theme picker: ring the active scheme without needing client state on first paint */
 .lb-swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--lb-page), 0 0 0 4px var(--lb-ink); }
 
+/* =========================================================
+   HOME SCREEN
+   ========================================================= */
+
+/* Menu options fade up one after another (own timing, not tied to the landing intro). */
+.lb-rise-in {
+  opacity: 0;
+  animation: lb-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards var(--d, 0s);
+}
+
+/* Picker wheel: options sit on a drum that turns sideways. --off is how many
+   steps an option is from the selected one; JS sets --scale and opacity. */
+.lb-wheel { perspective: 900px; --wheel-gap: clamp(230px, 23vw, 330px); }
+.lb-wheel-item {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  white-space: nowrap;
+  transform:
+    translate(-50%, -50%)
+    translateX(calc(var(--off) * var(--wheel-gap)))
+    rotateY(calc(clamp(-3, var(--off), 3) * -38deg))
+    scale(var(--scale));
+  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.45s ease, color 0.3s ease;
+}
+button.lb-wheel-item { cursor: pointer; }
+
+/* List under the wheel: the selected option is outlined, tinted and green. */
+.lb-menu-title { transition: color 0.2s ease; }
+.lb-menu-row { transition: border-color 0.2s ease, background-color 0.2s ease; }
+.lb-menu-arrow {
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.lb-menu-row[data-selected="true"] {
+  border-color: var(--lb-primary);
+  background: color-mix(in srgb, var(--lb-primary) 8%, var(--lb-surface));
+}
+.lb-menu-row[data-selected="true"] .lb-menu-title { color: var(--lb-primary); }
+.lb-menu-row[data-selected="true"] .lb-menu-arrow { opacity: 1; transform: none; }
+
+/* Home background: code snippets fall at their own angle (--rot) and drift sideways (--dx). */
+@keyframes lb-fall {
+  from { transform: translate(0, -140px) rotate(var(--rot)); }
+  to { transform: translate(var(--dx), 110vh) rotate(var(--rot)); }
+}
+.lb-fall {
+  animation: lb-fall var(--dur) linear infinite var(--d);
+}
+.lb-fall[data-animated="false"] {
+  animation: none;
+  transform: rotate(var(--rot));
+}
+
 @media (prefers-reduced-motion: reduce) {
   .lb-intro { display: none; }
   .lb-reveal, .lb-tick, .lb-pop { opacity: 1; animation: none; }
   .lb-type { clip-path: none; animation: none; }
   .lb-cue, .lb-count, .lb-caret { animation: none; }
+  .lb-rise-in { opacity: 1; animation: none; }
+  .lb-wheel-item, .lb-menu-row, .lb-menu-arrow { transition: none; }
 }
