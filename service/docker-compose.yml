@@ -6,13 +6,15 @@ services:
     env_file:
       - ../.env
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - ./CodeService/sql/databases.sql:/docker-entrypoint-initdb.d/01-code-service-databases.sql
       - ./CodeService/sql/schema.sql:/docker-entrypoint-initdb.d/02-code-service-schema.sql
       - ./CodeService/sql/data.sql:/docker-entrypoint-initdb.d/03-code-service-data.sql
-      - ./AuthService/sql/databases.sql:/docker-entrypoint-initdb.d/04-auth-service-databases.sql
-      - ./AuthService/sql/schema.sql:/docker-entrypoint-initdb.d/05-auth-service-schema.sql
-      - ./AuthService/sql/data.sql:/docker-entrypoint-initdb.d/06-auth-service-data.sql
+      - ./LobbyService/sql/databases.sql:/docker-entrypoint-initdb.d/04-lobby-service-databases.sql
+      - ./LobbyService/sql/schema.sql:/docker-entrypoint-initdb.d/05-lobby-service-schema.sql
+      - ./AuthService/sql/databases.sql:/docker-entrypoint-initdb.d/06-auth-service-databases.sql
+      - ./AuthService/sql/schema.sql:/docker-entrypoint-initdb.d/07-auth-service-schema.sql
+      - ./AuthService/sql/data.sql:/docker-entrypoint-initdb.d/08-auth-service-data.sql
 volumes:
   postgres-data:

@@ -51,10 +51,6 @@ function formatClock(seconds: number) {
 	return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-function cssVars(vars: Record<string, string | number>) {
-	return vars as CSSProperties;
-}
-
 export default function LiveDemo() {
 	// Seconds since the demo started; negative while the page intro plays.
 	const [tick, setTick] = useState(-3);
@@ -94,13 +90,13 @@ export default function LiveDemo() {
 									<span className="w-14 flex-none pr-[22px] text-right opacity-55">{line.n}</span>
 									<span
 										className="lb-type"
-										style={cssVars({ '--steps': line.length, '--dur': `${line.duration}s`, '--d': `${line.delay}s` })}
+										style={{ '--steps': line.length, '--dur': `${line.duration}s`, '--d': `${line.delay}s` } as CSSProperties}
 									>
 										{line.tokens.map(([text, kind], j) => (
 											<span key={j} className={TOKEN_CLASS[kind]}>{text}</span>
 										))}
 									</span>
-									{isLast && <span className="lb-caret" style={cssVars({ '--d': `${line.delay + line.duration}s` })} />}
+									{isLast && <span className="lb-caret" style={{ '--d': `${line.delay + line.duration}s` } as CSSProperties} />}
 								</div>
 							);
 						})}
@@ -116,7 +112,7 @@ export default function LiveDemo() {
 						<span
 							key={`${cycle}-${label}`}
 							className="lb-tick inline-flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1 text-primary"
-							style={cssVars({ '--d': `${TYPING_DONE + 0.4 + i * 0.3}s` })}
+							style={{ '--d': `${TYPING_DONE + 0.4 + i * 0.3}s` } as CSSProperties}
 						>
 							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
 								<path d="M5 12l5 5 9-10" />
@@ -154,10 +150,10 @@ function Countdown({ phase }: { phase: number }) {
 			)}
 			{phase === 3 && (
 				<div className="relative">
-					<span className="lb-wipe block text-[64px] font-black leading-none tracking-[-0.03em]" style={cssVars({ '--dur': '0.7s', '--d': '0s' })}>
+					<span className="lb-wipe block text-[64px] font-black leading-none tracking-[-0.03em]" style={{ '--dur': '0.7s', '--d': '0s' } as CSSProperties}>
 						Leet<span className="text-primary">Battle!</span>
 					</span>
-					<span className="lb-tip" style={cssVars({ '--dur': '0.7s', '--d': '0s' })} />
+					<span className="lb-tip" style={{ '--dur': '0.7s', '--d': '0s' } as CSSProperties} />
 				</div>
 			)}
 		</div>

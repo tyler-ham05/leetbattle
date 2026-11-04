@@ -51,13 +51,13 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 	}, [currentQuestion]);
 
 	const onRun = () => {
-		if (loadingAction) {
+		if (!currentQuestion || loadingAction) {
 			return;
 		}
 		setLoadingAction('run');
 		const api = new APIService();
 		api
-			.run(code, testCases)
+			.run(code, testCases, currentQuestion.question_id)
 			.then(setRunResult)
 			.catch((err) => setError(err.message))
 			.finally(() => setLoadingAction(null));

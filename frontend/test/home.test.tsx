@@ -2,6 +2,9 @@
 //  - User profile should have a dropdown when clicked that allows user to
 //      - Change settings
 //      - Log out
+//  - Clicking the settings link closes the dropdown
+//  - Nothing is rendered when there's no logged-in user (!user)
+//  - Falls back to showing the email when user.name is null
 // Home screen should show a picker wheel with Practice, Lobby and Settings
 //  - Practice should be selected when the page opens
 //  - Next and Previous buttons should move the selection, looping around at the ends
@@ -15,6 +18,7 @@
 // Home screen should show falling code snippets in the background
 //  - The background should be hidden from screen readers
 //  - The background should not animate when the user has reduced motion turned on
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -22,10 +26,13 @@ import { fakeUser } from './helpers';
 
 const push = vi.fn();
 const logout = vi.fn();
+// A mock we can redirect per-test (e.g. to simulate the logged-out/!user case)
+// instead of the fixed fakeUser every test used to get.
+const useAuthMock = vi.fn();
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, replace: vi.fn() }) }));
 vi.mock('../app/login/context', () => ({
-	useAuth: () => ({ user: fakeUser, logout, isLoading: false }),
+	useAuth: () => useAuthMock(),
 }));
 
 import HomeTopBar from '../app/_home/components/topbar';
@@ -44,6 +51,7 @@ function stubReducedMotion(reduce: boolean) {
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	useAuthMock.mockReturnValue({ user: fakeUser, logout, isLoading: false });
 });
 afterEach(() => {
 	cleanup();
@@ -86,6 +94,40 @@ describe('home screen user profile', () => {
 
 		await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
 		expect(push).toHaveBeenCalledWith('/');
+	});
+
+	it('closes the dropdown when the Settings link is clicked', async () => {
+		render(<HomeTopBar />);
+		await userEvent.click(screen.getByRole('button', { name: 'Account menu' }));
+		await userEvent.click(screen.getByRole('link', { name: 'Settings' }));
+		expect(screen.queryByText('Settings')).toBeNull();
+	});
+
+	it('hides the account menu button when there is no logged-in user', () => {
+		useAuthMock.mockReturnValue({ user: null, logout, isLoading: false });
+		render(<HomeTopBar />);
+		expect(screen.queryByRole('button', { name: 'Account menu' })).toBeNull();
+	});
+
+	it('renders no menu wrapper at all when there is no logged-in user', () => {
+		useAuthMock.mockReturnValue({ user: null, logout, isLoading: false });
+		// UserMenu bails out to `null`; only the topbar's own wordmark/link remain.
+		const { container } = render(<HomeTopBar />);
+		expect(container.querySelector('.relative')).toBeNull();
+	});
+
+	it('shows the email instead of a name when user.name is null', async () => {
+		useAuthMock.mockReturnValue({ user: { ...fakeUser, name: null }, logout, isLoading: false });
+		render(<HomeTopBar />);
+		await userEvent.click(screen.getByRole('button', { name: 'Account menu' }));
+		expect(screen.getByText(fakeUser.email)).toBeTruthy();
+	});
+
+	it('does not fall back to the (absent) name when user.name is null', async () => {
+		useAuthMock.mockReturnValue({ user: { ...fakeUser, name: null }, logout, isLoading: false });
+		render(<HomeTopBar />);
+		await userEvent.click(screen.getByRole('button', { name: 'Account menu' }));
+		expect(screen.queryByText(fakeUser.name as string)).toBeNull();
 	});
 });
 

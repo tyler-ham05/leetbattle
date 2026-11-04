@@ -1,14 +1,18 @@
 // settings page should allow user to change their username
 // settings page should allow user to change their password
 // - user should not be able to change their password if they do not remember their password
+// - clicking the Back link navigates back
+// - clicking the light/dark mode button toggles the theme
+// - clicking each color scheme button marks it as the pressed/selected one
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { fakeUser, jsonResponse, requestsOf, stubFetch } from './helpers';
 
 const refresh = vi.fn();
+const back = vi.fn();
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back }) }));
 vi.mock('../app/login/context', () => ({
 	useAuth: () => ({ user: fakeUser, isLoading: false, refresh }),
 }));
@@ -23,6 +27,47 @@ beforeEach(() => {
 });
 afterEach(() => {
 	cleanup();
+	// ThemeControls writes directly to <html>, outside localStorage/React
+	// state, so it has to be reset by hand between tests.
+	document.documentElement.removeAttribute('data-mode');
+	document.documentElement.removeAttribute('data-scheme');
+});
+
+describe('back link', () => {
+	it('navigates back when clicked', async () => {
+		render(<SettingsPage />);
+		await userEvent.click(screen.getByRole('button', { name: 'Back' }));
+		expect(back).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('theme controls', () => {
+	// No data-mode attribute is set, so it falls back to DEFAULT_MODE ('dark'),
+	// meaning the button starts offering to switch to light mode.
+	it('switches to light mode when the mode button is clicked', async () => {
+		render(<SettingsPage />);
+		await userEvent.click(screen.getByRole('button', { name: 'Switch to light mode' }));
+		// The attribute change is picked up asynchronously via MutationObserver.
+		expect(await screen.findByRole('button', { name: 'Switch to dark mode' })).toBeTruthy();
+	});
+
+	it('switches back to dark mode when the mode button is clicked again', async () => {
+		render(<SettingsPage />);
+		await userEvent.click(screen.getByRole('button', { name: 'Switch to light mode' }));
+		await userEvent.click(await screen.findByRole('button', { name: 'Switch to dark mode' }));
+		expect(await screen.findByRole('button', { name: 'Switch to light mode' })).toBeTruthy();
+	});
+
+	it.each(['Emerald', 'Volt', 'Midnight', 'Ultraviolet'])('marks %s as pressed when its swatch is clicked', async (label) => {
+		render(<SettingsPage />);
+		await userEvent.click(screen.getByRole('button', { name: `${label} color scheme` }));
+		// The attribute change is picked up asynchronously via MutationObserver,
+		// and (unlike the mode button) the accessible name doesn't change, so
+		// we have to poll the aria-pressed attribute itself.
+		await waitFor(() =>
+			expect(screen.getByRole('button', { name: `${label} color scheme` }).getAttribute('aria-pressed')).toBe('true'),
+		);
+	});
 });
 
 describe('changing username', () => {

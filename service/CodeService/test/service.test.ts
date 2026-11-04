@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { request } from './setup';
 
+describe('health check', () => {
+	it('returns 200 on request', async () => {
+		const res = await request
+			.get('/');
+		expect(res.status).toBe(200);
+	});
+});
+
 describe('getRandomProblem Tests', () => {
 	it('returns 200 on request', async () => {
 		const res = await request

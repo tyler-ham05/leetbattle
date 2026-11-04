@@ -82,16 +82,16 @@ export class APIService {
 		});
 		return await handleResponse(res);
 	}
-	public async run(code: string, cases: unknown): Promise<RunResult> {
-		const res = await fetch(`${CODESERVICE}/problem`, {
+	public async run(code: string, cases: unknown, questionId: number): Promise<RunResult> {
+		const res = await fetch(`${CODESERVICE}/solution`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ code, cases }),
+			body: JSON.stringify({ code, cases, questionId }),
 		});
 		return await handleResponse(res);
 	}
 	public async submit(questionId: number, code: string): Promise<SubmitResult> {
-		const res = await fetch(`${CODESERVICE}/problem/${questionId}`, {
+		const res = await fetch(`${CODESERVICE}/solution/${questionId}`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ code }),

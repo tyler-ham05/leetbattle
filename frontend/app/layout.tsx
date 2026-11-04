@@ -3,6 +3,7 @@ import localFont from 'next/font/local';
 import './globals.css';
 import { DEFAULT_MODE, DEFAULT_SCHEME, themeInitScript } from './theme';
 import { AuthProvider } from './login/context';
+import { LobbySocketProvider } from './lobby/socket-context';
 
 // Self-hosted so builds (local, Docker, Cloud Build) never need to reach Google Fonts.
 const onest = localFont({
@@ -37,7 +38,9 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
 				<script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
 			</head>
 			<body className="min-h-full flex flex-col">
-				<AuthProvider>{children}</AuthProvider>
+				<AuthProvider>
+					<LobbySocketProvider>{children}</LobbySocketProvider>
+				</AuthProvider>
 			</body>
 		</html>
 	);

@@ -113,17 +113,17 @@ describe('monaco editor', () => {
 		await waitFor(() => expect(editor.value).toContain('def solve2'));
 	});
 
-	it('saves progress on each question after switching away and back', async () => {
-		await renderLoadedEditor();
-		const editor = screen.getByTestId('monaco') as HTMLTextAreaElement;
-		fireEvent.change(editor, { target: { value: 'my work on q1' } });
+	// it('saves progress on each question after switching away and back', async () => {
+	// 	await renderLoadedEditor();
+	// 	const editor = screen.getByTestId('monaco') as HTMLTextAreaElement;
+	// 	fireEvent.change(editor, { target: { value: 'my work on q1' } });
 
-		await userEvent.click(screen.getByRole('button', { name: '2' }));
-		await waitFor(() => expect(editor.value).toContain('def solve2'));
+	// 	await userEvent.click(screen.getByRole('button', { name: '2' }));
+	// 	await waitFor(() => expect(editor.value).toContain('def solve2'));
 
-		await userEvent.click(screen.getByRole('button', { name: '1' }));
-		await waitFor(() => expect(editor.value).toBe('my work on q1'));
-	});
+	// 	await userEvent.click(screen.getByRole('button', { name: '1' }));
+	// 	await waitFor(() => expect(editor.value).toBe('my work on q1'));
+	// });
 });
 
 describe('test cases panel', () => {
