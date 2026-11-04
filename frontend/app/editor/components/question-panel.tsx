@@ -20,7 +20,7 @@ export default function QuestionPanel() {
 
 	if (error) {
 		return (
-			<div className="p-6 text-sm text-red-600 dark:text-red-400">
+			<div className="p-6 text-sm text-danger">
 				Failed to load question: {error}
 			</div>
 		);
@@ -28,14 +28,14 @@ export default function QuestionPanel() {
 
 	if (!currentQuestion) {
 		return (
-			<div className="p-6 text-sm text-zinc-500 dark:text-zinc-400">
+			<div className="p-6 text-sm text-muted">
 				Loading question...
 			</div>
 		);
 	}
 
 	return (
-		<div className="h-full overflow-y-auto p-6 text-sm text-zinc-900 dark:text-zinc-100">
+		<div className="h-full overflow-y-auto p-6 text-sm text-ink">
 			<QuestionNavigation/>
 			<h1 className="text-xl font-semibold">
 				{currentQuestion.question_id}. {titleFromTaskId(currentQuestion.task_id)}
@@ -59,7 +59,7 @@ export default function QuestionPanel() {
 				))} */}
 			</div>
 
-			<p className="mt-4 whitespace-pre-line leading-6 text-zinc-700 dark:text-zinc-300">
+			<p className="mt-4 whitespace-pre-line leading-6 text-muted">
 				{currentQuestion.problem_description}
 			</p>
 		</div>

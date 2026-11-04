@@ -4,29 +4,32 @@ import TestCasesPanel from './components/test-cases-panel';
 import SubmitBar from './components/submit-bar';
 import TopBar from './components/top-bar';
 import { EditorProvider } from './context';
+import RequireAuth from '../login/protected';
 
 export default function editor() {
 	return (
-		<EditorProvider>
-			<div>
-				<TopBar/>
-				<div className="flex h-screen bg-zinc-50 font-sans dark:bg-black">
-					
-					<div className="w-1/2 border-r border-zinc-200 dark:border-zinc-800">
-						<QuestionPanel />
-					</div>
+		<RequireAuth>
+			<EditorProvider>
+				<div>
+					<TopBar/>
+					<div className="flex h-screen bg-page font-sans">
 
-					<div className="flex w-1/2 flex-col">
-						<div className="h-3/5 min-h-0">
-							<Monaco />
+						<div className="w-1/2 border-r border-line">
+							<QuestionPanel />
 						</div>
-						<SubmitBar />
-						<div className="h-2/5 min-h-0 border-t border-zinc-200 dark:border-zinc-800">
-							<TestCasesPanel />
+
+						<div className="flex w-1/2 flex-col">
+							<div className="h-3/5 min-h-0">
+								<Monaco />
+							</div>
+							<SubmitBar />
+							<div className="h-2/5 min-h-0 border-t border-line">
+								<TestCasesPanel />
+							</div>
 						</div>
 					</div>
 				</div>
-			</div>
-		</EditorProvider>
+			</EditorProvider>
+		</RequireAuth>
 	);
 }

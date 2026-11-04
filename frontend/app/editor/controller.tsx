@@ -10,6 +10,58 @@ export interface Problem {
 	input_output?: unknown; // test cases from the problems table (JSONB)
 }
 
+export interface TestCase {
+	input: string;
+	expected: string;
+}
+
+function stringifyCase(value: unknown): string {
+	return typeof value === 'string' ? value : JSON.stringify(value);
+}
+
+// input_output is a JSONB column with no fixed shape across sources (the imported
+// LeetCodeDataset rows vs. hand-seeded local rows), so this stays defensive and
+// falls back to no test cases rather than guessing at a shape that isn't there.
+export function parseTestCases(inputOutput: unknown): TestCase[] {
+	let value = inputOutput;
+	if (typeof value === 'string') {
+		try {
+			value = JSON.parse(value);
+		} catch {
+			return [];
+		}
+	}
+	if (!value || typeof value !== 'object') {
+		return [];
+	}
+
+	if (Array.isArray(value)) {
+		return value
+			.filter((entry): entry is Record<string, unknown> => !!entry && typeof entry === 'object')
+			.map((entry) => ({
+				input: stringifyCase(entry.input),
+				expected: stringifyCase(entry.expected ?? entry.output),
+			}));
+	}
+
+	const { inputs, outputs } = value as { inputs?: unknown[]; outputs?: unknown[] };
+	if (Array.isArray(inputs) && Array.isArray(outputs)) {
+		return inputs.map((input, i) => ({
+			input: stringifyCase(input),
+			expected: stringifyCase(outputs[i]),
+		}));
+	}
+
+	return [];
+}
+
+export async function handleResponse(res:Response){
+	if (!res.ok) {
+		throw new Error(`Request failed with status ${res.status}`);
+	}
+	return await res.json();
+}
+
 export interface RunResult {
     verdict: string;
     cases: unknown;
@@ -28,10 +80,7 @@ export class APIService {
 		const res = await fetch(`${CODESERVICE}/problem`, {
 			method: 'GET',
 		});
-		if (!res.ok) {
-			throw new Error(`Request failed with status ${res.status}`);
-		}
-		return await res.json();
+		return await handleResponse(res);
 	}
 	public async run(code: string, cases: unknown): Promise<RunResult> {
 		const res = await fetch(`${CODESERVICE}/problem`, {
@@ -39,10 +88,7 @@ export class APIService {
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ code, cases }),
 		});
-		if (!res.ok) {
-			throw new Error(`Request failed with status ${res.status}`);
-		}
-		return await res.json();
+		return await handleResponse(res);
 	}
 	public async submit(questionId: number, code: string): Promise<SubmitResult> {
 		const res = await fetch(`${CODESERVICE}/problem/${questionId}`, {
@@ -50,9 +96,6 @@ export class APIService {
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ code }),
 		});
-		if (!res.ok) {
-			throw new Error(`Request failed with status ${res.status}`);
-		}
-		return await res.json();
+		return await handleResponse(res);
 	}
 }

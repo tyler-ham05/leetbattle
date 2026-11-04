@@ -2,17 +2,18 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
 import { DEFAULT_MODE, DEFAULT_SCHEME, themeInitScript } from './theme';
+import { AuthProvider } from './login/context';
 
 // Self-hosted so builds (local, Docker, Cloud Build) never need to reach Google Fonts.
 const onest = localFont({
-	src: './fonts/Onest-Variable.woff2',
+	src: './_fonts/Onest-Variable.woff2',
 	variable: '--font-onest',
 	weight: '100 900',
 	display: 'swap',
 });
 
 const jetbrainsMono = localFont({
-	src: './fonts/JetBrainsMono-Variable.woff2',
+	src: './_fonts/JetBrainsMono-Variable.woff2',
 	variable: '--font-jetbrains',
 	weight: '100 800',
 	display: 'swap',
@@ -35,7 +36,9 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
 			<head>
 				<script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
 			</head>
-			<body className="min-h-full flex flex-col">{children}</body>
+			<body className="min-h-full flex flex-col">
+				<AuthProvider>{children}</AuthProvider>
+			</body>
 		</html>
 	);
 }

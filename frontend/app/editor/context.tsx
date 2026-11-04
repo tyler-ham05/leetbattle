@@ -3,7 +3,7 @@
 // subscribe to them here!
 'use client';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { APIService, Problem, RunResult, SubmitResult } from './controller';
+import { APIService, parseTestCases, Problem, RunResult, SubmitResult, TestCase } from './controller';
 
 export type LoadingAction = 'run' | 'submit' | null;
 
@@ -11,6 +11,7 @@ export interface EditorContextValue {
 	questions: Problem[];
 	currentQuestion: Problem | null;
 	setCurrentQuestion: (_question: Problem) => void;
+	testCases: TestCase[];
 	code: string;
 	setCode: (_code: string) => void;
 	error: string | null;
@@ -32,6 +33,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 	const [runResult, setRunResult] = useState<RunResult | null>(null);
 	const [submitResult, setSubmitResult] = useState<SubmitResult | null>(null);
 	const [loadingAction, setLoadingAction] = useState<LoadingAction>(null);
+	const testCases = currentQuestion ? parseTestCases(currentQuestion.input_output) : [];
 
 	useEffect(() => {
 		const api = new APIService();
@@ -55,7 +57,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 		setLoadingAction('run');
 		const api = new APIService();
 		api
-			.run(code, currentQuestion?.input_output ?? [])
+			.run(code, testCases)
 			.then(setRunResult)
 			.catch((err) => setError(err.message))
 			.finally(() => setLoadingAction(null));
@@ -80,6 +82,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 				questions,
 				currentQuestion,
 				setCurrentQuestion,
+				testCases,
 				code,
 				setCode,
 				error,
