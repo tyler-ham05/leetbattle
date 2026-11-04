@@ -3,7 +3,7 @@
 \c code_service
 
 INSERT INTO problems (
-  task_id, question_id, difficulty, tags, problem_description, starter_code, entry_point, input_output
+  task_id, question_id, difficulty, tags, problem_description, starter_code, entry_point, input_output, prompt, test
 ) VALUES
 (
   'two-sum',
@@ -16,7 +16,9 @@ INSERT INTO problems (
   '{
     "inputs": ["nums = [2,7,11,15], target = 9", "nums = [3,2,4], target = 6", "nums = [3,3], target = 6"],
     "outputs": ["[0,1]", "[1,2]", "[0,1]"]
-  }'::jsonb
+  }'::jsonb,
+  'from typing import List, Optional, Dict, Tuple\nimport math\nimport heapq\nimport collections\nfrom collections import defaultdict, Counter, deque\n\nclass Solution:\n    def twoSum(self, nums: List[int], target: int) -> List[int]:\n',
+  'def check(candidate):\n    assert candidate(nums = [2,7,11,15], target = 9) == [0,1]\n    assert candidate(nums = [3,2,4], target = 6) == [1,2]\n    assert candidate(nums = [3,3], target = 6) == [0,1]'
 ),
 (
   'valid-parentheses',
@@ -29,7 +31,9 @@ INSERT INTO problems (
   '{
     "inputs": ["s = \"()\"", "s = \"()[]{}\"", "s = \"(]\""],
     "outputs": ["true", "true", "false"]
-  }'::jsonb
+  }'::jsonb,
+  'from typing import List, Optional, Dict, Tuple\nimport math\nimport heapq\nimport collections\nfrom collections import defaultdict, Counter, deque\n\nclass Solution:\n    def isValid(self, s: str) -> bool:\n',
+  'def check(candidate):\n    assert candidate(s = "()") == True\n    assert candidate(s = "()[]{}") == True\n    assert candidate(s = "(]") == False'
 ),
 (
   'best-time-to-buy-and-sell-stock',
@@ -42,6 +46,8 @@ INSERT INTO problems (
   '{
     "inputs": ["prices = [7,1,5,3,6,4]", "prices = [7,6,4,3,1]"],
     "outputs": ["5", "0"]
-  }'::jsonb
+  }'::jsonb,
+  'from typing import List, Optional, Dict, Tuple\nimport math\nimport heapq\nimport collections\nfrom collections import defaultdict, Counter, deque\n\nclass Solution:\n    def maxProfit(self, prices: List[int]) -> int:\n',
+  'def check(candidate):\n    assert candidate(prices = [7,1,5,3,6,4]) == 5\n    assert candidate(prices = [7,6,4,3,1]) == 0'
 )
 ON CONFLICT (task_id) DO NOTHING;
