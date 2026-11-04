@@ -7,7 +7,7 @@ COPY . .
 ARG NEXT_PUBLIC_CODE_URL
 ARG NEXT_PUBLIC_AUTH_URL
 ENV NEXT_PUBLIC_CODE_URL=https://codeservice-1040040326387.europe-west1.run.app
-ENV NEXT_PUBLIC_AUTH_URL=https://authservice-1040040326387.europe-west1.run.app
+ENV NEXT_PUBLIC_AUTH_URL=https://authservice-1040040326387.us-west1.run.app
 
 RUN npm run build
 
