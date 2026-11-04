@@ -11,8 +11,8 @@ app.use(express.json());
 app.get('/', getRoot);
 app.get('/problem/:questionId', getProblem);
 app.get('/problem', getRandomProblem);
-app.post('/problem', runProblem);
-app.post('/problem/:questionId', submitProblem);
+app.post('/solution', runProblem);
+app.post('/solution/:questionId', submitProblem);
 
 const errorHandler: ErrorRequestHandler = (err, _req, res, _next: NextFunction) => {
 	res.status(err.status || 500).json( {

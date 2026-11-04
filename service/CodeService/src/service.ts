@@ -1,5 +1,16 @@
 import { NextFunction, Request, Response } from 'express';
 import { pool } from './db';
+import {
+	extractImports,
+	parseCheckCases,
+	questionIdParamsSchema,
+	runBodySchema,
+	runCases,
+	submitBodySchema,
+	unescapeNewlines,
+	verdictForResult,
+	verdictForResults,
+} from './utils/coderunner';
 
 class HttpError extends Error {
 	status: number;
@@ -52,25 +63,51 @@ export async function getRandomProblem(req: Request, res: Response, next: NextFu
 	}
 }
 
-//NOT FINISHED
 export async function runProblem(req: Request, res: Response, next: NextFunction) {
-	const {code, cases} = req.body;
 	try {
-		// INSERT CODE RUNNER HERE
-		const responses = Array(cases.length).fill(0);
-		console.log(code);
-		res.json({verdict: 'pass', cases, responses});
-		// CODE RUNNER ENDS HERE
+		const body = runBodySchema.safeParse(req.body);
+		if (!body.success) {
+			return next(new HttpError(400, 'code, cases, and questionId are required'));
+		}
+		const { code, cases, questionId } = body.data;
+
+		const result = await pool.query(
+			'SELECT entry_point, prompt FROM problems WHERE question_id = $1',
+			[questionId],
+		);
+		if (result.rows.length === 0) {
+			return next(new HttpError(404, 'problem not found'));
+		}
+		const { entry_point: entryPoint, prompt } = result.rows[0];
+		const imports = extractImports(unescapeNewlines(prompt ?? ''));
+
+		const results = await runCases(imports, code, entryPoint, cases, { runAll: true });
+		res.json(
+			results.map((r) => ({
+				verdict: verdictForResult(r),
+				expected: r.expected,
+				response: r.error ?? r.actual,
+			})),
+		);
 	} catch (err) {
 		next(err);
 	}
 }
 
-// NOT FINISHED
 export async function submitProblem(req: Request, res: Response, next: NextFunction) {
-	const {code} = req.body;
-	const {questionId} = req.params;
 	try {
+		const body = submitBodySchema.safeParse(req.body);
+		if (!body.success) {
+			return next(new HttpError(400, 'code is required'));
+		}
+		const { code } = body.data;
+
+		const params = questionIdParamsSchema.safeParse(req.params);
+		if (!params.success) {
+			return next(new HttpError(404, 'problem not found'));
+		}
+		const { questionId } = params.data;
+
 		const result = await pool.query(
 			'SELECT * FROM problems WHERE question_id = $1',
 			[questionId],
@@ -78,11 +115,23 @@ export async function submitProblem(req: Request, res: Response, next: NextFunct
 		if (result.rows.length === 0) {
 			return next(new HttpError(404, 'problem not found'));
 		}
-		// INSERT CODE RUNNER HERE
-		const answer = result.rows[0];
-		console.log(code, answer);
-		res.json({verdict: 'pass', passed: 4, case: null, response: null});
-		// CODE RUNNER ENDS HERE
+		const problem = result.rows[0];
+		const imports = extractImports(unescapeNewlines(problem.prompt ?? ''));
+		const cases = parseCheckCases(unescapeNewlines(problem.test ?? ''));
+
+		const results = await runCases(imports, code, problem.entry_point, cases);
+		const passed = results.filter((r) => r.passed).length;
+		const firstFailure = results.find((r) => !r.passed);
+		const verdict = verdictForResults(results);
+
+		res.json({
+			verdict,
+			passed,
+			total: cases.length,
+			case: firstFailure ? firstFailure.input : null,
+			expected: firstFailure ? firstFailure.expected : null,
+			response: firstFailure ? (firstFailure.error ?? firstFailure.actual) : null,
+		});
 	} catch (err) {
 		next(err);
 	}
