@@ -12,7 +12,7 @@ export interface User {
 	createdAt: string;
 }
 
-function getToken(): string | null {
+export function getToken(): string | null {
 	try {
 		return localStorage.getItem(TOKEN_STORAGE_KEY);
 	} catch {

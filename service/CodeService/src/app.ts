@@ -1,7 +1,7 @@
 import cors from 'cors';
 import express from 'express';
 import { getRoot, getProblem, getRandomProblem,runProblem, submitProblem } from './service';
-import { NextFunction, ErrorRequestHandler } from 'express';
+import type { NextFunction, ErrorRequestHandler } from 'express';
 
 const app = express();
 

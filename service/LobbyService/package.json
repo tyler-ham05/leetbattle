@@ -1,0 +1,32 @@
+{
+	"name": "lobby-service",
+	"version": "0.1.0",
+	"private": true,
+	"main": "dist/index.js",
+	"scripts": {
+		"lint": "eslint .",
+		"predev": "npm run lint",
+		"dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+		"build": "tsc",
+		"start": "node dist/index.js",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"dotenv": "^16.4.5",
+		"jose": "^6.2.14",
+		"pg": "^8.23.1",
+		"socket.io": "^4.8.1"
+	},
+	"devDependencies": {
+		"@eslint/js": "^10.0.1",
+		"@types/node": "^22.7.5",
+		"@types/pg": "^8.11.10",
+		"eslint": "^10.13.0",
+		"globals": "^17.13.0",
+		"ts-node-dev": "^2.0.0",
+		"typescript": "^5.9.3",
+		"typescript-eslint": "^8.72.0",
+		"socket.io-client": "^4.8.1",
+		"vitest": "^5.0.5"
+	}
+}

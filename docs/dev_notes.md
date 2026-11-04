@@ -18,3 +18,7 @@ Do not fret! most linting errors can be fixed with
 ```
 eslint --fix
 ```
+
+### Lobby
+See [lobby setup and API notes](./lobby.md) for the static lobby's anonymous
+player sessions, team capacity, and database setup.
