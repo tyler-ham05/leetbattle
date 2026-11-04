@@ -31,7 +31,7 @@ Backend Service: docs/service/services.md
 - Editing anything under leetbattle/docs
 
 # TDD is mandatory
-Every change should follow **failing test first -> implement -> verify**
+Every change should follow **failing test first -> implement -> verify**. A person **must** write the tests.  
 1. The tests will be written in pseudocode under the following directories respectively
   -frontend/test
   -service/AuthService/test
