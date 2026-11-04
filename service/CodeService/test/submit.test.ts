@@ -9,22 +9,22 @@ const code = `class Solution:
             if complement in seen:
                 return [seen[complement], i]
             seen[num] = i
-        return []`; 
+        return []`;
 
 const wrongAnswer = `class Solution:
     def twoSum(self, nums: List[int], target: int) -> List[int]:
-        return []`; 
+        return []`;
 
 const buggyCode = `class Solution:
     def twoSum(self, nums: List[int], target: int) -> List[int]:
-        neegy`; 
+        neegy`;
 
 const infiniteLoop = `class Solution:
     def twoSum(self, nums: List[int], target: int) -> List[int]:
         i = 1
         while i > 0:
             print("hello world!")
-        return []`; 
+        return []`;
 
 describe('solution tests', () => {
 	it('returns a 200 on a valid question and code', async () => {
@@ -67,7 +67,7 @@ describe('solution tests', () => {
 		const res = await request
 			.post('/solution/1')
 			.send({ code: infiniteLoop });
-		console.log(res.body.response)
+		console.log(res.body.response);
 		expect(res.body.verdict).toBe('Time Limit Exceeded');
 	});
 
@@ -79,8 +79,8 @@ describe('solution tests', () => {
 	});
 	it('returns a 400 on no body', async () => {
 		const res = await request
-			.post('/solution/1')
+			.post('/solution/1');
 		expect(res.status).toBe(400);
 	});
-	
+
 });
