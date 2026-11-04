@@ -30,8 +30,13 @@ Backend Service: docs/service/services.md
 - Touching git at all (including: push, pull, PR, commit)
 - Editing anything under leetbattle/docs
 
+
+
+
+
+
 # TDD is mandatory
-Every change should follow **failing test first -> implement -> verify**. A person **must** write the tests.  
+Every change should follow **failing test first -> implement -> verify**. A person **must** write the tests. Frontend tests must not touch backend services.
 1. The tests will be written in pseudocode under the following directories respectively
   -frontend/test
   -service/AuthService/test
