@@ -1,7 +1,7 @@
 // root page should display the landing page with no credentials
 // root page should siplay the home page with credentials
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { fakeUser } from './helpers';
 
 const auth = vi.hoisted(() => ({
@@ -31,7 +31,10 @@ describe('root page', () => {
 		auth.value = { ...auth.value, user: fakeUser };
 		render(<Home />);
 		expect(screen.getByRole('button', { name: 'Account menu' })).toBeTruthy();
-		expect(screen.getByRole('link', { name: /Practice/ }).getAttribute('href')).toBe('/editor');
+		// The home menu has several links mentioning Practice (the list row and the
+		// wheel's Open button), so look for it inside the menu list.
+		const menu = screen.getByRole('list', { name: 'Menu' });
+		expect(within(menu).getByRole('link', { name: /Practice/ }).getAttribute('href')).toBe('/editor');
 		expect(screen.queryByText(/Practice under pressure/)).toBeNull();
 	});
 
