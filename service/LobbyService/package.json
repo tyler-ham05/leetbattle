@@ -28,5 +28,10 @@
 		"typescript-eslint": "^8.72.0",
 		"socket.io-client": "^4.8.1",
 		"vitest": "^5.0.5"
+	},
+	"optionalDependencies": {
+		"@rolldown/binding-darwin-arm64": "~1.2.14",
+		"@rolldown/binding-darwin-x64": "~1.2.14",
+		"@rolldown/binding-linux-x64-gnu": "~1.2.14"
 	}
 }
