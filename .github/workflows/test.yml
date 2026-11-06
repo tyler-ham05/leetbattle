@@ -127,3 +127,6 @@ jobs:
 
       - name: Lint and check for duplication
         run: npm run predev
+
+      - name: Run test suite
+        run: npm test
