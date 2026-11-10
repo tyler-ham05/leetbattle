@@ -158,7 +158,7 @@ describe('run and submit', () => {
 		await waitFor(() => {
 			expect(requestsOf(fetchMock).filter((r) => r.method === 'POST')).toEqual([
 				{
-					url: `${CODE_URL}/problem`,
+					url: `${CODE_URL}/solution`,
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: {
@@ -167,6 +167,7 @@ describe('run and submit', () => {
 							{ input: '[1]', expected: '1' },
 							{ input: '[2]', expected: '2' },
 						],
+						questionId: 1,
 					},
 				},
 			]);
@@ -183,7 +184,7 @@ describe('run and submit', () => {
 		await waitFor(() => {
 			expect(requestsOf(fetchMock).filter((r) => r.method === 'POST')).toEqual([
 				{
-					url: `${CODE_URL}/problem/2`,
+					url: `${CODE_URL}/solution/2`,
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: { code: 'code to submit' },
