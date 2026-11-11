@@ -308,3 +308,42 @@ it('US-4-T-2 shows "Accepted" between the editor and the Case tabs after an Acce
 	const beforeTabs = verdict.compareDocumentPosition(firstCaseTab) & Node.DOCUMENT_POSITION_FOLLOWING;
 	expect(Boolean(afterEditor && beforeTabs)).toBe(true);
 });
+
+// Pseudocode: "After Submit, the page shows how many tests passed out of the total
+// between the monaco editor and the Case 1, Case 2, Case 3 tabs"
+it('US-4-T-2 shows "Passed: 1 / 3" between the editor and the Case tabs after a Submit', async () => {
+	// Arrange: serve the 3 problems, and make the judge answer for question 1 with
+	// passed: 1 and total: 3. The response has every field CodeService returns.
+	stubFetch((url) => {
+		if (url === `${CODE_URL}/solution/1`) {
+			return jsonResponse({
+				verdict: 'Wrong Answer',
+				passed: 1,
+				total: 3,
+				case: '[1]',
+				expected: '1',
+				response: '2',
+			});
+		}
+		return jsonResponse(threeProblems);
+	});
+	render(<EditorPage />);
+	await screen.findByRole('heading', { name: /1\. Problem Number 1/ });
+
+	// Act: click Submit.
+	await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+
+	// Find the three things we are comparing positions of. `findByText` waits for the
+	// passed count and throws "Unable to find an element with the text" if it never appears,
+	// which is the failure expected until the passed count is displayed.
+	const passed = await screen.findByText('Passed: 1 / 3');
+	const editor = screen.getByTestId('monaco');
+	const firstCaseTab = screen.getByRole('button', { name: 'Case 1' });
+
+	// Assert (one expect): in page order the passed count comes after the editor AND before the tabs.
+	// compareDocumentPosition returns a bitmask; DOCUMENT_POSITION_FOLLOWING means
+	// "the argument comes later in the page than the element it is called on".
+	const afterEditor = editor.compareDocumentPosition(passed) & Node.DOCUMENT_POSITION_FOLLOWING;
+	const beforeTabs = passed.compareDocumentPosition(firstCaseTab) & Node.DOCUMENT_POSITION_FOLLOWING;
+	expect(Boolean(afterEditor && beforeTabs)).toBe(true);
+});
