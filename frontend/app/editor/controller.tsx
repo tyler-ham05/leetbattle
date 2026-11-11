@@ -62,17 +62,19 @@ export async function handleResponse(res:Response){
 	return await res.json();
 }
 
-export interface RunResult {
+export type RunResult = {
     verdict: string;
-    cases: unknown;
-    responses: unknown;
-}
+    expected: string;
+    response: string | null;
+}[];
 
 export interface SubmitResult {
     verdict: string;
     passed: number;
-    case: unknown;
-    response: unknown;
+    total: number;
+    case: string | null;
+    expected: string | null;
+    response: string | null;
 }
 
 export class APIService {

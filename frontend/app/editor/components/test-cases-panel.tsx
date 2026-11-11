@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useEditor } from '../context';
 
 export default function TestCasesPanel() {
-	const { testCases } = useEditor();
+	const { testCases, runResult } = useEditor();
 	const [activeCase, setActiveCase] = useState(0);
 
 	useEffect(() => {
@@ -19,6 +19,7 @@ export default function TestCasesPanel() {
 	}
 
 	const testCase = testCases[activeCase];
+	const runVerdict = runResult?.[activeCase]?.verdict;
 
 	return (
 		<div className="flex h-full flex-col text-sm text-ink">
@@ -39,6 +40,7 @@ export default function TestCasesPanel() {
 			</div>
 
 			<div className="flex-1 overflow-y-auto p-4">
+				{runVerdict && <p className="mb-3 font-medium">{runVerdict}</p>}
 				<div>
 					<p className="text-xs text-muted">Input</p>
 					<pre className="mt-1 rounded-md bg-raised p-3 font-mono text-xs">

@@ -6,6 +6,18 @@
 // Editor should display test cases with correct format
 // Editor should have run and submit buttons
 //  - Editor should correctly foward code to the API when running/submitting
+
+// Submit should display its result (all following tests should be done by taking a fake POST /solution/:questionId)
+//  - After Submit returns Accepted the page shows "Accepted" between the monaco editor and the Case 1, Case 2, Case 3 tabs
+//  - After Submit returns Wrong Answer, the page shows "Wrong Answer" between the monaco editor and the Case 1, Case 2, Case 3 tabs
+//  - After Submit, the page shows how many tests passed out of the total between the monaco editor and the Case 1, Case 2, Case 3 tabs
+//  - After a failed Submit the page shows the test case that failed 
+//  - After a failed Submit the page shows the expected value
+//  - After a failed Submit the page shows the users's output
+// Run should display its result (all following tests should be done by taking a fake POST /solution)
+//	- The page shows one verdict for each test case in its respective Case 1, Case 2, Case 3 tabs. 
+
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -214,4 +226,239 @@ describe('run and submit', () => {
 			expect((screen.getByRole('button', { name: 'Submit' }) as HTMLButtonElement).disabled).toBe(false),
 		);
 	});
+});
+
+
+// Pseudocode: "After Submit returns Wrong Answer, the page shows "Wrong Answer"
+// between the monaco editor and the Case 1, Case 2, Case 3 tabs"
+it('US-4-T-2 shows "Wrong Answer" between the editor and the Case tabs after a Wrong Answer Submit', async () => {
+	// Arrange: serve the 3 problems, and make the judge answer Wrong Answer for question 1.
+	// The response has the same shape CodeService returns for a judged submission.
+	stubFetch((url) => {
+		if (url === `${CODE_URL}/solution/1`) {
+			return jsonResponse({
+				verdict: 'Wrong Answer',
+				passed: 1,
+				total: 3,
+				case: '[1]',
+				expected: '1',
+				response: '2',
+			});
+		}
+		return jsonResponse(threeProblems);
+	});
+	render(<EditorPage />);
+	await screen.findByRole('heading', { name: /1\. Problem Number 1/ });
+
+	// Act: click Submit.
+	await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+
+	// Find the three things we are comparing positions of. `findByText` waits for the
+	// verdict to appear and throws "Unable to find an element with the text" if it never does,
+	// which is the failure we expect until the result is displayed.
+	const verdict = await screen.findByText('Wrong Answer');
+	const editor = screen.getByTestId('monaco');
+	const firstCaseTab = screen.getByRole('button', { name: 'Case 1' });
+
+	// Assert (one expect): in page order the verdict comes after the editor AND before the tabs.
+	// compareDocumentPosition returns a bitmask; DOCUMENT_POSITION_FOLLOWING means
+	// "the argument comes later in the page than the element it is called on".
+	const afterEditor = editor.compareDocumentPosition(verdict) & Node.DOCUMENT_POSITION_FOLLOWING;
+	const beforeTabs = verdict.compareDocumentPosition(firstCaseTab) & Node.DOCUMENT_POSITION_FOLLOWING;
+	expect(Boolean(afterEditor && beforeTabs)).toBe(true);
+});
+
+// NOTE: kept as its own test on purpose, separate from the "Wrong Answer" test above.
+// The setup and the position check are almost identical, and that repetition is
+// intentional: one pseudocode line = one test. Do not merge the two or extract a shared helper.
+// Pseudocode: "After Submit returns Accepted the page shows "Accepted"
+// between the monaco editor and the Case 1, Case 2, Case 3 tabs"
+it('US-4-T-2 shows "Accepted" between the editor and the Case tabs after an Accepted Submit', async () => {
+	// Arrange: serve the 3 problems, and make the judge answer Accepted for question 1.
+	// All 3 tests passed, so there is no failing case, expected value or response.
+	stubFetch((url) => {
+		if (url === `${CODE_URL}/solution/1`) {
+			return jsonResponse({
+				verdict: 'Accepted',
+				passed: 3,
+				total: 3,
+				case: null,
+				expected: null,
+				response: null,
+			});
+		}
+		return jsonResponse(threeProblems);
+	});
+	render(<EditorPage />);
+	await screen.findByRole('heading', { name: /1\. Problem Number 1/ });
+
+	// Act: click Submit.
+	await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+
+	// Find the three things we are comparing positions of. `findByText` waits for the
+	// verdict and throws "Unable to find an element with the text" if it never appears.
+	const verdict = await screen.findByText('Accepted');
+	const editor = screen.getByTestId('monaco');
+	const firstCaseTab = screen.getByRole('button', { name: 'Case 1' });
+
+	// Assert (one expect): in page order the verdict comes after the editor AND before the tabs.
+	// compareDocumentPosition returns a bitmask; DOCUMENT_POSITION_FOLLOWING means
+	// "the argument comes later in the page than the element it is called on".
+	const afterEditor = editor.compareDocumentPosition(verdict) & Node.DOCUMENT_POSITION_FOLLOWING;
+	const beforeTabs = verdict.compareDocumentPosition(firstCaseTab) & Node.DOCUMENT_POSITION_FOLLOWING;
+	expect(Boolean(afterEditor && beforeTabs)).toBe(true);
+});
+
+// Pseudocode: "After Submit, the page shows how many tests passed out of the total
+// between the monaco editor and the Case 1, Case 2, Case 3 tabs"
+it('US-4-T-2 shows "Passed: 1 / 3" between the editor and the Case tabs after a Submit', async () => {
+	// Arrange: serve the 3 problems, and make the judge answer for question 1 with
+	// passed: 1 and total: 3. The response has every field CodeService returns.
+	stubFetch((url) => {
+		if (url === `${CODE_URL}/solution/1`) {
+			return jsonResponse({
+				verdict: 'Wrong Answer',
+				passed: 1,
+				total: 3,
+				case: '[1]',
+				expected: '1',
+				response: '2',
+			});
+		}
+		return jsonResponse(threeProblems);
+	});
+	render(<EditorPage />);
+	await screen.findByRole('heading', { name: /1\. Problem Number 1/ });
+
+	// Act: click Submit.
+	await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+
+	// Find the three things we are comparing positions of. `findByText` waits for the
+	// passed count and throws "Unable to find an element with the text" if it never appears,
+	// which is the failure expected until the passed count is displayed.
+	const passed = await screen.findByText('Passed: 1 / 3');
+	const editor = screen.getByTestId('monaco');
+	const firstCaseTab = screen.getByRole('button', { name: 'Case 1' });
+
+	// Assert (one expect): in page order the passed count comes after the editor AND before the tabs.
+	// compareDocumentPosition returns a bitmask; DOCUMENT_POSITION_FOLLOWING means
+	// "the argument comes later in the page than the element it is called on".
+	const afterEditor = editor.compareDocumentPosition(passed) & Node.DOCUMENT_POSITION_FOLLOWING;
+	const beforeTabs = passed.compareDocumentPosition(firstCaseTab) & Node.DOCUMENT_POSITION_FOLLOWING;
+	expect(Boolean(afterEditor && beforeTabs)).toBe(true);
+});
+
+// Pseudocode: "After a failed Submit the page shows the test case that failed"
+it('US-4-T-2 shows "Input: [1]" after a failed Submit', async () => {
+	// Arrange: serve the 3 problems, and make the judge answer Wrong Answer for question 1
+	// with the failing test case `case: '[1]'`. The response has every field CodeService returns.
+	stubFetch((url) => {
+		if (url === `${CODE_URL}/solution/1`) {
+			return jsonResponse({
+				verdict: 'Wrong Answer',
+				passed: 1,
+				total: 3,
+				case: '[1]',
+				expected: '1',
+				response: '2',
+			});
+		}
+		return jsonResponse(threeProblems);
+	});
+	render(<EditorPage />);
+	await screen.findByRole('heading', { name: /1\. Problem Number 1/ });
+
+	// Act: click Submit.
+	await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+
+	// Assert (one expect): the failing test case is shown as "Input: <case>".
+	// `findByText` waits for it and throws "Unable to find an element with the text" if it never
+	// appears, which is the failure expected until the failing test case is displayed.
+	expect(await screen.findByText('Input: [1]')).toBeTruthy();
+});
+
+// Pseudocode: "After a failed Submit the page shows the expected value"
+it('US-4-T-2 shows "Expected: 1" after a failed Submit', async () => {
+	// Arrange: serve the 3 problems, and make the judge answer Wrong Answer for question 1
+	// with the expected value `expected: '1'`. The response has every field CodeService returns.
+	stubFetch((url) => {
+		if (url === `${CODE_URL}/solution/1`) {
+			return jsonResponse({
+				verdict: 'Wrong Answer',
+				passed: 1,
+				total: 3,
+				case: '[1]',
+				expected: '1',
+				response: '2',
+			});
+		}
+		return jsonResponse(threeProblems);
+	});
+	render(<EditorPage />);
+	await screen.findByRole('heading', { name: /1\. Problem Number 1/ });
+
+	// Act: click Submit.
+	await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+
+	// Assert (one expect): the expected value is shown as "Expected: <expected>".
+	// `findByText` waits for it and throws "Unable to find an element with the text" if it never
+	// appears, which is the failure expected until the expected value is displayed.
+	expect(await screen.findByText('Expected: 1')).toBeTruthy();
+});
+
+// Pseudocode: "After a failed Submit the page shows the user's output"
+it('US-4-T-2 shows "Your output: 2" after a failed Submit', async () => {
+	// Arrange: serve the 3 problems, and make the judge answer Wrong Answer for question 1
+	// with the user's output `response: '2'`. The response has every field CodeService returns.
+	stubFetch((url) => {
+		if (url === `${CODE_URL}/solution/1`) {
+			return jsonResponse({
+				verdict: 'Wrong Answer',
+				passed: 1,
+				total: 3,
+				case: '[1]',
+				expected: '1',
+				response: '2',
+			});
+		}
+		return jsonResponse(threeProblems);
+	});
+	render(<EditorPage />);
+	await screen.findByRole('heading', { name: /1\. Problem Number 1/ });
+
+	// Act: click Submit.
+	await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+
+	// Assert (one expect): the user's output is shown as "Your output: <response>".
+	// `findByText` waits for it and throws "Unable to find an element with the text" if it never
+	// appears, which is the failure expected until the user's output is displayed.
+	expect(await screen.findByText('Your output: 2')).toBeTruthy();
+});
+
+// Pseudocode: "The page shows one verdict for each test case in its respective Case 1, Case 2, Case 3 tabs."
+it('US-4-T-2 shows each Case tab its own verdict after Run', async () => {
+	// Arrange: serve the 3 problems, and make the judge answer Run with a list of two verdicts that
+	// DIFFER: item 1 (Case 1) is Accepted and item 2 (Case 2) is Wrong Answer. Run is
+	// POST /solution (no question id) and returns one { verdict, expected, response } per case.
+	// If the page showed the first item's verdict on every tab, Case 2 would not show "Wrong Answer".
+	stubFetch((url) => {
+		if (url === `${CODE_URL}/solution`) {
+			return jsonResponse([
+				{ verdict: 'Accepted', expected: '1', response: '1' },
+				{ verdict: 'Wrong Answer', expected: '2', response: '3' },
+			]);
+		}
+		return jsonResponse(threeProblems);
+	});
+	render(<EditorPage />);
+	await screen.findByRole('heading', { name: /1\. Problem Number 1/ });
+
+	// Act: click Run, then select the Case 2 tab.
+	await userEvent.click(screen.getByRole('button', { name: 'Run' }));
+	await userEvent.click(screen.getByRole('button', { name: 'Case 2' }));
+
+	// Assert (one expect): Case 2's own verdict is shown.
+	// `findByText` waits for it and throws "Unable to find an element with the text" if it never
+	// appears, which is the failure expected until Run results are displayed in the Case tabs.
+	expect(await screen.findByText('Wrong Answer')).toBeTruthy();
 });

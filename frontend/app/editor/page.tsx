@@ -2,6 +2,7 @@ import Monaco from './components/monaco';
 import QuestionPanel from './components/question-panel';
 import TestCasesPanel from './components/test-cases-panel';
 import SubmitBar from './components/submit-bar';
+import ResultsPanel from './components/results-panel';
 import HomeTopBar from '../_home/components/topbar';
 import { EditorProvider } from './context';
 import RequireAuth from '../login/protected';
@@ -25,6 +26,7 @@ export default function editor() {
 								<Monaco />
 							</div>
 							<SubmitBar />
+							<ResultsPanel />
 							<div className="h-2/5 min-h-0 border-t border-line">
 								<TestCasesPanel />
 							</div>
