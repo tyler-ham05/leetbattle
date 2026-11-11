@@ -14,6 +14,7 @@ export default function ResultsPanel() {
 			<p>Passed: {submitResult.passed} / {submitResult.total}</p>
 			{submitResult.case !== null && <p>Input: {submitResult.case}</p>}
 			{submitResult.expected !== null && <p>Expected: {submitResult.expected}</p>}
+			{submitResult.response !== null && <p>Your output: {submitResult.response}</p>}
 		</div>
 	);
 }

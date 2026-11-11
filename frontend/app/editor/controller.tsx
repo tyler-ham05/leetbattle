@@ -74,7 +74,7 @@ export interface SubmitResult {
     total: number;
     case: string | null;
     expected: string | null;
-    response: unknown;
+    response: string | null;
 }
 
 export class APIService {
