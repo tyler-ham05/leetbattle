@@ -338,8 +338,104 @@ button.lb-wheel-item { cursor: pointer; }
   transform: rotate(var(--rot));
 }
 
+/* The top bar's home link is marked with an underline on keyboard focus, not a box. */
+.lb-home-link:focus-visible { outline: none; }
+
+/* =========================================================
+   PAGE LOADERS (app/_shared/page-loader.tsx)
+   Each one covers the page, plays once, then reveals it.
+   The total times must match LOADER_MS in page-loader.tsx.
+   ========================================================= */
+
+@keyframes lb-show { to { opacity: 1; } }
+@keyframes lb-hide { to { opacity: 0; } }
+
+/* Katana (home), about 2.3s. The cut runs from 70% down the left edge to 30% down
+   the right. The word stays whole until the blade passes so no seam shows early. */
+@keyframes lb-k-word-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes lb-k-streak { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+@keyframes lb-k-slip-top { to { transform: translate(5px, -6px); } }
+@keyframes lb-k-slip-bottom { to { transform: translate(-5px, 6px); } }
+@keyframes lb-k-part-top { to { transform: translate(25vw, -10vh); opacity: 0; } }
+@keyframes lb-k-part-bottom { to { transform: translate(-25vw, 10vh); opacity: 0; } }
+.lb-k-backdrop, .lb-k-halves, .lb-k-part, .lb-k-slip, .lb-k-piece, .lb-k-whole { position: absolute; inset: 0; }
+/* A strip that lies exactly on the cut, whatever the screen size. */
+.lb-k-line {
+  position: absolute; left: 0; top: 70%;
+  width: hypot(100vw, 40vh);
+  transform-origin: left center;
+  transform: translateY(-50%) rotate(atan2(-40vh, 100vw));
+}
+.lb-k-backdrop { background: var(--lb-page); animation: lb-hide 0.35s ease forwards 1.3s; }
+.lb-k-seam { height: 24px; margin-top: 0; background: var(--lb-primary); opacity: 0; animation: lb-show 0.01s forwards 0.95s, lb-hide 0.35s ease forwards 1.3s; }
+.lb-k-halves { opacity: 0; animation: lb-show 0.01s forwards 0.95s; }
+.lb-k-whole { display: flex; align-items: center; justify-content: center; background: var(--lb-page); animation: lb-hide 0.01s forwards 0.95s; }
+.lb-k-piece { display: flex; align-items: center; justify-content: center; background: var(--lb-page); }
+.lb-k-top { clip-path: polygon(0 0, 100% 0, 100% 30%, 0 70%); }
+.lb-k-bottom { clip-path: polygon(0 70%, 100% 30%, 100% 100%, 0 100%); }
+.lb-k-slip-top { animation: lb-k-slip-top 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.95s; }
+.lb-k-slip-bottom { animation: lb-k-slip-bottom 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.95s; }
+.lb-k-part { will-change: transform, opacity; }
+.lb-k-part-top { animation: lb-k-part-top 1s cubic-bezier(0.6, 0, 0.25, 1) forwards 1.25s; }
+.lb-k-part-bottom { animation: lb-k-part-bottom 1s cubic-bezier(0.6, 0, 0.25, 1) forwards 1.25s; }
+.lb-k-word { font-size: clamp(64px, 12vw, 168px); font-weight: 900; letter-spacing: -0.05em; line-height: 1; }
+.lb-k-word-in { animation: lb-k-word-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both 0.1s; }
+.lb-k-track { height: 3px; overflow: hidden; }
+.lb-k-blade {
+  width: 40%; height: 100%;
+  background: linear-gradient(90deg, transparent, var(--lb-ink) 70%);
+  transform: translateX(-100%);
+  will-change: transform;
+  animation: lb-k-streak 0.34s cubic-bezier(0.45, 0, 0.2, 1) forwards 0.78s;
+}
+
+/* Team clash (lobby), about 2.7s. */
+@keyframes lb-c-left { 0% { transform: translateX(-100%); } 30%, 78% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+@keyframes lb-c-right { 0% { transform: translateX(100%); } 30%, 78% { transform: translateX(0); } 100% { transform: translateX(100%); } }
+@keyframes lb-c-shake { 0%, 100% { transform: none; } 25% { transform: translate(-6px, 3px); } 50% { transform: translate(5px, -3px); } 75% { transform: translate(-3px, 2px); } }
+@keyframes lb-c-vs { from { opacity: 0; transform: translate(-50%, -50%) scale(2.2); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+.lb-c-backdrop { position: absolute; inset: 0; background: var(--lb-page); animation: lb-hide 0.01s forwards 0.9s; }
+.lb-c-stage { position: absolute; inset: 0; animation: lb-c-shake 0.25s ease 0.66s; }
+.lb-c-panel { position: absolute; inset: 0; }
+.lb-c-left {
+  clip-path: polygon(0 0, 56% 0, 44% 100%, 0 100%);
+  background: color-mix(in oklab, var(--lb-primary) 16%, var(--lb-page));
+  transform: translateX(-100%);
+  animation: lb-c-left 2.6s cubic-bezier(0.7, 0, 0.2, 1) forwards 0.1s;
+}
+.lb-c-right {
+  clip-path: polygon(56% 0, 100% 0, 100% 100%, 44% 100%);
+  background: color-mix(in oklab, var(--lb-secondary) 16%, var(--lb-page));
+  transform: translateX(100%);
+  animation: lb-c-right 2.6s cubic-bezier(0.7, 0, 0.2, 1) forwards 0.1s;
+}
+.lb-c-word { font-size: clamp(64px, 9vw, 120px); font-weight: 900; letter-spacing: -0.05em; line-height: 0.95; }
+.lb-c-vs {
+  position: absolute; left: 50%; top: 50%;
+  padding: 14px 22px; border: 2px solid var(--lb-ink); border-radius: 14px;
+  background: var(--lb-page);
+  font-size: 44px; font-weight: 900; letter-spacing: -0.02em;
+  opacity: 0;
+  animation: lb-c-vs 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.66s, lb-hide 0.25s ease forwards 2.05s;
+}
+
+/* Pen-tip wipe (practice, sign in, settings), about 1.3s. */
+@keyframes lb-p-out { to { opacity: 0; transform: translateY(-12px); } }
+.lb-p-cover {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--lb-page);
+  animation: lb-p-out 0.35s ease forwards 0.95s;
+}
+.lb-p-word { clip-path: inset(0 100% 0 0); animation: lb-wipe 0.7s cubic-bezier(0.6, 0.05, 0.4, 0.95) forwards 0.1s; }
+.lb-p-tip {
+  position: absolute; top: -8%; height: 116%; width: 3px; border-radius: 2px;
+  background: var(--lb-primary);
+  animation: lb-tip 0.7s cubic-bezier(0.6, 0.05, 0.4, 0.95) forwards 0.1s;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .lb-intro { display: none; }
+  .lb-intro, .lb-loader { display: none; }
   .lb-reveal, .lb-tick, .lb-pop { opacity: 1; animation: none; }
   .lb-type { clip-path: none; animation: none; }
   .lb-cue, .lb-count, .lb-caret { animation: none; }

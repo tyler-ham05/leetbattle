@@ -41,7 +41,6 @@ export default function HomeWheel({ position, onStep }: { position: number; onSt
 		const label = (
 			<>
 				<span className="text-[clamp(36px,5vw,64px)] font-extrabold leading-[1.1] tracking-[-0.04em]">{option.title}</span>
-				<span className="font-mono text-[15px] font-semibold text-muted">{String(wrap(k) + 1).padStart(2, '0')}</span>
 			</>
 		);
 		slots.push(offset === 0 || distance === 1 ? (

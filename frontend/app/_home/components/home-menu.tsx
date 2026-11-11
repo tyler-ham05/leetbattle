@@ -22,7 +22,6 @@ export default function HomeMenu({ selected, onSelect }: { selected: number; onS
 						className="lb-menu-row lb-rise-in flex flex-1 items-center gap-3.5 rounded-[14px] border border-line bg-surface px-[18px] py-4"
 						style={{ '--d': `${0.1 + i * 0.08}s` } as CSSProperties}
 					>
-						<span className="font-mono text-xs font-semibold text-primary">{String(i + 1).padStart(2, '0')}</span>
 						<span className="flex min-w-0 flex-1 flex-col gap-0.5">
 							<span className="lb-menu-title text-xl font-extrabold leading-tight tracking-[-0.02em]">{option.title}</span>
 							<span className="text-[13px] text-muted">{option.description}</span>
