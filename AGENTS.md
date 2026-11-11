@@ -45,6 +45,7 @@ Every change should follow **failing test first -> implement -> verify**. A pers
   -service/CodeService/test
 2. Convert the user written pseudocode into thoroughly commented tests that capture the desired behaviour and watch them **fail**.
 3. Implement the **minumum** code to make them pass.
+4. Tests should include only one expect or assert clause per test.
 
 Never write implementation before a corresponding failing test exists. When addressing bugs, reproduce it with a failing test first. 
 

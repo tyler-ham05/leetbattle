@@ -16,5 +16,8 @@ services:
       - ./AuthService/sql/databases.sql:/docker-entrypoint-initdb.d/06-auth-service-databases.sql
       - ./AuthService/sql/schema.sql:/docker-entrypoint-initdb.d/07-auth-service-schema.sql
       - ./AuthService/sql/data.sql:/docker-entrypoint-initdb.d/08-auth-service-data.sql
+      - ./GameService/sql/databases.sql:/docker-entrypoint-initdb.d/09-game-service-databases.sql
+      - ./GameService/sql/schema.sql:/docker-entrypoint-initdb.d/10-game-service-schema.sql
+      - ./GameService/sql/data.sql:/docker-entrypoint-initdb.d/11-game-service-data.sql
 volumes:
   postgres-data:
