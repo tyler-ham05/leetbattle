@@ -14,6 +14,8 @@
 
  // Players should only be able to ready up when the lobby is full
  //  - Attempting to ready up before both teams are filled should return a "lobby-not-ready" error
+ //  - When six players have joined but one has not chosen a team, attempting to ready up should return a "lobby-not-ready" error
+ //  - When six players fill both teams but one is disconnected, attempting to ready up should return a "lobby-not-ready" error
 
  // Lobby should start a countdown when all players are ready
  //  - When all six players are ready, a countdown should be broadcast to connected clients

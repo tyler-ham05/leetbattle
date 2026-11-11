@@ -58,12 +58,14 @@ function expectNoEvent(socket: Socket, event: string, waitMs: number): Promise<v
 	});
 }
 
-async function createFullLobby(prefix: string): Promise<Socket[]> {
+// Six players join the lobby. The first `teamedPlayers` of them pick a team
+// (indexes 0-2 join Team 1, 3-5 join Team 2); the rest stay without a team.
+async function createFullLobby(prefix: string, teamedPlayers = 6): Promise<Socket[]> {
 	const clients = await Promise.all(Array.from({ length: 6 }, (_, index) => connectUser(`${prefix}-${index}`)));
 	for (const [index, client] of clients.entries()) {
 		await emitAndWaitForState(client, 'lobby:join', undefined, (state) => state.playerCount === index + 1);
 	}
-	for (const [index, client] of clients.entries()) {
+	for (const [index, client] of clients.slice(0, teamedPlayers).entries()) {
 		const team: 'a' | 'b' = index < 3 ? 'a' : 'b';
 		const userId = `${prefix}-${index}`;
 		await emitAndWaitForState(client, 'lobby:join-team', team, (state) => state.players.find((player) => player.userId === userId)?.team === team);
@@ -180,6 +182,34 @@ describe('LobbyService socket lifecycle', () => {
 
 		const error = nextEvent<{ code: string }>(client, 'lobby:error');
 		client.emit('lobby:set-ready', true);
+		expect(await error).toMatchObject({ code: 'lobby-not-ready' });
+	});
+
+	it('US-1-T-1 rejects ready-up when six players have joined but a team is not full', async () => {
+		// All six seats are taken, but only five players picked a team, so Team 2 has two players.
+		const clients = await createFullLobby('US-1-T-1-teamless', 5);
+
+		// A player on a full team tries to ready up anyway.
+		const error = nextEvent<{ code: string }>(clients[0], 'lobby:error');
+		clients[0].emit('lobby:set-ready', true);
+
+		// The server refuses because both teams must have three players.
+		expect(await error).toMatchObject({ code: 'lobby-not-ready' });
+	});
+
+	it('US-1-T-1 rejects ready-up when a player in a full lobby is disconnected', async () => {
+		// Both teams are full, then one player drops. They keep their seat during the grace period.
+		const clients = await createFullLobby('US-1-T-1-offline');
+		const offlineState = nextLobbyState(clients[0], (state) =>
+			state.players.some((player) => player.userId === 'US-1-T-1-offline-5' && !player.connected));
+		clients[5].disconnect();
+		await offlineState;
+
+		// A connected player tries to ready up while their teammate is offline.
+		const error = nextEvent<{ code: string }>(clients[0], 'lobby:error');
+		clients[0].emit('lobby:set-ready', true);
+
+		// The server refuses because every player must be connected.
 		expect(await error).toMatchObject({ code: 'lobby-not-ready' });
 	});
 
