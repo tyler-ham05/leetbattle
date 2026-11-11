@@ -44,6 +44,33 @@ function nextLobbyState(socket: Socket, predicate: (_state: LobbySnapshot) => bo
 	});
 }
 
+function expectNoEvent(socket: Socket, event: string, waitMs: number): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const timeout = setTimeout(() => {
+			socket.off(event, onEvent);
+			resolve();
+		}, waitMs);
+		const onEvent = () => {
+			clearTimeout(timeout);
+			reject(new Error(`Unexpectedly received ${event}`));
+		};
+		socket.once(event, onEvent);
+	});
+}
+
+async function createFullLobby(prefix: string): Promise<Socket[]> {
+	const clients = await Promise.all(Array.from({ length: 6 }, (_, index) => connectUser(`${prefix}-${index}`)));
+	for (const [index, client] of clients.entries()) {
+		await emitAndWaitForState(client, 'lobby:join', undefined, (state) => state.playerCount === index + 1);
+	}
+	for (const [index, client] of clients.entries()) {
+		const team: 'a' | 'b' = index < 3 ? 'a' : 'b';
+		const userId = `${prefix}-${index}`;
+		await emitAndWaitForState(client, 'lobby:join-team', team, (state) => state.players.find((player) => player.userId === userId)?.team === team);
+	}
+	return clients;
+}
+
 async function connectUser(userId: string, options: { invalidToken?: boolean } = {}): Promise<Socket> {
 	const token = options.invalidToken ? 'invalid-token' : await tokenFor(userId);
 	const client = io(socketUrl, {
@@ -107,7 +134,7 @@ describe('LobbyService socket lifecycle', () => {
 		expect(await fullError).toMatchObject({ code: 'lobby-full' });
 	});
 
-	it('enforces team capacity and emits a ready roster without owning match creation', async () => {
+	it('US-1-T-1 enforces team capacity, broadcasts the countdown, and emits a ready roster', async () => {
 		const clients = await Promise.all(Array.from({ length: 6 }, (_, index) => connectUser(`teams-${index}`)));
 		for (const [index, client] of clients.entries()) {
 			await emitAndWaitForState(client, 'lobby:join', undefined, (state) => state.playerCount === index + 1);
@@ -125,16 +152,66 @@ describe('LobbyService socket lifecycle', () => {
 		clients[3].emit('lobby:join-team', 'a');
 		expect(await fullTeamError).toMatchObject({ code: 'team-full' });
 
-		const readinessEvents = Promise.all(clients.map((client) => nextEvent<{ lobbyId: string; players: { userId: string }[] }>(client, 'lobby:ready-for-match', 7_000)));
-		for (const [index, client] of clients.entries()) {
+		// An authenticated client can observe the lobby without taking one of its seats.
+		const observer = await connectUser('teams-observer');
+		const lobbyClients = [...clients, observer];
+		const readinessEvents = Promise.all(lobbyClients.map((client) => nextEvent<{ lobbyId: string; players: { userId: string }[] }>(client, 'lobby:ready-for-match', 7_000)));
+		for (const [index, client] of clients.slice(0, 5).entries()) {
 			await emitAndWaitForState(client, 'lobby:set-ready', true, (state) => state.readyCount === index + 1);
 		}
+		const countdownStates = Promise.all(lobbyClients.map((client) => nextLobbyState(client, (state) =>
+			typeof (state as LobbySnapshot & { countdownSecondsRemaining?: number | null }).countdownSecondsRemaining === 'number')));
+		await emitAndWaitForState(clients[5], 'lobby:set-ready', true, (state) => state.readyCount === 6);
+		const statesDuringCountdown = await countdownStates;
+		expect(statesDuringCountdown.every((state) => {
+			const seconds = (state as LobbySnapshot & { countdownSecondsRemaining?: number | null }).countdownSecondsRemaining;
+			return typeof seconds === 'number' && seconds > 0 && seconds <= 5;
+		})).toBe(true);
 		const events = await readinessEvents;
 		expect(events.every((event) => event.lobbyId === 'main' && event.players.length === 6)).toBe(true);
 		expect(new Set(events.flatMap((event) => event.players.map((player) => player.userId))).size).toBe(6);
-		expect(clients.every((client) => client.connected)).toBe(true);
+		expect(lobbyClients.every((client) => client.connected)).toBe(true);
 		expect(lobbyService.lobby.snapshot().readyToStart).toBe(true);
+	}, 12_000);
+
+	it('US-1-T-1 rejects ready-up until all six players fill both teams', async () => {
+		const client = await connectUser('US-1-T-1-incomplete');
+		await emitAndWaitForState(client, 'lobby:join');
+
+		const error = nextEvent<{ code: string }>(client, 'lobby:error');
+		client.emit('lobby:set-ready', true);
+		expect(await error).toMatchObject({ code: 'lobby-not-ready' });
 	});
+
+	it('US-1-T-1 cancels the countdown when a player becomes unready', async () => {
+		const clients = await createFullLobby('US-1-T-1-unready');
+		const observer = await connectUser('US-1-T-1-unready-observer');
+		const lobbyClients = [...clients, observer];
+		for (const client of clients.slice(0, 5)) await emitAndWaitForState(client, 'lobby:set-ready', true);
+		const noMatchStart = expectNoEvent(clients[0], 'lobby:ready-for-match', 5_200);
+		await emitAndWaitForState(clients[5], 'lobby:set-ready', true);
+
+		const updatedStates = Promise.all(lobbyClients.map((client) => nextLobbyState(client, (state) =>
+			state.readyCount === 5
+			&& (state as LobbySnapshot & { countdownSecondsRemaining?: number | null }).countdownSecondsRemaining === null)));
+		await emitAndWaitForState(clients[0], 'lobby:set-ready', false);
+		const states = await updatedStates;
+		expect(states.every((state) => state.readyCount === 5
+			&& (state as LobbySnapshot & { countdownSecondsRemaining?: number | null }).countdownSecondsRemaining === null)).toBe(true);
+		await noMatchStart;
+	}, 8_000);
+
+	it('US-1-T-1 cancels the countdown when a player disconnects', async () => {
+		const clients = await createFullLobby('US-1-T-1-disconnect');
+		for (const client of clients) await emitAndWaitForState(client, 'lobby:set-ready', true);
+		const noMatchStart = expectNoEvent(clients[0], 'lobby:ready-for-match', 5_200);
+		const disconnectedState = nextLobbyState(clients[0], (state) =>
+			state.players.some((player) => player.userId === 'US-1-T-1-disconnect-5' && !player.connected)
+			&& (state as LobbySnapshot & { countdownSecondsRemaining?: number | null }).countdownSecondsRemaining === null);
+		clients[5].disconnect();
+		expect((await disconnectedState).readyCount).toBe(5);
+		await noMatchStart;
+	}, 8_000);
 
 	it('allows a player to switch teams when the destination has space', async () => {
 		const clients = await Promise.all(Array.from({ length: 3 }, (_, index) => connectUser(`switch-${index}`)));
