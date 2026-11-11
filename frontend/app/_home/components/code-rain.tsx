@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, type CSSProperties } from 'react';
+import { prefersReducedMotion } from '../../_shared/motion';
 
 // Pieces of solutions that fall behind the home menu.
 const SNIPPETS = [
@@ -39,12 +40,6 @@ const DROPS = SNIPPETS.map((text) => {
 		delay: -rand() * duration,
 	};
 });
-
-function prefersReducedMotion() {
-	return typeof window !== 'undefined'
-		&& typeof window.matchMedia === 'function'
-		&& window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
 
 export default function CodeRain() {
 	// Start animated (what the server renders), then honour the user's setting.
