@@ -3,7 +3,7 @@ import QuestionPanel from './components/question-panel';
 import TestCasesPanel from './components/test-cases-panel';
 import SubmitBar from './components/submit-bar';
 import ResultsPanel from './components/results-panel';
-import TopBar from './components/top-bar';
+import HomeTopBar from '../_home/components/topbar';
 import { EditorProvider } from './context';
 import RequireAuth from '../login/protected';
 import PageLoader from '../_shared/page-loader';
