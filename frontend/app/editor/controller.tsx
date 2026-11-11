@@ -72,7 +72,7 @@ export interface SubmitResult {
     verdict: string;
     passed: number;
     total: number;
-    case: unknown;
+    case: string | null;
     response: unknown;
 }
 
