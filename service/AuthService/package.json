@@ -28,7 +28,7 @@
     "@types/node": "^22.7.5",
     "@types/pg": "^8.11.10",
     "@types/supertest": "^6.0.3",
-    "@vitest/coverage-v8": "^5.0.5",
+    "@vitest/coverage-v8": "^4.1.12",
     "eslint": "^10.13.0",
     "globals": "^17.13.0",
     "jscpd": "^5.4.2",
@@ -36,6 +36,11 @@
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.72.0",
-    "vitest": "^5.0.5"
+    "vitest": "^4.1.12"
+  },
+  "optionalDependencies": {
+    "@rolldown/binding-darwin-arm64": "~1.2.14",
+    "@rolldown/binding-darwin-x64": "~1.2.14",
+    "@rolldown/binding-linux-x64-gnu": "~1.2.14"
   }
 }

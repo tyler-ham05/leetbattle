@@ -3,6 +3,8 @@
 Frontend Structure: docs/frontend/frontend.md
 Frontend theming: docs/frontend/theming.md
 Backend Service: docs/service/services.md
+s
+
 
 # Stack:
 - Node.js 20 (node:20-alpine)
@@ -36,7 +38,7 @@ Backend Service: docs/service/services.md
 
 
 # TDD is mandatory
-Every change should follow **failing test first -> implement -> verify**. A person **must** write the tests. Frontend tests must not touch backend services.
+Every change should follow **failing test first -> implement -> verify**. A person **must** write the tests. Frontend tests must not touch backend services. Every test should only have one expect statement.
 1. The tests will be written in pseudocode under the following directories respectively
   -frontend/test
   -service/AuthService/test
@@ -64,6 +66,7 @@ Run this command individually for frontend and service
 # Invariants
 ## Codebase Invariants
 1. Do not change linting rules
+2. Adhere to the rules stated by copy_paste_function
 
 
 

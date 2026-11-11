@@ -5,6 +5,7 @@ import type { FormEvent } from 'react';
 import RequireAuth from '../login/protected';
 import { useAuth } from '../login/context';
 import HomeTopBar from '../_home/components/topbar';
+import PageLoader from '../_shared/page-loader';
 import { useLobbySocket } from './socket-context';
 import type { TeamId } from './socket-context';
 
@@ -46,6 +47,7 @@ function LobbyContent() {
 
 	return (
 		<div className="flex min-h-screen flex-col bg-page font-sans text-ink">
+			<PageLoader variant="clash" />
 			<HomeTopBar />
 			<main className="flex-1 px-5 py-10 sm:px-8">
 				<div className="mx-auto max-w-[1180px]">
