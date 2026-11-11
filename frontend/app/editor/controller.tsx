@@ -73,6 +73,7 @@ export interface SubmitResult {
     passed: number;
     total: number;
     case: string | null;
+    expected: string | null;
     response: unknown;
 }
 
