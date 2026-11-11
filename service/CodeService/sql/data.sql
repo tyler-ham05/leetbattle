@@ -50,4 +50,13 @@ INSERT INTO problems (
   'from typing import List, Optional, Dict, Tuple\nimport math\nimport heapq\nimport collections\nfrom collections import defaultdict, Counter, deque\n\nclass Solution:\n    def maxProfit(self, prices: List[int]) -> int:\n',
   'def check(candidate):\n    assert candidate(prices = [7,1,5,3,6,4]) == 5\n    assert candidate(prices = [7,6,4,3,1]) == 0'
 )
-ON CONFLICT (task_id) DO NOTHING;
+ON CONFLICT (task_id) DO UPDATE SET
+  question_id = EXCLUDED.question_id,
+  difficulty = EXCLUDED.difficulty,
+  tags = EXCLUDED.tags,
+  problem_description = EXCLUDED.problem_description,
+  starter_code = EXCLUDED.starter_code,
+  entry_point = EXCLUDED.entry_point,
+  input_output = EXCLUDED.input_output,
+  prompt = EXCLUDED.prompt,
+  test = EXCLUDED.test;
