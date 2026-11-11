@@ -434,3 +434,31 @@ it('US-4-T-2 shows "Your output: 2" after a failed Submit', async () => {
 	// appears, which is the failure expected until the user's output is displayed.
 	expect(await screen.findByText('Your output: 2')).toBeTruthy();
 });
+
+// Pseudocode: "The page shows one verdict for each test case in its respective Case 1, Case 2, Case 3 tabs."
+it('US-4-T-2 shows each Case tab its own verdict after Run', async () => {
+	// Arrange: serve the 3 problems, and make the judge answer Run with a list of two verdicts that
+	// DIFFER: item 1 (Case 1) is Accepted and item 2 (Case 2) is Wrong Answer. Run is
+	// POST /solution (no question id) and returns one { verdict, expected, response } per case.
+	// If the page showed the first item's verdict on every tab, Case 2 would not show "Wrong Answer".
+	stubFetch((url) => {
+		if (url === `${CODE_URL}/solution`) {
+			return jsonResponse([
+				{ verdict: 'Accepted', expected: '1', response: '1' },
+				{ verdict: 'Wrong Answer', expected: '2', response: '3' },
+			]);
+		}
+		return jsonResponse(threeProblems);
+	});
+	render(<EditorPage />);
+	await screen.findByRole('heading', { name: /1\. Problem Number 1/ });
+
+	// Act: click Run, then select the Case 2 tab.
+	await userEvent.click(screen.getByRole('button', { name: 'Run' }));
+	await userEvent.click(screen.getByRole('button', { name: 'Case 2' }));
+
+	// Assert (one expect): Case 2's own verdict is shown.
+	// `findByText` waits for it and throws "Unable to find an element with the text" if it never
+	// appears, which is the failure expected until Run results are displayed in the Case tabs.
+	expect(await screen.findByText('Wrong Answer')).toBeTruthy();
+});
