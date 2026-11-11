@@ -376,3 +376,32 @@ it('US-4-T-2 shows "Input: [1]" after a failed Submit', async () => {
 	// appears, which is the failure expected until the failing test case is displayed.
 	expect(await screen.findByText('Input: [1]')).toBeTruthy();
 });
+
+// Pseudocode: "After a failed Submit the page shows the expected value"
+it('US-4-T-2 shows "Expected: 1" after a failed Submit', async () => {
+	// Arrange: serve the 3 problems, and make the judge answer Wrong Answer for question 1
+	// with the expected value `expected: '1'`. The response has every field CodeService returns.
+	stubFetch((url) => {
+		if (url === `${CODE_URL}/solution/1`) {
+			return jsonResponse({
+				verdict: 'Wrong Answer',
+				passed: 1,
+				total: 3,
+				case: '[1]',
+				expected: '1',
+				response: '2',
+			});
+		}
+		return jsonResponse(threeProblems);
+	});
+	render(<EditorPage />);
+	await screen.findByRole('heading', { name: /1\. Problem Number 1/ });
+
+	// Act: click Submit.
+	await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+
+	// Assert (one expect): the expected value is shown as "Expected: <expected>".
+	// `findByText` waits for it and throws "Unable to find an element with the text" if it never
+	// appears, which is the failure expected until the expected value is displayed.
+	expect(await screen.findByText('Expected: 1')).toBeTruthy();
+});
