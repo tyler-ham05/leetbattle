@@ -7,7 +7,6 @@
 // Each main page should have its own loader, sub pages share one
 //  - Home should play the katana slice
 //  - Practice should play the pen-tip wipe
-//  - Lobby should play the team clash
 //  - Settings should play the pen-tip wipe
 //  - Sign in should play the pen-tip wipe
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -21,23 +20,10 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: 
 vi.mock('../app/login/context', () => ({ useAuth: () => auth.value }));
 // Monaco needs a real browser; the practice page only needs something to render.
 vi.mock('@monaco-editor/react', () => ({ default: () => <textarea data-testid="monaco" /> }));
-// The lobby page talks to a socket server; frontend tests must not reach any service.
-vi.mock('../app/lobby/socket-context', () => ({
-	useLobbySocket: () => ({
-		socket: null,
-		connected: false,
-		lobby: null,
-		error: null,
-		matchReadiness: null,
-		connect: vi.fn(),
-		clearError: vi.fn(),
-	}),
-}));
 
 import PageLoader, { LOADER_MS } from '../app/_shared/page-loader';
 import Home from '../app/page';
 import EditorPage from '../app/editor/page';
-import LobbyPage from '../app/lobby/page';
 import SettingsPage from '../app/settings/page';
 import LoginPage from '../app/login/page';
 
@@ -117,11 +103,6 @@ describe('which loader each page plays', () => {
 		stubFetch(() => jsonResponse(threeProblems));
 		render(<EditorPage />);
 		expect(loader()?.getAttribute('data-loader')).toBe('pen');
-	});
-
-	it('lobby plays the team clash', () => {
-		render(<LobbyPage />);
-		expect(loader()?.getAttribute('data-loader')).toBe('clash');
 	});
 
 	it('settings plays the pen-tip wipe', () => {

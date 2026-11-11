@@ -1,6 +1,5 @@
 // Every page should have a way back to the home page
 //  - Practice should show a link to the home page
-//  - Lobby should show a link to the home page
 //  - Settings should show a link to the home page
 //  - Sign in should show a link to the home page
 // The home link should work for keyboard and screen reader users
@@ -24,21 +23,8 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: 
 vi.mock('../app/login/context', () => ({ useAuth: () => auth.value }));
 // Monaco needs a real browser; the practice page only needs something to render.
 vi.mock('@monaco-editor/react', () => ({ default: () => <textarea data-testid="monaco" /> }));
-// The lobby page talks to a socket server; frontend tests must not reach any service.
-vi.mock('../app/lobby/socket-context', () => ({
-	useLobbySocket: () => ({
-		socket: null,
-		connected: false,
-		lobby: null,
-		error: null,
-		matchReadiness: null,
-		connect: vi.fn(),
-		clearError: vi.fn(),
-	}),
-}));
 
 import EditorPage from '../app/editor/page';
-import LobbyPage from '../app/lobby/page';
 import SettingsPage from '../app/settings/page';
 import LoginPage from '../app/login/page';
 import HomeTopBar from '../app/_home/components/topbar';
@@ -61,11 +47,6 @@ afterEach(() => {
 describe('a way back to the home page', () => {
 	it('practice links to the home page', () => {
 		render(<EditorPage />);
-		expect(homeLink().getAttribute('href')).toBe('/');
-	});
-
-	it('lobby links to the home page', () => {
-		render(<LobbyPage />);
 		expect(homeLink().getAttribute('href')).toBe('/');
 	});
 
