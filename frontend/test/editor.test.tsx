@@ -347,3 +347,32 @@ it('US-4-T-2 shows "Passed: 1 / 3" between the editor and the Case tabs after a 
 	const beforeTabs = passed.compareDocumentPosition(firstCaseTab) & Node.DOCUMENT_POSITION_FOLLOWING;
 	expect(Boolean(afterEditor && beforeTabs)).toBe(true);
 });
+
+// Pseudocode: "After a failed Submit the page shows the test case that failed"
+it('US-4-T-2 shows "Input: [1]" after a failed Submit', async () => {
+	// Arrange: serve the 3 problems, and make the judge answer Wrong Answer for question 1
+	// with the failing test case `case: '[1]'`. The response has every field CodeService returns.
+	stubFetch((url) => {
+		if (url === `${CODE_URL}/solution/1`) {
+			return jsonResponse({
+				verdict: 'Wrong Answer',
+				passed: 1,
+				total: 3,
+				case: '[1]',
+				expected: '1',
+				response: '2',
+			});
+		}
+		return jsonResponse(threeProblems);
+	});
+	render(<EditorPage />);
+	await screen.findByRole('heading', { name: /1\. Problem Number 1/ });
+
+	// Act: click Submit.
+	await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+
+	// Assert (one expect): the failing test case is shown as "Input: <case>".
+	// `findByText` waits for it and throws "Unable to find an element with the text" if it never
+	// appears, which is the failure expected until the failing test case is displayed.
+	expect(await screen.findByText('Input: [1]')).toBeTruthy();
+});
