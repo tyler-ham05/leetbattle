@@ -2,16 +2,18 @@ import Monaco from './components/monaco';
 import QuestionPanel from './components/question-panel';
 import TestCasesPanel from './components/test-cases-panel';
 import SubmitBar from './components/submit-bar';
-import TopBar from './components/top-bar';
+import HomeTopBar from '../_home/components/topbar';
 import { EditorProvider } from './context';
 import RequireAuth from '../login/protected';
+import PageLoader from '../_shared/page-loader';
 
 export default function editor() {
 	return (
 		<RequireAuth>
 			<EditorProvider>
 				<div>
-					<TopBar/>
+					<PageLoader variant="pen" />
+					<HomeTopBar />
 					<div className="flex h-screen bg-page font-sans">
 
 						<div className="w-1/2 border-r border-line">

@@ -2,6 +2,8 @@
 import { useRouter } from 'next/navigation';
 import { SubmitEvent, useEffect, useState } from 'react';
 import { useAuth } from './context';
+import PageLoader from '../_shared/page-loader';
+import HomeTopBar from '../_home/components/topbar';
 import { AuthCard, AuthField, AuthMessage, AuthSubmitButton } from './components/components';
 
 type Mode = 'login' | 'signup';
@@ -45,50 +47,54 @@ export default function LoginPage() {
 	}
 
 	return (
-		<AuthCard title={mode === 'signup' ? 'Sign up' : 'Log in'}>
-			<form onSubmit={onSubmit} className="flex flex-col gap-4">
-				{mode === 'signup' && (
+		<>
+			<PageLoader variant="pen" />
+			<HomeTopBar />
+			<AuthCard title={mode === 'signup' ? 'Sign up' : 'Log in'}>
+				<form onSubmit={onSubmit} className="flex flex-col gap-4">
+					{mode === 'signup' && (
+						<AuthField
+							label="Name"
+							type="text"
+							required
+							value={name}
+							onChange={(e) => setName(e.target.value)}
+						/>
+					)}
 					<AuthField
-						label="Name"
-						type="text"
+						label="Email"
+						type="email"
 						required
-						value={name}
-						onChange={(e) => setName(e.target.value)}
+						value={email}
+						onChange={(e) => setEmail(e.target.value)}
 					/>
-				)}
-				<AuthField
-					label="Email"
-					type="email"
-					required
-					value={email}
-					onChange={(e) => setEmail(e.target.value)}
-				/>
-				<AuthField
-					label="Password"
-					type="password"
-					required
-					minLength={mode === 'signup' ? 8 : undefined}
-					value={password}
-					onChange={(e) => setPassword(e.target.value)}
-				/>
+					<AuthField
+						label="Password"
+						type="password"
+						required
+						minLength={mode === 'signup' ? 8 : undefined}
+						value={password}
+						onChange={(e) => setPassword(e.target.value)}
+					/>
 
-				<AuthMessage status={error ? { type: 'error', text: error } : null} />
+					<AuthMessage status={error ? { type: 'error', text: error } : null} />
 
-				<AuthSubmitButton pending={isSubmitting} pendingLabel={mode === 'signup' ? 'Signing up…' : 'Logging in…'}>
-					{mode === 'signup' ? 'Sign up' : 'Log in'}
-				</AuthSubmitButton>
+					<AuthSubmitButton pending={isSubmitting} pendingLabel={mode === 'signup' ? 'Signing up…' : 'Logging in…'}>
+						{mode === 'signup' ? 'Sign up' : 'Log in'}
+					</AuthSubmitButton>
 
-				<button
-					type="button"
-					onClick={() => {
-						setError(null);
-						setMode(mode === 'signup' ? 'login' : 'signup');
-					}}
-					className="text-sm underline"
-				>
-					{mode === 'signup' ? 'Already have an account?' : 'Need an account?'}
-				</button>
-			</form>
-		</AuthCard>
+					<button
+						type="button"
+						onClick={() => {
+							setError(null);
+							setMode(mode === 'signup' ? 'login' : 'signup');
+						}}
+						className="text-sm underline"
+					>
+						{mode === 'signup' ? 'Already have an account?' : 'Need an account?'}
+					</button>
+				</form>
+			</AuthCard>
+		</>
 	);
 }
