@@ -9,8 +9,9 @@ export default function ResultsPanel() {
 	}
 
 	return (
-		<div className="border-b border-line px-4 py-2 text-sm font-medium text-ink">
-			{submitResult.verdict}
+		<div className="border-b border-line px-4 py-2 text-sm text-ink">
+			<p className="font-medium">{submitResult.verdict}</p>
+			<p>Passed: {submitResult.passed} / {submitResult.total}</p>
 		</div>
 	);
 }

@@ -71,6 +71,7 @@ export interface RunResult {
 export interface SubmitResult {
     verdict: string;
     passed: number;
+    total: number;
     case: unknown;
     response: unknown;
 }
