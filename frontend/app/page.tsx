@@ -2,7 +2,7 @@
 import { useAuth } from './login/context';
 import LandingPage from './_landing/landing-page';
 import HomeActions from './_home/components/home-actions';
-import HomeTopBar from './_home/components/topbar';
+import UserMenu from './_home/components/user-menu';
 import PageLoader from './_shared/page-loader';
 
 export default function Home() {
@@ -14,12 +14,12 @@ export default function Home() {
 
 	if (user) {
 		return (
-			<div className="flex flex-1 flex-col">
+			<div className="relative flex flex-1 flex-col">
 				<PageLoader variant="katana" />
-				<HomeTopBar />
-				<div className="flex flex-1 items-center justify-center">
-					<HomeActions />
+				<div className="absolute top-3 right-4 z-10">
+					<UserMenu />
 				</div>
+				<HomeActions />
 			</div>
 		);
 	}

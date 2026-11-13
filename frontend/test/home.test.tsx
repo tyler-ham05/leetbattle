@@ -5,22 +5,25 @@
 //  - Clicking the settings link closes the dropdown
 //  - Nothing is rendered when there's no logged-in user (!user)
 //  - Falls back to showing the email when user.name is null
-// Home screen should show a picker wheel with Practice, Lobby and Settings
-//  - Practice should be selected when the page opens
-//  - Next and Previous buttons should move the selection, looping around at the ends
-//  - Clicking an option on the wheel should select it
-//  - Scrolling over the wheel should move the selection
-//  - An Open button under the wheel should link to the selected option's page
-// Home screen should show a list of the same options under the wheel
-//  - Each option should show its title and a one-line description
+// Home screen should look like a game title screen, over the falling code
+//  - LeetBattle should be the page heading
+//  - The signed-in player's name should show above the title
+//  - The menu should list Practice, Lobby and Settings, each with a one-line description
 //  - Practice should link to the editor page, Lobby to the lobby page, Settings to the settings page
-//  - Hovering or focusing an option in the list should select it on the wheel
+//  - Practice should be selected when the page opens
+//  - Hovering an option should select it
+//  - Focusing an option with the keyboard should select it
+//  - Arrow down should select the next option and move keyboard focus to it
+//  - Arrow up from the first option should wrap around to Log out
+//  - Enter, with nothing focused, should open the selected option
+//  - Log out should sign the player out
+//  - Keyboard hints for selecting and opening should be shown
 // Home screen should show falling code snippets in the background
 //  - The background should be hidden from screen readers
 //  - The background should not animate when the user has reduced motion turned on
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { fakeUser } from './helpers';
 
@@ -131,84 +134,39 @@ describe('home screen user profile', () => {
 	});
 });
 
-describe('home screen picker wheel', () => {
-	// The Open button under the wheel is named after the selected option, so it
-	// tells us which option is selected and where it will go.
-	const openLink = () => screen.getByRole('link', { name: /^Open / });
-
-	beforeEach(() => {
-		stubReducedMotion(false);
-	});
-
-	it('selects Practice when the page opens', () => {
-		render(<HomeActions />);
-		expect(openLink().textContent).toMatch(/Open Practice/);
-	});
-
-	it('moves the selection with Next and Previous, looping around at the ends', async () => {
-		render(<HomeActions />);
-		const next = screen.getByRole('button', { name: 'Next' });
-		const previous = screen.getByRole('button', { name: 'Previous' });
-
-		await userEvent.click(next);
-		expect(openLink().textContent).toMatch(/Open Lobby/);
-		await userEvent.click(next);
-		expect(openLink().textContent).toMatch(/Open Settings/);
-		// Past the last option, the wheel loops back to the first.
-		await userEvent.click(next);
-		expect(openLink().textContent).toMatch(/Open Practice/);
-		// And before the first option, it loops to the last.
-		await userEvent.click(previous);
-		expect(openLink().textContent).toMatch(/Open Settings/);
-	});
-
-	it('selects an option when it is clicked on the wheel', async () => {
-		render(<HomeActions />);
-		await userEvent.click(screen.getByRole('button', { name: 'Show Lobby' }));
-		expect(openLink().textContent).toMatch(/Open Lobby/);
-	});
-
-	it('moves the selection when the user scrolls over the wheel', () => {
-		render(<HomeActions />);
-		fireEvent.wheel(screen.getByRole('group', { name: 'Pick a mode' }), { deltaY: 120 });
-		expect(openLink().textContent).toMatch(/Open Lobby/);
-	});
-
-	it.each([
-		['Practice', '/editor'],
-		['Lobby', '/lobby'],
-		['Settings', '/settings'],
-	])('points the Open button at the %s page', async (title, href) => {
-		render(<HomeActions />);
-		// Select the option from the list, then check where Open goes.
-		await userEvent.hover(within(screen.getByRole('list', { name: 'Menu' })).getByRole('link', { name: new RegExp(title) }));
-		expect(openLink().textContent).toMatch(new RegExp(`Open ${title}`));
-		expect(openLink().getAttribute('href')).toBe(href);
-	});
-});
-
-describe('home screen menu list', () => {
+describe('home title screen', () => {
 	const OPTIONS = [
 		{ title: 'Practice', href: '/editor' },
 		{ title: 'Lobby', href: '/lobby' },
 		{ title: 'Settings', href: '/settings' },
 	];
 	const list = () => screen.getByRole('list', { name: 'Menu' });
+	// The option marked as selected (the one Enter opens), read by its visible text.
+	const selected = () => list().querySelector('[data-selected="true"]')?.textContent ?? '';
 
 	beforeEach(() => {
 		stubReducedMotion(false);
 	});
 
+	it('shows LeetBattle as the page heading', () => {
+		render(<HomeActions />);
+		expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('LeetBattle');
+	});
+
+	it('shows the name of the signed-in player', () => {
+		render(<HomeActions />);
+		expect(screen.getByText(new RegExp(fakeUser.name as string))).toBeTruthy();
+	});
+
 	it('shows Practice, Lobby and Settings, in that order, each with a one-line description', () => {
 		render(<HomeActions />);
-		const items = within(list()).getAllByRole('listitem');
-		expect(items).toHaveLength(OPTIONS.length);
-		OPTIONS.forEach((option, i) => {
-			expect(within(items[i]).getByText(option.title)).toBeTruthy();
-			// Whatever text is left after the title is the description; it must exist.
-			const description = (items[i].textContent ?? '').replace(option.title, '').replace(/\d+/, '').trim();
-			expect(description.length).toBeGreaterThan(0);
+		// Each row reads "<title><description>": keep the title only if a description follows it.
+		const rows = within(list()).getAllByRole('link').map((link) => {
+			const option = OPTIONS.find((o) => link.textContent?.startsWith(o.title));
+			const description = (link.textContent ?? '').slice(option?.title.length ?? 0).trim();
+			return description ? option?.title : 'no description';
 		});
+		expect(rows).toEqual(['Practice', 'Lobby', 'Settings']);
 	});
 
 	it.each(OPTIONS)('links $title to $href', ({ title, href }) => {
@@ -216,17 +174,55 @@ describe('home screen menu list', () => {
 		expect(within(list()).getByRole('link', { name: new RegExp(title) }).getAttribute('href')).toBe(href);
 	});
 
-	it('selects an option on the wheel when it is hovered in the list', async () => {
+	it('selects Practice when the page opens', () => {
 		render(<HomeActions />);
-		await userEvent.hover(within(list()).getByRole('link', { name: /Settings/ }));
-		expect(screen.getByRole('link', { name: /^Open / }).textContent).toMatch(/Open Settings/);
+		expect(selected()).toMatch(/^Practice/);
 	});
 
-	it('selects an option on the wheel when it gets keyboard focus in the list', () => {
+	it('selects an option when it is hovered', async () => {
+		render(<HomeActions />);
+		await userEvent.hover(within(list()).getByRole('link', { name: /Settings/ }));
+		expect(selected()).toMatch(/^Settings/);
+	});
+
+	it('selects an option when it gets keyboard focus', () => {
 		render(<HomeActions />);
 		// act() lets React handle the focus event before we check the result.
 		act(() => within(list()).getByRole('link', { name: /Lobby/ }).focus());
-		expect(screen.getByRole('link', { name: /^Open / }).textContent).toMatch(/Open Lobby/);
+		expect(selected()).toMatch(/^Lobby/);
+	});
+
+	it('moves keyboard focus to the next option on arrow down', async () => {
+		render(<HomeActions />);
+		await userEvent.keyboard('{ArrowDown}');
+		expect(document.activeElement?.textContent).toMatch(/^Lobby/);
+	});
+
+	it('wraps around to Log out on arrow up from the first option', async () => {
+		render(<HomeActions />);
+		await userEvent.keyboard('{ArrowUp}');
+		expect(selected()).toBe('Log out');
+	});
+
+	it('opens the selected option on Enter when nothing is focused', async () => {
+		render(<HomeActions />);
+		await userEvent.hover(within(list()).getByRole('link', { name: /Lobby/ }));
+		await userEvent.unhover(within(list()).getByRole('link', { name: /Lobby/ }));
+		// Nothing has keyboard focus, so Enter should open whatever is selected.
+		(document.activeElement as HTMLElement | null)?.blur();
+		await userEvent.keyboard('{Enter}');
+		expect(push).toHaveBeenCalledWith('/lobby');
+	});
+
+	it('signs the player out from Log out', async () => {
+		render(<HomeActions />);
+		await userEvent.click(within(list()).getByRole('button', { name: 'Log out' }));
+		expect(logout).toHaveBeenCalled();
+	});
+
+	it('shows keyboard hints for selecting and opening', () => {
+		render(<HomeActions />);
+		expect(screen.getByText('Select')).toBeTruthy();
 	});
 });
 
