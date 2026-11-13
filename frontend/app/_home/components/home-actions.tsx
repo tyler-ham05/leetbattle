@@ -1,47 +1,114 @@
 'use client';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useAuth } from '../../login/context';
 import CodeRain from './code-rain';
-import HomeMenu, { MENU } from './home-menu';
-import HomeWheel, { wrap } from './home-wheel';
 
-// Signed-in home screen: a picker wheel of the menu options, an Open button for
-// the selected one, and the same options as a list underneath, all over a
-// background of falling code.
+export const MENU = [
+	{ title: 'Practice', description: 'Three random problems in the editor', href: '/editor' },
+	{ title: 'Lobby', description: 'Join a six-player lobby and pick a team', href: '/lobby' },
+	{ title: 'Settings', description: 'Name, password and color theme', href: '/settings' },
+];
+
+// The rows of the menu: the three pages, then Log out at the bottom.
+const ROWS = MENU.length + 1;
+const LOG_OUT = MENU.length;
+
+// Signed-in home screen, styled like a game title screen: the player's name,
+// a big LeetBattle title and a stacked menu, over the falling code.
+// Hover, Tab or the arrow keys pick a row; Enter opens it.
 export default function HomeActions() {
-	// Steps the wheel has turned, unwrapped (see HomeWheel). The selected option is wrap(position).
-	const [position, setPosition] = useState(0);
-	const selected = wrap(position);
-	const current = MENU[selected];
+	const { user, logout } = useAuth();
+	const router = useRouter();
+	const [selected, setSelected] = useState(0);
+	const selectedRef = useRef(0);
+	const rows = useRef<(HTMLElement | null)[]>([]);
 
-	// Selecting from the list turns the wheel the short way round.
-	const selectIndex = (index: number) => {
-		let steps = index - selected;
-		if (steps > MENU.length / 2) {
-			steps -= MENU.length;
-		} else if (steps < -MENU.length / 2) {
-			steps += MENU.length;
-		}
-		setPosition((p) => p + steps);
+	const select = (index: number) => {
+		selectedRef.current = index;
+		setSelected(index);
 	};
 
+	const onLogout = async () => {
+		await logout();
+		router.push('/');
+	};
+
+	useEffect(() => {
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+				e.preventDefault();
+				const next = (selectedRef.current + (e.key === 'ArrowDown' ? 1 : -1) + ROWS) % ROWS;
+				selectedRef.current = next;
+				setSelected(next);
+				rows.current[next]?.focus();
+			}
+			// A focused row opens itself; with nothing focused, Enter opens the selected row.
+			const nothingFocused = !document.activeElement || document.activeElement === document.body;
+			if (e.key === 'Enter' && nothingFocused) {
+				if (selectedRef.current === LOG_OUT) {
+					void onLogout();
+				} else {
+					router.push(MENU[selectedRef.current].href);
+				}
+			}
+		};
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
+	});
+
 	return (
-		<div className="relative w-full flex-1 self-stretch overflow-hidden">
+		<div className="relative flex w-full flex-1 self-stretch overflow-hidden">
 			<CodeRain />
-			<div className="relative mx-auto flex max-w-[1180px] flex-col gap-10 px-6 pt-12 pb-14 sm:px-8">
-				<HomeWheel position={position} onStep={(steps) => setPosition((p) => p + steps)} />
-				<div className="-mt-4 flex justify-center">
-					<Link
-						href={current.href}
-						className="inline-flex h-[50px] items-center gap-2.5 rounded-[14px] bg-primary px-6 text-[15px] font-bold text-on-primary hover:opacity-90"
-					>
-						Open {current.title}
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-							<path d="M5 12h14M13 6l6 6-6 6" />
-						</svg>
-					</Link>
-				</div>
-				<HomeMenu selected={selected} onSelect={selectIndex} />
+			<div aria-hidden="true" className="lb-title-fade pointer-events-none absolute inset-0" />
+			<div className="relative flex flex-1 flex-col justify-center px-[clamp(24px,8vw,110px)] py-16">
+				<p className="lb-rise-in m-0 font-mono text-[13px] font-semibold uppercase tracking-[0.2em] text-primary" style={{ '--d': '0.05s' } as CSSProperties}>
+					Player · {user?.name ?? user?.email}
+				</p>
+				<h1 className="lb-rise-in mt-3.5 mb-0 text-[clamp(56px,8vw,96px)] font-black leading-[0.9] tracking-[-0.055em]" style={{ '--d': '0.1s' } as CSSProperties}>
+					Leet<span className="text-primary">Battle</span>
+				</h1>
+				<ul aria-label="Menu" className="mt-14 mb-0 flex list-none flex-col gap-0.5 p-0">
+					{MENU.map((option, i) => (
+						<li key={option.title}>
+							<Link
+								ref={(el) => {
+									rows.current[i] = el;
+								}}
+								href={option.href}
+								data-selected={i === selected}
+								onMouseEnter={() => select(i)}
+								onFocus={() => select(i)}
+								className="lb-title-row lb-rise-in"
+								style={{ '--d': `${0.25 + i * 0.07}s` } as CSSProperties}
+							>
+								<span>{option.title}</span>
+								<span className="lb-title-desc">{option.description}</span>
+							</Link>
+						</li>
+					))}
+					<li>
+						<button
+							ref={(el) => {
+								rows.current[LOG_OUT] = el;
+							}}
+							type="button"
+							data-selected={selected === LOG_OUT}
+							onMouseEnter={() => select(LOG_OUT)}
+							onFocus={() => select(LOG_OUT)}
+							onClick={onLogout}
+							className="lb-title-row lb-title-row-small lb-rise-in"
+							style={{ '--d': `${0.25 + LOG_OUT * 0.07}s` } as CSSProperties}
+						>
+							Log out
+						</button>
+					</li>
+				</ul>
+			</div>
+			<div className="absolute bottom-11 left-[clamp(24px,8vw,110px)] hidden items-center gap-5 text-[13px] text-muted sm:flex">
+				<span className="flex items-center gap-2"><kbd className="lb-key">↑</kbd><kbd className="lb-key">↓</kbd><span>Select</span></span>
+				<span className="flex items-center gap-2"><kbd className="lb-key">Enter</kbd><span>Open</span></span>
 			</div>
 		</div>
 	);

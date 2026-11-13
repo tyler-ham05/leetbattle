@@ -290,40 +290,59 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
   animation: lb-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards var(--d, 0s);
 }
 
-/* Picker wheel: options sit on a drum that turns sideways. --off is how many
-   steps an option is from the selected one; JS sets --scale and opacity. */
-.lb-wheel { perspective: 900px; --wheel-gap: clamp(230px, 23vw, 330px); }
-.lb-wheel-item {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  white-space: nowrap;
-  transform:
-    translate(-50%, -50%)
-    translateX(calc(var(--off) * var(--wheel-gap)))
-    rotateY(calc(clamp(-3, var(--off), 3) * -38deg))
-    scale(var(--scale));
-  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.45s ease, color 0.3s ease;
+/* Title-screen menu: dim rows; the selected one turns bright with a green marker and its description. */
+.lb-title-fade {
+  background: linear-gradient(to right,
+    color-mix(in oklab, var(--lb-page) 92%, transparent) 0%,
+    color-mix(in oklab, var(--lb-page) 60%, transparent) 40%,
+    transparent 70%);
 }
-button.lb-wheel-item { cursor: pointer; }
-
-/* List under the wheel: the selected option is outlined, tinted and green. */
-.lb-menu-title { transition: color 0.2s ease; }
-.lb-menu-row { transition: border-color 0.2s ease, background-color 0.2s ease; }
-.lb-menu-arrow {
+.lb-title-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: clamp(40px, 5.5vw, 64px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.12;
+  color: color-mix(in oklab, var(--lb-muted) 60%, var(--lb-page));
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.lb-title-row::before {
+  content: '▸';
+  flex: none;
+  width: clamp(20px, 2.4vw, 28px);
+  font-size: clamp(16px, 2vw, 24px);
+  color: var(--lb-primary);
   opacity: 0;
   transform: translateX(-8px);
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
-.lb-menu-row[data-selected="true"] {
-  border-color: var(--lb-primary);
-  background: color-mix(in srgb, var(--lb-primary) 8%, var(--lb-surface));
+.lb-title-row[data-selected="true"] { color: var(--lb-ink); }
+.lb-title-row[data-selected="true"]::before { opacity: 1; transform: none; }
+.lb-title-row:focus-visible { outline: none; text-decoration: underline; text-decoration-color: var(--lb-primary); text-decoration-thickness: 3px; text-underline-offset: 8px; }
+.lb-title-row-small { margin-top: 6px; font-size: clamp(22px, 2.4vw, 30px); }
+.lb-title-desc {
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--lb-muted);
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
-.lb-menu-row[data-selected="true"] .lb-menu-title { color: var(--lb-primary); }
-.lb-menu-row[data-selected="true"] .lb-menu-arrow { opacity: 1; transform: none; }
+.lb-title-row[data-selected="true"] .lb-title-desc { opacity: 1; }
+@media (max-width: 640px) { .lb-title-desc { display: none; } }
+.lb-key {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 26px; height: 26px; padding: 0 6px;
+  border: 1px solid var(--lb-line); border-radius: 6px;
+  font: 600 12px var(--font-jetbrains), ui-monospace, monospace; color: var(--lb-ink);
+}
 
 /* Home background: code snippets fall at their own angle (--rot) and drift sideways (--dx). */
 @keyframes lb-fall {
@@ -440,5 +459,5 @@ button.lb-wheel-item { cursor: pointer; }
   .lb-type { clip-path: none; animation: none; }
   .lb-cue, .lb-count, .lb-caret { animation: none; }
   .lb-rise-in { opacity: 1; animation: none; }
-  .lb-wheel-item, .lb-menu-row, .lb-menu-arrow { transition: none; }
+  .lb-title-row, .lb-title-row::before, .lb-title-desc { transition: none; }
 }

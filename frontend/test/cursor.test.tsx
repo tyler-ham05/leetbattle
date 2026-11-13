@@ -4,8 +4,6 @@
 //  - A snippet far from the cursor should stay where it is
 //  - Snippets should not react to the cursor when reduced motion is on
 // The home menu should not show option numbers (01, 02, 03)
-//  - The wheel should not show option numbers
-//  - The list should not show option numbers
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { fakeUser } from './helpers';
@@ -91,12 +89,7 @@ describe('background snippets react to the cursor', () => {
 });
 
 describe('home menu without option numbers', () => {
-	it('does not show numbers on the wheel', () => {
-		render(<HomeActions />);
-		expect(screen.getByRole('group', { name: 'Pick a mode' }).textContent).not.toMatch(/0[1-3]/);
-	});
-
-	it('does not show numbers in the list', () => {
+	it('does not show option numbers', () => {
 		render(<HomeActions />);
 		expect(screen.getByRole('list', { name: 'Menu' }).textContent).not.toMatch(/0[1-3]/);
 	});

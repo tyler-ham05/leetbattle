@@ -32,8 +32,8 @@ const DROPS = SNIPPETS.map((text) => {
 		color: COLORS[Math.floor(rand() * COLORS.length)],
 		left: rand() * 94,
 		top: rand() * 90, // only used when motion is off, to spread the snippets out
-		size: Math.round(12 + rand() * 16),
-		opacity: 0.05 + rand() * 0.06,
+		size: Math.round(14 + rand() * 22),
+		opacity: 0.1 + rand() * 0.16,
 		angle,
 		drift: Math.round(-Math.tan((angle * Math.PI) / 180) * 520),
 		duration,
