@@ -9,7 +9,7 @@ Backend Service: docs/service/services.md
 # Stack:
 - Node.js 20 (node:20-alpine)
 - PostgreSQL 18 (postgres:18-alpine)
-- Next.js 16.4.2
+- Next.js 16.4.6
 - React / React DOM 19.3.0
 - @monaco-editor/react 4.7.0 (monaco-editor 0.57.0)
 - Tailwind CSS 4.3.3
