@@ -11,9 +11,11 @@ import userEvent from '@testing-library/user-event';
 const banMocks = vi.hoisted(() => ({
 	useBan: vi.fn(),
 	ban: vi.fn(),
+	// The router's push, so tests can see where the player was sent.
+	push: vi.fn(),
 }));
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: banMocks.push, replace: vi.fn() }) }));
 // The signed-in player is u1, "Ada", on Team 1.
 vi.mock('../app/login/context', () => ({
 	useAuth: () => ({ user: { id: 'u1', name: 'Ada', email: 'ada@example.test' }, isLoading: false }),
@@ -224,5 +226,65 @@ describe('ban count', () => {
 
 		// Alan and Edsger are the Team 2 players who banned.
 		expect(container.querySelectorAll('[data-seat="b"]')).toHaveLength(2);
+	});
+});
+
+// Issue #95: the ban screen flow.
+const GEORGE: TestBanner = { userId: 'u6', displayName: 'George', team: 'b' };
+const HOPPER: TestBanner = { userId: 'u3', displayName: 'Hopper', team: 'a' };
+
+// Five players have banned; Ada is one of them.
+const fiveBans = withBans({
+	'two-sum': ADA,
+	'valid-palindrome': GRACE,
+	'number-of-islands': EDSGER,
+	'maximum-depth-of-binary-tree': ALAN,
+	'assign-cookies': HOPPER,
+});
+// Every player has banned.
+const sixBans = withBans({
+	'two-sum': ADA,
+	'valid-palindrome': GRACE,
+	'number-of-islands': EDSGER,
+	'maximum-depth-of-binary-tree': ALAN,
+	'assign-cookies': HOPPER,
+	'reverse-linked-list': GEORGE,
+});
+
+describe('Issue95 ban flow', () => {
+	it('Issue95 shows "Banned by you" on a sample question after the player clicks "Ban this question"', async () => {
+		// Use the real provider (sample questions, local state) instead of the fake.
+		// The file's mocked auth context signs in Ada (u1, the same id as fakeUser).
+		const actual = await vi.importActual<typeof import('../app/ban/context')>('../app/ban/context');
+		banMocks.useBan.mockImplementation(actual.useBan);
+		const user = userEvent.setup();
+		render(<actual.BanProvider><BanPage /></actual.BanProvider>);
+
+		await user.click(screen.getAllByRole('button', { name: /Ban this question/ })[0]);
+
+		// Ada is the signed-in player, so her own ban reads "you".
+		expect(questionCard(1).textContent).toContain('Banned by you');
+	});
+
+	it('Issue95 shows "All bans are in" when six players have banned', () => {
+		configureBan(sixBans);
+		render(<BanPage />);
+
+		expect(screen.getByRole('status').textContent).toContain('All bans are in');
+	});
+
+	it('Issue95 sends the player to the editor when six players have banned', () => {
+		configureBan(sixBans);
+		render(<BanPage />);
+
+		expect(banMocks.push).toHaveBeenCalledWith('/editor');
+	});
+
+	it('Issue95 does not send the player to the editor when five players have banned', () => {
+		configureBan(fiveBans);
+		render(<BanPage />);
+
+		// One ban is still missing, so the player stays on the ban screen.
+		expect(banMocks.push).not.toHaveBeenCalled();
 	});
 });

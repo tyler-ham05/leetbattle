@@ -27,3 +27,13 @@
  //  - When three players have banned, "3 of 6 bans made" should be displayed
  //  - The screen should always display six ban markers
  //  - When two Team 2 players have banned, two ban markers should be marked for Team 2
+
+// Issue #95: ban screen flow (still no backend: sample questions, the editor move is a mocked router)
+
+ // A ban should show up on the sample questions
+ //  - With the sample questions, clicking "Ban this question" should display "Banned by you"
+
+ // When every ban is in, the match should move on to the editor
+ //  - When six players have banned, "All bans are in" should be displayed
+ //  - When six players have banned, the player should be sent to the editor
+ //  - When five players have banned, the player should not be sent to the editor
