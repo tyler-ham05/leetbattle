@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import RequireAuth from '../login/protected';
 import { useAuth } from '../login/context';
 import HomeTopBar from '../_home/components/topbar';
@@ -40,6 +42,7 @@ function QuestionTopics({ position, question }: { position: number; question: Ba
 function BanContent() {
 	const { user } = useAuth();
 	const { questions, ban } = useBan();
+	const router = useRouter();
 
 	const banners = questions.flatMap((question) => (question.bannedBy ? [question.bannedBy] : []));
 	const hasBanned = banners.some((banner) => banner.userId === user?.id);
@@ -49,6 +52,11 @@ function BanContent() {
 		...banners.filter((banner) => banner.team === 'b').map(() => 'b'),
 		...Array<string>(TOTAL_BANS).fill('empty'),
 	].slice(0, TOTAL_BANS);
+
+	const allBansIn = banners.length >= TOTAL_BANS;
+	useEffect(() => {
+		if (allBansIn) router.push('/editor');
+	}, [allBansIn, router]);
 
 	return (
 		<div className="flex min-h-screen flex-col bg-page font-sans text-ink">
@@ -68,7 +76,7 @@ function BanContent() {
 							<span className="text-sm font-semibold">{banners.length} of {TOTAL_BANS} bans made</span>
 						</div>
 						<p role="status" aria-live="polite" className="text-sm text-muted">
-							{hasBanned ? 'Your ban is in. Waiting for the other players.' : 'You have 1 ban left. Choose a question to remove.'}
+							{allBansIn ? 'All bans are in' : hasBanned ? 'Your ban is in. Waiting for the other players.' : 'You have 1 ban left. Choose a question to remove.'}
 						</p>
 					</div>
 

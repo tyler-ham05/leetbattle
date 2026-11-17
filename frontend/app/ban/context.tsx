@@ -1,9 +1,11 @@
 // The questions and bans for the ban screen.
-// UI only for now: the questions are sample data and `ban` does nothing. Once
-// GameService has its websocket, this provider is where the live state comes
-// in (questions and bans from the server) and where `ban` sends the request.
+// UI only for now: the questions are sample data and `ban` only updates local
+// state. Once GameService has its websocket, this provider is where the live
+// state comes in (questions and bans from the server) and the local update in
+// `ban` is the spot that becomes the request to the server.
 'use client';
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
+import { useAuth } from '../login/context';
 
 export type TeamId = 'a' | 'b';
 
@@ -41,10 +43,20 @@ const SAMPLE_QUESTIONS: BanQuestion[] = SAMPLE_TOPICS.map((topics, i) => ({
 const BanContext = createContext<BanContextValue | null>(null);
 
 export function BanProvider({ children }: { children: ReactNode }) {
-	// Not implemented yet: banning waits for the GameService websocket.
-	const ban = () => undefined;
+	const { user } = useAuth();
+	const [questions, setQuestions] = useState(SAMPLE_QUESTIONS);
 
-	return <BanContext.Provider value={{ questions: SAMPLE_QUESTIONS, ban }}>{children}</BanContext.Provider>;
+	const ban = (questionId: string) => {
+		if (!user) return;
+		setQuestions((current) => {
+			if (current.find((question) => question.id === questionId)?.bannedBy) return current;
+			// Team 'a' is a sample value: the real team comes from the server.
+			const bannedBy = { userId: user.id, displayName: user.name, team: 'a' as TeamId };
+			return current.map((question) => (question.id === questionId ? { ...question, bannedBy } : question));
+		});
+	};
+
+	return <BanContext.Provider value={{ questions, ban }}>{children}</BanContext.Provider>;
 }
 
 export function useBan(): BanContextValue {
