@@ -168,6 +168,22 @@ async function waitForServerSockets(count: number): Promise<void> {
 	}
 }
 
+// Connects `userId` to `gameIdToJoin` and resolves with the chat:history the
+// server sends them on connect. Listens before connecting, because the
+// history is sent as soon as the player joins, before their first game:state.
+async function joinAndGetHistory(userId: string, gameIdToJoin = gameId): Promise<ChatMessage[]> {
+	const socket = io(socketUrl(), {
+		autoConnect: false,
+		reconnection: false,
+		transports: ['websocket'],
+		auth: { token: await tokenFor(userId), gameId: gameIdToJoin },
+	});
+	clients.push(socket);
+	const history = nextEvent<ChatMessage[]>(socket, 'chat:history');
+	socket.connect();
+	return history;
+}
+
 // A second fresh 3v3 game, running at the same time as the test's game, with
 // every player connected. Its sockets are in roster order like `sockets`.
 async function secondGame(): Promise<{ gameId: string; players: ReadyPlayer[]; sockets: Socket[] }> {
@@ -456,5 +472,24 @@ describe('old team chat cleanup', () => {
 		await endGameByForfeit();
 		const { rows } = await pool.query('SELECT id FROM team_messages WHERE id = $1', [id]);
 		expect(rows).toEqual([{ id }]);
+	});
+});
+
+describe('team chat history', () => {
+	it('US-3-T-3 sends a reconnecting player chat:history with both messages their teammates sent', async () => {
+		// Players 0 and 1 (team a) each send a message; wait until player 2 has both.
+		const first = nextEvent<ChatMessage>(sockets[2], 'chat:message');
+		sockets[0].emit('chat:send', { text: 'first' });
+		await first;
+		const second = nextEvent<ChatMessage>(sockets[2], 'chat:message');
+		sockets[1].emit('chat:send', { text: 'second' });
+		await second;
+
+		// Player 2 drops and reconnects.
+		sockets[2].disconnect();
+		const history = await joinAndGetHistory(players[2].userId);
+
+		// Sorted so this only checks both are there; the next test checks the order.
+		expect(history.map((message) => message.text).sort()).toEqual(['first', 'second']);
 	});
 });
