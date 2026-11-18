@@ -67,7 +67,11 @@ export function ChatProvider({
 	// GameService sends each team message (the player's own included) as `chat:message`.
 	useEffect(() => {
 		if (!socket) return;
-		const onMessage = (message: ChatMessage) => setMessages((current) => [...current, message]);
+		// Skips a message already on screen (same id), e.g. one the history
+		// already included, so it is never shown twice.
+		const onMessage = (message: ChatMessage) => setMessages((current) => (
+			current.some((shown) => shown.id === message.id) ? current : [...current, message]
+		));
 		socket.on('chat:message', onMessage);
 		return () => {
 			socket.off('chat:message', onMessage);
