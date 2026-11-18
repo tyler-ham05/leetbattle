@@ -572,4 +572,17 @@ describe('team chat history', () => {
 
 		expect(history).toEqual([]);
 	});
+
+	it('US-3-T-3 does not include a rate-limited chat:send in chat:history', async () => {
+		// The first message is accepted; the second, sent straight after, is rate limited.
+		const first = nextEvent<ChatMessage>(sockets[2], 'chat:message');
+		sockets[0].emit('chat:send', { text: 'first' });
+		await first;
+		await sockets[0].timeout(2_000).emitWithAck('chat:send', { text: 'too soon' });
+
+		sockets[2].disconnect();
+		const history = await joinAndGetHistory(players[2].userId);
+
+		expect(history.map((message) => message.text)).toEqual(['first']);
+	});
 });
