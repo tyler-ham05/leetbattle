@@ -520,4 +520,21 @@ describe('team chat history', () => {
 		// Same id, userId, displayName, team, text and sentAt as the live message.
 		expect(history).toEqual([sentOut]);
 	});
+
+	it('US-3-T-3 does not include the other team\'s messages in chat:history', async () => {
+		// Player 0 (team a) and player 3 (team b) each send a message to their own team.
+		const teamA = nextEvent<ChatMessage>(sockets[2], 'chat:message');
+		sockets[0].emit('chat:send', { text: 'team a message' });
+		await teamA;
+		const teamB = nextEvent<ChatMessage>(sockets[4], 'chat:message');
+		sockets[3].emit('chat:send', { text: 'team b message' });
+		await teamB;
+
+		// Player 2 (team a) reconnects.
+		sockets[2].disconnect();
+		const history = await joinAndGetHistory(players[2].userId);
+
+		// Only team a's message; team b's never reaches team a.
+		expect(history.map((message) => message.text)).toEqual(['team a message']);
+	});
 });
