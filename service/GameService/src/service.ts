@@ -26,6 +26,16 @@ const startGameBodySchema = z.object({
 
 export type TeamId = 'a' | 'b';
 
+// One accepted team chat message, as sent on `chat:message` and `chat:history`.
+export interface TeamChatMessage {
+	id: string;
+	userId: string;
+	displayName: string;
+	team: TeamId;
+	text: string;
+	sentAt: string;
+}
+
 // One problem in a match's pool. game_problems saves only the task_id; the
 // question_id is what CodeService's GET /problem/:questionId looks it up by,
 // so the game page can load the full problem from the pool alone. topics are
@@ -92,6 +102,9 @@ export interface GameState {
 	// When each player's last team chat message was accepted (see `chat:send`
 	// in src/server.ts), so a player can send at most one message per second.
 	lastChatAt: Map<string, number>; // userId -> Date.now()
+	// Every accepted team chat message so far, per team, oldest first. Sent as
+	// `chat:history` to a player who joins or reconnects (see src/server.ts).
+	chat: Record<TeamId, TeamChatMessage[]>;
 	// Server-side timers driving the match - all owned by src/server.ts.
 	timers: {
 		join?: NodeJS.Timeout; // ends the join wait
@@ -259,6 +272,7 @@ export async function createGame(req: Request, res: Response, next: NextFunction
 			submitting: { a: false, b: false },
 			cooldownUntil: { a: 0, b: 0 },
 			lastChatAt: new Map(),
+			chat: { a: [], b: [] },
 			timers: { leave: new Map() },
 		};
 		games.set(gameId, game);
