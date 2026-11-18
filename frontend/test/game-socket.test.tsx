@@ -15,6 +15,8 @@
 //  - A received "game:code" event should be stored under the sending teammate's userId and questionId
 //  - On connecting, a "game:code:snapshot" of teammates' saved workspaces should be loaded into state
 //  - A later "game:code" event for the same teammate and question should replace, not merge with, the earlier one
+// US-3-T-3: Game socket context should store the team's chat history
+//  - A received "chat:history" should be exposed to the page as chatHistory
 import { useEffect, useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
@@ -62,7 +64,7 @@ const WORKSPACE = { tabs: [{ id: 'tab-1', name: 'Tab 1', code: 'print(1)' }], ac
 
 // A minimal page: joins game-1 on mount and prints what the context exposes.
 function Consumer() {
-	const { connect, game, error, result, forfeit, ban, submit, shareCode, teammateCode } = useGameSocket();
+	const { connect, game, error, result, forfeit, ban, submit, shareCode, teammateCode, chatHistory } = useGameSocket();
 	const [submitted, setSubmitted] = useState('');
 	useEffect(() => {
 		connect('game-1');
@@ -80,6 +82,7 @@ function Consumer() {
 			<span data-testid="submitted">{submitted}</span>
 			<button onClick={() => shareCode(3, WORKSPACE)}>Share</button>
 			<span data-testid="teammate-code">{JSON.stringify(teammateCode)}</span>
+			<span data-testid="chat-history">{JSON.stringify(chatHistory)}</span>
 		</div>
 	);
 }
@@ -214,5 +217,19 @@ describe('game socket context', () => {
 		act(() => fake.fire('game:code', { userId: 'u2', displayName: 'Alan', questionId: 5, workspace: laterWorkspace }));
 
 		expect(JSON.parse(screen.getByTestId('teammate-code').textContent ?? '{}')).toEqual({ u2: { 5: laterWorkspace } });
+	});
+});
+
+describe('game socket context chat history', () => {
+	it('US-3-T-3 exposes a received chat:history to the page as chatHistory', () => {
+		const history = [
+			{ id: 'm1', userId: 'u2', displayName: 'Grace', team: 'a', text: 'first', sentAt: '2026-11-17T12:00:00.000Z' },
+			{ id: 'm2', userId: 'u3', displayName: 'Katherine', team: 'a', text: 'second', sentAt: '2026-11-17T12:00:05.000Z' },
+		];
+		renderConsumer();
+
+		act(() => fake.fire('chat:history', history));
+
+		expect(JSON.parse(screen.getByTestId('chat-history').textContent ?? '[]')).toEqual(history);
 	});
 });
