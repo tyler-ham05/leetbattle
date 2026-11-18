@@ -457,4 +457,21 @@ describe('chat history in the chat panel', () => {
 
 		expect(screen.getAllByTestId('chat-text').map((text) => text.textContent)).toEqual(['Try a hash map', 'Question 1 is done']);
 	});
+
+	it('US-3-T-3 does not show messages from before reconnecting twice', () => {
+		// Before the drop: one message from the history and one that arrived live.
+		const fake = renderChatWithHistory([fromGrace]);
+		const live = { ...fromGrace, id: 'm10', text: 'Question 1 is done' };
+		act(() => fake.fire('chat:message', live));
+
+		// After reconnecting, the new history has both again, plus one sent while away.
+		const missed = { ...fromGrace, id: 'm11', text: 'Moving on to question 3' };
+		fake.view.rerender(
+			<ChatProvider socket={fake.socket as unknown as Socket} history={[fromGrace, live, missed]}>
+				<TeamChat />
+			</ChatProvider>,
+		);
+
+		expect(screen.getAllByTestId('chat-text').map((text) => text.textContent)).toEqual(['Try a hash map', 'Question 1 is done', 'Moving on to question 3']);
+	});
 });
