@@ -32,6 +32,23 @@ Out of scope: restoring chat if GameService restarts, history from other games, 
 - With no history, the panel shows "No messages yet".
 - Without a game socket (the practice editor), the panel works as before. (All tests from previous PRs should still pass)
 
+### Files touched
+- `service/GameService/src/service.ts`
+- `service/GameService/src/server.ts`
+- `frontend/app/game/socket-context.tsx`
+- `frontend/app/game/[gameId]/page.tsx`
+- `frontend/app/editor/chat-context.tsx`
+- `service/GameService/test/chat.test.ts`
+- `frontend/test/game-socket.test.tsx`
+- `frontend/test/game.test.tsx`
+- `frontend/test/chat.test.tsx`
+- `service/GameService/test/chat-test-pseudo.md`
+- `frontend/test/chat-test-pseudo.md`
+
+
+
+
+
 ## Requirements
 - History comes from the gameservice memory, not from the database. 
 - Team and game come from the authenticated socket, never from the client.
