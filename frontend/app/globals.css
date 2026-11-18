@@ -548,7 +548,8 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 
 /* US-5-T-14: landing match demo, one 12s loop. Team 1 types faster, submits,
    passes, scores 100 and wins; Team 2 fades; then it starts again. */
-.lb-demo-loop { animation-duration: 12s; animation-iteration-count: infinite; animation-timing-function: linear; }
+/* US-5-T-18: the demo plays once and holds its finished state; Replay restarts it. */
+.lb-demo-loop { animation-duration: 12s; animation-iteration-count: 1; animation-fill-mode: forwards; animation-timing-function: linear; }
 .lb-demo-line { display: block; width: 0; overflow: hidden; white-space: pre; }
 @keyframes lb-demo-l1 { 0% { width: 0; } 5%, 100% { width: 23ch; } }
 @keyframes lb-demo-l2 { 0%, 5% { width: 0; } 8%, 100% { width: 13ch; } }
@@ -560,18 +561,18 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 @keyframes lb-demo-r2 { 0%, 18% { width: 0; } 27%, 100% { width: 13ch; } }
 @keyframes lb-demo-r3 { 0%, 32% { width: 0; } 58%, 100% { width: 32ch; } }
 @keyframes lb-demo-r4 { 0%, 62% { width: 0; } 92%, 100% { width: 14ch; } }
-@keyframes lb-demo-fade { 0%, 94% { opacity: 1; } 98%, 100% { opacity: 0; } }
+@keyframes lb-demo-fade { 0%, 100% { opacity: 1; } }
 @keyframes lb-demo-press { 0%, 36% { transform: none; } 38% { transform: scale(0.92); } 41%, 100% { transform: none; } }
 @keyframes lb-demo-submit { 0%, 38% { opacity: 1; } 39%, 100% { opacity: 0; } }
 @keyframes lb-demo-running { 0%, 38% { opacity: 0; } 39%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
 @keyframes lb-demo-passed { 0%, 49% { opacity: 0; } 50%, 100% { opacity: 1; } }
-@keyframes lb-demo-t1 { 0%, 50% { opacity: 0; transform: translateY(8px); } 52%, 94% { opacity: 1; transform: none; } 98%, 100% { opacity: 0; } }
-@keyframes lb-demo-t2 { 0%, 53% { opacity: 0; transform: translateY(8px); } 55%, 94% { opacity: 1; transform: none; } 98%, 100% { opacity: 0; } }
-@keyframes lb-demo-t3 { 0%, 56% { opacity: 0; transform: translateY(8px); } 58%, 94% { opacity: 1; transform: none; } 98%, 100% { opacity: 0; } }
+@keyframes lb-demo-t1 { 0%, 50% { opacity: 0; transform: translateY(8px); } 52%, 100% { opacity: 1; transform: none; } }
+@keyframes lb-demo-t2 { 0%, 53% { opacity: 0; transform: translateY(8px); } 55%, 100% { opacity: 1; transform: none; } }
+@keyframes lb-demo-t3 { 0%, 56% { opacity: 0; transform: translateY(8px); } 58%, 100% { opacity: 1; transform: none; } }
 @keyframes lb-demo-s0 { 0%, 59% { opacity: 1; } 60%, 100% { opacity: 0; } }
-@keyframes lb-demo-s100 { 0%, 59% { opacity: 0; transform: scale(0.4); } 62% { opacity: 1; transform: scale(1.3); } 66%, 96% { opacity: 1; transform: none; } 100% { opacity: 0; } }
-@keyframes lb-demo-dim { 0%, 64% { opacity: 1; } 68%, 92% { opacity: 0.15; } 96%, 100% { opacity: 1; } }
-@keyframes lb-demo-win { 0%, 64% { opacity: 0; transform: translateY(10px); } 69%, 90% { opacity: 1; transform: none; } 94%, 100% { opacity: 0; } }
+@keyframes lb-demo-s100 { 0%, 59% { opacity: 0; transform: scale(0.4); } 62% { opacity: 1; transform: scale(1.3); } 66%, 100% { opacity: 1; transform: none; } }
+@keyframes lb-demo-dim { 0%, 64% { opacity: 1; } 68%, 100% { opacity: 0.15; } }
+@keyframes lb-demo-win { 0%, 64% { opacity: 0; transform: translateY(10px); } 69%, 100% { opacity: 1; transform: none; } }
 @keyframes lb-demo-tilt { from { opacity: 0.4; transform: perspective(1600px) rotateX(26deg) scale(0.86) translateY(40px); } to { opacity: 1; transform: none; } }
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
