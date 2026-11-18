@@ -537,4 +537,21 @@ describe('team chat history', () => {
 		// Only team a's message; team b's never reaches team a.
 		expect(history.map((message) => message.text)).toEqual(['team a message']);
 	});
+
+	it('US-3-T-3 does not include messages from another game in chat:history', async () => {
+		const other = await secondGame();
+		// Player 0 of each game (both on team a) sends a message in their own game.
+		const ours = nextEvent<ChatMessage>(sockets[2], 'chat:message');
+		sockets[0].emit('chat:send', { text: 'this game' });
+		await ours;
+		const theirs = nextEvent<ChatMessage>(other.sockets[2], 'chat:message');
+		other.sockets[0].emit('chat:send', { text: 'other game' });
+		await theirs;
+
+		// Player 2 of the test's game reconnects.
+		sockets[2].disconnect();
+		const history = await joinAndGetHistory(players[2].userId);
+
+		expect(history.map((message) => message.text)).toEqual(['this game']);
+	});
 });
