@@ -436,4 +436,10 @@ describe('chat history in the chat panel', () => {
 
 		expect(screen.getAllByTestId('chat-text').map((text) => text.textContent)).toEqual(['Try a hash map', 'Question 1 is done']);
 	});
+
+	it('US-3-T-3 shows "No messages yet" when chat:history is empty', () => {
+		renderChatWithHistory([]);
+
+		expect(screen.getByText('No messages yet')).toBeTruthy();
+	});
 });
