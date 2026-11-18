@@ -428,4 +428,12 @@ describe('chat history in the chat panel', () => {
 
 		expect(screen.queryAllByText('Try a hash map')).toHaveLength(1);
 	});
+
+	it('US-3-T-3 shows a chat:message that arrives after chat:history below the history', () => {
+		const fake = renderChatWithHistory([fromGrace]);
+
+		act(() => fake.fire('chat:message', { ...fromGrace, id: 'm10', text: 'Question 1 is done' }));
+
+		expect(screen.getAllByTestId('chat-text').map((text) => text.textContent)).toEqual(['Try a hash map', 'Question 1 is done']);
+	});
 });
