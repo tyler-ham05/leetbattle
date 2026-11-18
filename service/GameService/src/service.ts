@@ -70,9 +70,13 @@ export interface GamePlayerState {
 
 // waiting: created, waiting for players to connect (the clock hasn't started)
 // banning: every player bans one problem from the pool (the clock hasn't started)
-// playing: the 20-minute clock is running on the problems the bans left
+// picking: every player picks one of the problems the bans left (the clock hasn't started)
+// playing: the 20-minute clock is running on the problems left after banning (and picking)
 // ended:   decided; about to be torn down
-export type GamePhase = 'waiting' | 'banning' | 'playing' | 'ended';
+// US-6-T-10: a 1v1 (team size 1) skips "banning" and "picking" entirely, going
+// straight from "waiting" to "playing" on its full, un-banned pool -- there's
+// no teammate to coordinate a ban or a pick with.
+export type GamePhase = 'waiting' | 'banning' | 'picking' | 'playing' | 'ended';
 
 export interface GameState {
 	gameId: string;
@@ -85,6 +89,8 @@ export interface GameState {
 	problemPool: PoolProblem[];
 	bans: Map<string, number>; // userId -> questionId that player banned
 	banEndsAt: number | null; // Date.now() when the ban window runs out; null outside the ban phase
+	picks: Map<string, number>; // userId -> questionId that player picked (US-6-T-10)
+	pickEndsAt: number | null; // Date.now() when the pick window runs out; null outside the pick phase
 	selections: Map<string, string>; // userId -> task_id currently being worked (player_selections)
 	// Every player's last-shared editor, kept so a player who joins or
 	// reconnects mid-match can be shown their teammates' workspaces read only
@@ -109,6 +115,7 @@ export interface GameState {
 	timers: {
 		join?: NodeJS.Timeout; // ends the join wait
 		ban?: NodeJS.Timeout; // ends the ban window
+		pick?: NodeJS.Timeout; // ends the pick window
 		end?: NodeJS.Timeout; // ends the match when the clock runs out
 		leave: Map<string, NodeJS.Timeout>; // userId -> ends that player's reconnect window
 	};
@@ -142,6 +149,19 @@ function bannedBy(game: GameState, questionId: number) {
 	return null;
 }
 
+// Who on each team has picked the problem with `questionId`, as the pick
+// screen shows it (US-6-T-10). Each team picks independently from the same
+// pool left after banning, so a problem can show up to one picker per team.
+function pickedBy(game: GameState, questionId: number): Record<TeamId, { userId: string; displayName: string; team: TeamId } | null> {
+	const result: Record<TeamId, { userId: string; displayName: string; team: TeamId } | null> = { a: null, b: null };
+	for (const [userId, picked] of game.picks) {
+		if (picked !== questionId) continue;
+		const player = game.players.get(userId);
+		if (player) result[player.team] = { userId, displayName: player.displayName, team: player.team };
+	}
+	return result;
+}
+
 const secondsUntil = (time: number) => Math.max(0, Math.ceil((time - Date.now()) / 1000));
 
 // The wire form of a GameState for the `game:state` socket event: everything
@@ -153,8 +173,13 @@ export function serializeGame(game: GameState) {
 		startedAt: game.startedAt,
 		secondsRemaining: secondsUntil((game.startedAt ?? Date.now()) + GAME_DURATION_MS),
 		banSecondsRemaining: game.banEndsAt === null ? 0 : secondsUntil(game.banEndsAt),
+		pickSecondsRemaining: game.pickEndsAt === null ? 0 : secondsUntil(game.pickEndsAt),
 		scores: game.scores,
-		problemPool: game.problemPool.map((problem) => ({ ...problem, bannedBy: bannedBy(game, problem.questionId) })),
+		problemPool: game.problemPool.map((problem) => ({
+			...problem,
+			bannedBy: bannedBy(game, problem.questionId),
+			pickedBy: pickedBy(game, problem.questionId),
+		})),
 		players: [...game.players.values()],
 		forfeitVotes: { a: game.forfeitVotes.a.size, b: game.forfeitVotes.b.size },
 		solved: { a: [...game.solved.a], b: [...game.solved.b] },
@@ -170,19 +195,20 @@ class HttpError extends Error {
 	}
 }
 
-// The shared problem pool for a new match: six Easy + three Medium questions
-// from CodeService's GET /problem?difficulty=&quantity= endpoint. Both teams
-// draw from the same nine (see game_problems in sql/schema.sql).
+// The shared problem pool for a new match: 2*teamSize Easy + teamSize Medium
+// questions from CodeService's GET /problem?difficulty=&quantity= endpoint
+// (9/6/3 for a 3v3/2v2/1v1 -- US-6-T-10). Both teams draw from the same pool
+// (see game_problems in sql/schema.sql).
 // Any failure here (an error status, or CodeService not answering at all)
 // becomes a 502, since it's an upstream problem rather than a bad request.
-async function fetchProblemPool(): Promise<PoolProblem[]> {
+async function fetchProblemPool(teamSize: number): Promise<PoolProblem[]> {
 	const unavailable = new HttpError(502, 'could not load the problem pool from CodeService');
 	// The fetch Response, not Express's Response imported at the top of this file.
 	let responses: globalThis.Response[];
 	try {
 		responses = await Promise.all([
-			fetch(`${CODE_SERVICE_URL}/problem?difficulty=Easy&quantity=6`),
-			fetch(`${CODE_SERVICE_URL}/problem?difficulty=Medium&quantity=3`),
+			fetch(`${CODE_SERVICE_URL}/problem?difficulty=Easy&quantity=${teamSize * 2}`),
+			fetch(`${CODE_SERVICE_URL}/problem?difficulty=Medium&quantity=${teamSize}`),
 		]);
 	} catch {
 		throw unavailable;
@@ -244,9 +270,11 @@ export async function createGame(req: Request, res: Response, next: NextFunction
 		return next(new HttpError(400, 'players must be 2 to 6 entries split evenly across teams a and b'));
 	}
 	const { players } = body.data;
+	// Validated above to be an even split, so this is each team's size (1 to 3).
+	const teamSize = players.filter((player) => player.team === 'a').length;
 
 	try {
-		const problemPool = await fetchProblemPool();
+		const problemPool = await fetchProblemPool(teamSize);
 		const gameResult = await pool.query<{ game_id: string }>(SAVE_GAME_SQL, [
 			players.map((player) => player.userId),
 			players.map((player) => player.displayName),
@@ -264,6 +292,8 @@ export async function createGame(req: Request, res: Response, next: NextFunction
 			problemPool,
 			bans: new Map(),
 			banEndsAt: null,
+			picks: new Map(),
+			pickEndsAt: null,
 			selections: new Map(),
 			workspaces: new Map(),
 			forfeitVotes: { a: new Set(), b: new Set() },

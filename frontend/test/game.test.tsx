@@ -103,6 +103,16 @@
 //  - The "Team 1 wins" heading should still be displayed
 //  - The line explaining why the game ended should still be displayed
 //  - The "Back to lobby" link should still be displayed
+// US-6-T-12: The top bar should show the player's connected teammates next to Forfeit
+//  - During a match, the "Teammates" list in the top bar should show each connected teammate's name
+//  - The "Teammates" list should not include the signed-in player
+//  - The "Teammates" list should not include players on the other team
+//  - The "Teammates" list should not include a teammate who is disconnected
+//  - The "Teammates" list should sit to the left of the Forfeit button
+//  - While the game is waiting for players, the "Teammates" list should not be shown
+//  - While the game is banning, the "Teammates" list should not be shown
+//  - Once the game has ended, the "Teammates" list should not be shown
+//  - When every teammate is disconnected, the "Teammates" list should not be shown
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -116,6 +126,7 @@ const gameMocks = vi.hoisted(() => ({
 	clearError: vi.fn(),
 	forfeit: vi.fn(),
 	ban: vi.fn(),
+	pick: vi.fn(),
 	submit: vi.fn(),
 	shareCode: vi.fn(),
 	// socket.io-client's io(): the editor must never open a lobby socket in a match.
@@ -210,6 +221,7 @@ function configureGame(context: Record<string, unknown> = {}) {
 		clearError: gameMocks.clearError,
 		forfeit: gameMocks.forfeit,
 		ban: gameMocks.ban,
+		pick: gameMocks.pick,
 		submit: gameMocks.submit,
 		shareCode: gameMocks.shareCode,
 		teammateCode: {},
@@ -413,6 +425,99 @@ describe('game page forfeit', () => {
 		await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Forfeit' }));
 
 		expect((forfeitButton() as HTMLButtonElement).disabled).toBe(true);
+	});
+});
+
+// US-6-T-12: the signed-in user is u1 ("Ada") on Team 1, so with the default
+// roster their connected teammates are Grace (u2) and Katherine (u3); Alan,
+// Edsger and Margaret are on Team 2 and must never be listed.
+describe('game page teammates next to Forfeit', () => {
+	// The "Teammates" list, looked up inside the top bar so a teammate list
+	// anywhere else on the page can't satisfy the tests. The top bar is the
+	// first banner; the ban screen renders a <header> of its own below it.
+	function teammatesList() {
+		return within(screen.getAllByRole('banner')[0]).queryByRole('list', { name: 'Teammates' });
+	}
+
+	// The names in the "Teammates" list, in the order shown.
+	function teammateNames() {
+		const list = teammatesList();
+		return list ? within(list).getAllByRole('listitem').map((item) => (item.textContent ?? '').trim()) : [];
+	}
+
+	// The default roster with the given players marked disconnected.
+	function rosterWithDisconnected(...userIds: string[]) {
+		return roster.map((entry) => (userIds.includes(entry.userId) ? { ...entry, connected: false } : entry));
+	}
+
+	it('US-6-T-12 lists each connected teammate by name in the top bar', () => {
+		configureConnectedGame();
+		render(<GamePage />);
+
+		expect(teammateNames()).toEqual(['Grace', 'Katherine']);
+	});
+
+	it('US-6-T-12 does not list the signed-in player', () => {
+		configureConnectedGame();
+		render(<GamePage />);
+
+		expect(teammateNames()).not.toContain('Ada');
+	});
+
+	it('US-6-T-12 does not list players on the other team', () => {
+		configureConnectedGame();
+		render(<GamePage />);
+
+		// None of Team 2's players may appear.
+		expect(teammateNames().filter((name) => ['Alan', 'Edsger', 'Margaret'].includes(name))).toEqual([]);
+	});
+
+	it('US-6-T-12 does not list a disconnected teammate', () => {
+		configureConnectedGame({ players: rosterWithDisconnected('u2') });
+		render(<GamePage />);
+
+		expect(teammateNames()).not.toContain('Grace');
+	});
+
+	it('US-6-T-12 puts the teammates to the left of the Forfeit button', () => {
+		configureConnectedGame();
+		render(<GamePage />);
+
+		const list = within(screen.getAllByRole('banner')[0]).getByRole('list', { name: 'Teammates' });
+		const forfeit = screen.getByRole('button', { name: 'Forfeit' });
+		// DOCUMENT_POSITION_FOLLOWING: the Forfeit button comes after the list.
+		expect(list.compareDocumentPosition(forfeit) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+	});
+
+	it('US-6-T-12 hides the teammates while waiting for players', () => {
+		configureConnectedGame({ phase: 'waiting' });
+		render(<GamePage />);
+
+		expect(teammatesList()).toBeNull();
+	});
+
+	it('US-6-T-12 hides the teammates while banning', () => {
+		// The ban screen needs each problem's topics and ban state.
+		const banPool = problemPool.map((entry) => ({ ...entry, topics: ['Array'], bannedBy: null }));
+		configureConnectedGame({ phase: 'banning', banSecondsRemaining: 25, problemPool: banPool });
+		render(<GamePage />);
+
+		expect(teammatesList()).toBeNull();
+	});
+
+	it('US-6-T-12 hides the teammates once the game has ended', () => {
+		// Still connected and still "playing" in the last game:state, but game:ended has arrived.
+		configureGame({ socket: { connected: true, emit: vi.fn(), on: vi.fn(), off: vi.fn() }, connected: true, game: gameState(), result: { winner: 'a', reason: 'time' } });
+		render(<GamePage />);
+
+		expect(teammatesList()).toBeNull();
+	});
+
+	it('US-6-T-12 hides the teammates when every teammate is disconnected', () => {
+		configureConnectedGame({ players: rosterWithDisconnected('u2', 'u3') });
+		render(<GamePage />);
+
+		expect(teammatesList()).toBeNull();
 	});
 });
 
@@ -689,6 +794,96 @@ describe('game page during the ban phase', () => {
 	});
 });
 
+describe('game page during the pick phase', () => {
+	// The three problems left after a 3v3's bans, as GameService sends them
+	// while picking: each carries who (if anyone) on each team has picked it.
+	const pickPool = [
+		{ taskId: 'search-insert-position', questionId: 4, difficulty: 'Easy', topics: ['Binary Search'], pickedBy: { a: null, b: null } },
+		{ taskId: 'number-of-islands', questionId: 7, difficulty: 'Medium', topics: ['Graph'], pickedBy: { a: null, b: null } },
+		{ taskId: 'course-schedule', questionId: 9, difficulty: 'Medium', topics: ['Topological Sort'], pickedBy: { a: null, b: null } },
+	];
+
+	// Grace (u2, Team 1) has picked the first problem.
+	const poolWithGracePick = pickPool.map((entry) => (entry.questionId === 4
+		? { ...entry, pickedBy: { ...entry.pickedBy, a: { userId: 'u2', displayName: 'Grace', team: 'a' } } }
+		: entry));
+
+	// The page while the picks are going on, 25 seconds left to pick.
+	function configurePicking(overrides: Record<string, unknown> = {}) {
+		configureConnectedGame({ phase: 'picking', startedAt: null, pickSecondsRemaining: 25, problemPool: pickPool, ...overrides });
+	}
+
+	it('shows "Pick a question" while the game is picking', () => {
+		configurePicking();
+		render(<GamePage />);
+
+		expect(screen.getByRole('heading', { name: 'Pick a question' })).toBeTruthy();
+	});
+
+	it('hides the code editor while the game is picking', () => {
+		configurePicking();
+		render(<GamePage />);
+
+		expect(screen.queryByTestId('monaco')).toBeNull();
+	});
+
+	it('hides the Forfeit button while the game is picking', () => {
+		configurePicking();
+		render(<GamePage />);
+
+		expect(screen.queryByRole('button', { name: 'Forfeit' })).toBeNull();
+	});
+
+	it('shows the time left to pick while the game is picking', () => {
+		configurePicking();
+		render(<GamePage />);
+
+		// 25 seconds left in the pick window, shown as minutes and seconds.
+		expect(screen.getByText('0:25')).toBeTruthy();
+	});
+
+	it('does not show "Pick a question" once the game is playing', () => {
+		configureConnectedGame();
+		render(<GamePage />);
+
+		expect(screen.queryByRole('heading', { name: 'Pick a question' })).toBeNull();
+	});
+
+	it('shows each problem in the pool by its topics on the pick screen', () => {
+		configurePicking();
+		render(<GamePage />);
+
+		// Every topic of every problem, in pool order.
+		expect(screen.getAllByTestId('topic').map((topic) => topic.textContent))
+			.toEqual(pickPool.flatMap((entry) => entry.topics));
+	});
+
+	it('sends the problem\'s questionId to the game when "Pick this question" is clicked', async () => {
+		const user = userEvent.setup();
+		configurePicking();
+		render(<GamePage />);
+
+		// The second button belongs to question 2, "number-of-islands", questionId 7.
+		await user.click(screen.getAllByRole('button', { name: /Pick this question/ })[1]);
+
+		expect(gameMocks.pick).toHaveBeenCalledWith(7);
+	});
+
+	it('shows "Picked by <name>" on a problem a teammate picked', () => {
+		configurePicking({ problemPool: poolWithGracePick });
+		render(<GamePage />);
+
+		expect(screen.getByText(/Picked by/).textContent).toContain('Grace');
+	});
+
+	it('shows "1 of 3 picks made" with Ada\'s three-player team and one pick made', () => {
+		configurePicking({ problemPool: poolWithGracePick });
+		render(<GamePage />);
+
+		expect(screen.getByText('1 of 3 picks made')).toBeTruthy();
+	});
+});
+
 describe('game page editor after the bans', () => {
 	// makeProblem(1, ...) titles itself "1. Problem Number 1" once loaded.
 	async function renderPlayingGame() {
@@ -736,6 +931,19 @@ describe('game page editor after the bans', () => {
 		// The pool's question_ids are 1, 2 and 3.
 		expect(requestsOf(fetchMock).map((request) => request.url))
 			.toEqual([`${CODE_URL}/problem/1`, `${CODE_URL}/problem/2`, `${CODE_URL}/problem/3`]);
+	});
+
+	it('US-6-T-10 opens the editor on the question the player picked, not just the first in the pool', async () => {
+		stubCodeService();
+		// Ada (u1, Team 1) picked question 2 on the pick screen.
+		const pickedPool = problemPool.map((entry) => ({
+			...entry,
+			pickedBy: { a: entry.questionId === 2 ? { userId: 'u1', displayName: 'Ada', team: 'a' } : null, b: null },
+		}));
+		configureConnectedGame({ problemPool: pickedPool });
+		render(<GamePage />);
+
+		expect(await screen.findByRole('heading', { name: /2\. Problem Number 2/ })).toBeTruthy();
 	});
 
 	it('US-6-T-6 submits the current question\'s id and code to the game', async () => {

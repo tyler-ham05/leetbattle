@@ -104,7 +104,7 @@ describe('PUT /game', () => {
 		expect(res.status).toBe(400);
 	});
 
-	it('fetches the shared problem pool from CodeService as 6 easy + 3 medium questions', async () => {
+	it('fetches the shared problem pool from CodeService as 6 easy + 3 medium questions for a 3v3', async () => {
 		await request
 			.put('/game')
 			.send({ players: sixReadyPlayers() });
@@ -112,6 +112,32 @@ describe('PUT /game', () => {
 		expect(calledUrls).toEqual([
 			`${CODE_SERVICE_URL}/problem?difficulty=Easy&quantity=6`,
 			`${CODE_SERVICE_URL}/problem?difficulty=Medium&quantity=3`,
+		]);
+	});
+
+	// US-6-T-10: the pool scales with team size (2*teamSize Easy + teamSize
+	// Medium), not a fixed nine, so a 2v2 asks CodeService for a smaller pool.
+	it('fetches the shared problem pool from CodeService as 4 easy + 2 medium questions for a 2v2', async () => {
+		const roster = sixReadyPlayers().slice(0, 4).map((player, i) => ({ ...player, team: (i < 2 ? 'a' : 'b') as 'a' | 'b' }));
+		await request
+			.put('/game')
+			.send({ players: roster });
+		const calledUrls = codeServiceFetch.mock.calls.map((call) => call[0] as string);
+		expect(calledUrls).toEqual([
+			`${CODE_SERVICE_URL}/problem?difficulty=Easy&quantity=4`,
+			`${CODE_SERVICE_URL}/problem?difficulty=Medium&quantity=2`,
+		]);
+	});
+
+	it('fetches the shared problem pool from CodeService as 2 easy + 1 medium questions for a 1v1', async () => {
+		const roster = sixReadyPlayers().slice(0, 2).map((player, i) => ({ ...player, team: (i < 1 ? 'a' : 'b') as 'a' | 'b' }));
+		await request
+			.put('/game')
+			.send({ players: roster });
+		const calledUrls = codeServiceFetch.mock.calls.map((call) => call[0] as string);
+		expect(calledUrls).toEqual([
+			`${CODE_SERVICE_URL}/problem?difficulty=Easy&quantity=2`,
+			`${CODE_SERVICE_URL}/problem?difficulty=Medium&quantity=1`,
 		]);
 	});
 

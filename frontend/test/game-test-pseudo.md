@@ -166,3 +166,14 @@
  //  - The "Team 1 wins" heading should still be displayed
  //  - The line explaining why the game ended should still be displayed
  //  - The "Back to lobby" link should still be displayed
+
+ // US-6-T-12: The top bar should show the player's connected teammates next to Forfeit
+ //  - During a match, the "Teammates" list in the top bar should show each connected teammate's name
+ //  - The "Teammates" list should not include the signed-in player
+ //  - The "Teammates" list should not include players on the other team
+ //  - The "Teammates" list should not include a teammate who is disconnected
+ //  - The "Teammates" list should sit to the left of the Forfeit button
+ //  - While the game is waiting for players, the "Teammates" list should not be shown
+ //  - While the game is banning, the "Teammates" list should not be shown
+ //  - Once the game has ended, the "Teammates" list should not be shown
+ //  - When every teammate is disconnected, the "Teammates" list should not be shown

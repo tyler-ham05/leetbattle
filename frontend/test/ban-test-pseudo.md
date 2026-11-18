@@ -43,3 +43,19 @@
  // The ban screen should describe the match size
  //  - With six players, the intro should say the match is played on the three questions that are left
  //  - With two players, the intro should say the match is played on the seven questions that are left
+
+// ============================================================================
+// DRAFT (Claude, for review): US-6-T-10 changes the pool size by team size
+// (see the matching DRAFT in socket-test-pseudo.md and the new
+// pick-test-pseudo.md). This affects the fixtures above, not the ban
+// screen's own behaviour:
+//   - The nine-problem pool stops being a constant: it becomes 2*teamSize
+//     Easy + 1*teamSize Medium, so only the 3v3 case keeps nine. The mocked
+//     openProblems above (always nine) can stay as a 3v3 fixture, but a
+//     2v2 ban-screen test needs a six-problem mocked pool instead.
+//   - A 1v1 no longer reaches the ban screen at all (see
+//     pick-test-pseudo.md), so the two-player (1v1) cases above -- "shows
+//     one ban marker per player in the match" and "played on the seven
+//     questions that are left" -- should be dropped, or changed to a 2v2
+//     case instead.
+// ============================================================================

@@ -24,11 +24,11 @@ export function socketUrl(): string {
 
 beforeAll(async () => {
 	// Short timers so lifecycle tests don't wait the real 5 s join wait / 30 s
-	// reconnect window / 5 s submit cooldown / 30 s ban window (socket.test.ts
-	// relies on these values). The ban window is deliberately longer than the
-	// reconnect window, so a player can run out of time to reconnect while the
-	// bans are still going on.
-	gameServer = createGameServer(app, { joinWaitMs: 300, reconnectGraceMs: 300, submitCooldownMs: 100, banWindowMs: 1000 });
+	// reconnect window / 5 s submit cooldown / 30 s ban and pick windows
+	// (socket.test.ts relies on these values). The ban and pick windows are
+	// deliberately longer than the reconnect window, so a player can run out
+	// of time to reconnect while the bans or picks are still going on.
+	gameServer = createGameServer(app, { joinWaitMs: 300, reconnectGraceMs: 300, submitCooldownMs: 100, banWindowMs: 1000, pickWindowMs: 1000 });
 	await new Promise<void>((resolve) => gameServer.httpServer.listen(0, '127.0.0.1', resolve));
 	request = supertest(gameServer.httpServer);
 	// The schema is reset once for the whole run in test/global-setup.ts, not

@@ -112,6 +112,8 @@ const SECRET = 'local-test-secret-'.padEnd(64, 'x');
 const MATCH_SECONDS = 20 * 60;
 // Matches the ban window test/setup.ts gives the server.
 const BAN_WINDOW_MS = 1000;
+// Matches the pick window test/setup.ts gives the server (US-6-T-10).
+const PICK_WINDOW_MS = 1000;
 
 // Who banned a problem, as the ban screen shows it.
 interface BannedBy {
@@ -120,22 +122,33 @@ interface BannedBy {
 	team: 'a' | 'b';
 }
 
+// Who picked a problem, as the pick screen shows it (US-6-T-10). Each team
+// picks independently, so a problem can have up to one picker per team.
+interface PickedBy {
+	userId: string;
+	displayName: string;
+	team: 'a' | 'b';
+}
+
 // One problem in the pool. topics are CodeService's tags (all the ban screen
-// shows), and bannedBy is null until a player bans it.
+// shows), bannedBy is null until a player bans it, and pickedBy.a / .b are
+// null until a player on that team picks it.
 interface PoolProblemPayload {
 	taskId: string;
 	questionId: number;
 	difficulty: string;
 	topics: string[];
 	bannedBy: BannedBy | null;
+	pickedBy: Record<'a' | 'b', PickedBy | null>;
 }
 
 // The payload GameService sends on `game:state`.
 interface GameStatePayload {
 	gameId: string;
-	phase: 'waiting' | 'banning' | 'playing';
+	phase: 'waiting' | 'banning' | 'picking' | 'playing';
 	secondsRemaining: number;
 	banSecondsRemaining: number; // seconds left in the ban window
+	pickSecondsRemaining: number; // seconds left in the pick window (US-6-T-10)
 	problemPool: PoolProblemPayload[];
 	solved: Record<'a' | 'b', string[]>; // task_ids each team has solved
 	players: { userId: string; team: 'a' | 'b'; connected: boolean; left: boolean }[];
@@ -254,9 +267,22 @@ function ban(socket: Socket, questionId: number): Promise<BanResponse> {
 	return socket.timeout(2_000).emitWithAck('game:ban', { questionId });
 }
 
+// What GameService answers a `game:pick` with: ok, or why the pick was refused (US-6-T-10).
+interface PickResponse {
+	ok?: boolean;
+	error?: string;
+}
+
+// Picks `questionId` for the player on `socket` and resolves with GameService's answer.
+function pick(socket: Socket, questionId: number): Promise<PickResponse> {
+	return socket.timeout(2_000).emitWithAck('game:pick', { questionId });
+}
+
 // A fresh game with every player connected, resolved once the bans have
 // started. Gives back the sockets (in roster order), the first banning state,
-// and the full nine-problem pool as it stood when the bans began.
+// and the pool (sized by team size -- see "pool size by team size" below) as
+// it stood when the bans began. teamA/teamB must each be at least 2: a 1v1
+// never reaches banning (see "a 1v1 skips banning and picking").
 async function banningGame(teamA: number, teamB: number) {
 	const game = await newGame(teamA, teamB);
 	const first = await joinGame(game.players[0].userId, game.gameId);
@@ -269,21 +295,49 @@ async function banningGame(teamA: number, teamB: number) {
 }
 
 // Has each socket ban a different problem (the i-th socket bans pool[i]) and
-// resolves with the first state once the game is playing.
+// resolves with the first state once picking has started.
 async function banEveryone(sockets: Socket[], pool: PoolProblemPayload[]): Promise<GameStatePayload> {
-	const playing = nextState(sockets[0], (state) => state.phase === 'playing');
+	const picking = nextState(sockets[0], (state) => state.phase === 'picking');
 	for (const [i, socket] of sockets.entries()) await ban(socket, pool[i].questionId);
+	return picking;
+}
+
+// A fully-banned game, resolved once picking has started. Gives back the
+// sockets (in roster order) and `remaining`, the problems left to pick from
+// (what the bans left) -- one fewer than the pool, times the team size.
+async function pickingGame(teamA: number, teamB: number) {
+	const { game, sockets, pool } = await banningGame(teamA, teamB);
+	const state = await banEveryone(sockets, pool);
+	return { game, sockets, remaining: state.problemPool };
+}
+
+// Has each socket pick a problem within its own team: the i-th socket on a
+// team picks `remaining[i-th within that team]`, since `remaining` has
+// exactly one entry per teammate (team size == problems left to pick from).
+// Resolves with the first state once the game is playing.
+async function pickEveryone(sockets: Socket[], remaining: PoolProblemPayload[]): Promise<GameStatePayload> {
+	const playing = nextState(sockets[0], (state) => state.phase === 'playing');
+	const teamSize = remaining.length;
+	for (const [i, socket] of sockets.entries()) await pick(socket, remaining[i % teamSize].questionId);
 	return playing;
 }
 
-// A game that is already playing, with every player connected and every
-// player's ban made. `pool` is the problems left in play, worked out from
-// the bans this helper made rather than read back from the server, so
-// tests on winning really check the pool the bans left behind.
+// A game that is already playing, with every player connected. A 1v1 goes
+// straight there on its full pool (it never bans or picks -- US-6-T-10); any
+// other size bans, then picks, first. `pool` is the problems actually left
+// in play, read back from the server so it's never out of sync with the bans
+// or picks this helper made.
 async function playingGame(teamA: number, teamB: number) {
-	const { game, sockets, pool } = await banningGame(teamA, teamB);
-	await banEveryone(sockets, pool);
-	return { game, sockets, pool: pool.slice(sockets.length) };
+	if (teamA === 1 && teamB === 1) {
+		const game = await newGame(teamA, teamB);
+		const joined = await Promise.all(game.players.map((player) => joinGame(player.userId, game.gameId)));
+		// The pool is fixed at game creation, before either player connects, so
+		// it's the same regardless of which player's first state we read it from.
+		return { game, sockets: joined.map((entry) => entry.socket), pool: joined[0].state.problemPool };
+	}
+	const { game, sockets, remaining } = await pickingGame(teamA, teamB);
+	const state = await pickEveryone(sockets, remaining);
+	return { game, sockets, pool: state.problemPool };
 }
 
 // The stand-in for CodeService, kept so tests can check what was sent to it.
@@ -400,21 +454,64 @@ describe('waiting for players', () => {
 		expect(state.phase).toBe('waiting');
 	});
 
-	// Changed by the ban phase: a full game now bans before it plays.
+	// Changed by the ban phase: a full game (above a 1v1 -- see "a 1v1 skips
+	// banning and picking") now bans before it plays.
 	it('moves to banning once every player has connected', async () => {
-		const game = await newGame(1, 1);
+		const game = await newGame(2, 2);
 		const first = await joinGame(game.players[0].userId, game.gameId);
 		const banning = nextState(first.socket, (state) => state.phase === 'banning');
-		await joinGame(game.players[1].userId, game.gameId);
+		for (const player of game.players.slice(1)) await joinGame(player.userId, game.gameId);
 		expect((await banning).phase).toBe('banning');
 	});
 
 	// Changed by the ban phase: the join wait running out starts the bans, not play.
 	it('moves to banning with whoever has connected when the join wait runs out', async () => {
-		const game = await newGame(1, 1);
+		const game = await newGame(2, 2);
 		const first = await joinGame(game.players[0].userId, game.gameId);
 		const state = await nextState(first.socket, (next) => next.phase === 'banning');
 		expect(state.players.filter((player) => player.connected)).toHaveLength(1);
+	});
+});
+
+// US-6-T-10: a 1v1 has no teammate to ban or pick with, so it skips both
+// phases entirely and goes straight to playing on its full, un-banned pool.
+describe('a 1v1 skips banning and picking', () => {
+	it('moves straight to playing once both players have connected', async () => {
+		const game = await newGame(1, 1);
+		const first = await joinGame(game.players[0].userId, game.gameId);
+		const playing = nextState(first.socket, (state) => state.phase === 'playing');
+		await joinGame(game.players[1].userId, game.gameId);
+		expect((await playing).phase).toBe('playing');
+	});
+
+	it('moves straight to playing with whoever has connected when the join wait runs out', async () => {
+		const game = await newGame(1, 1);
+		const first = await joinGame(game.players[0].userId, game.gameId);
+		const state = await nextState(first.socket, (next) => next.phase === 'playing');
+		expect(state.players.filter((player) => player.connected)).toHaveLength(1);
+	});
+
+	it('is never shown banning or picking, even briefly', async () => {
+		const game = await newGame(1, 1);
+		const first = await joinGame(game.players[0].userId, game.gameId);
+		const phases: string[] = [first.state.phase];
+		first.socket.on('game:state', (state: GameStatePayload) => phases.push(state.phase));
+		await joinGame(game.players[1].userId, game.gameId);
+		await pause(SETUP_WAIT_MS);
+		expect(phases.some((phase) => phase === 'banning' || phase === 'picking')).toBe(false);
+	});
+
+	it('has all three of its problems in the pool', async () => {
+		const game = await newGame(1, 1);
+		const { state } = await joinGame(game.players[0].userId, game.gameId);
+		expect(state.problemPool).toHaveLength(3);
+	});
+
+	it('never bans or picks any of its problems', async () => {
+		const game = await newGame(1, 1);
+		await joinGame(game.players[0].userId, game.gameId);
+		const { state } = await joinGame(game.players[1].userId, game.gameId);
+		expect(state.problemPool.every((problem) => !problem.bannedBy && !problem.pickedBy.a && !problem.pickedBy.b)).toBe(true);
 	});
 });
 
@@ -703,20 +800,61 @@ describe('when saving the end of the game fails', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Ban phase. Between connecting and playing, every player bans one of the
-// nine problems; the match is played on the ones left. The ban window in
-// test/setup.ts is BAN_WINDOW_MS, longer than the 300 ms reconnect window.
+// Ban and pick phases. Between connecting and playing, every player (above a
+// 1v1 -- see "a 1v1 skips banning and picking") bans one of the pool's
+// problems, then picks one of the problems the bans left; the match is
+// played on the picks. The pool is sized by team size (US-6-T-10): 2*teamSize
+// Easy + teamSize Medium. The ban and pick windows in test/setup.ts are both
+// BAN_WINDOW_MS / PICK_WINDOW_MS, longer than the 300 ms reconnect window.
 // ---------------------------------------------------------------------------
+
+describe('pool size by team size', () => {
+	it('gives a 3v3 six Easy problems', async () => {
+		const game = await newGame(3, 3);
+		const { state } = await joinGame(game.players[0].userId, game.gameId);
+		expect(state.problemPool.filter((problem) => problem.difficulty === 'Easy')).toHaveLength(6);
+	});
+
+	it('gives a 3v3 three Medium problems', async () => {
+		const game = await newGame(3, 3);
+		const { state } = await joinGame(game.players[0].userId, game.gameId);
+		expect(state.problemPool.filter((problem) => problem.difficulty === 'Medium')).toHaveLength(3);
+	});
+
+	it('gives a 2v2 four Easy problems', async () => {
+		const game = await newGame(2, 2);
+		const { state } = await joinGame(game.players[0].userId, game.gameId);
+		expect(state.problemPool.filter((problem) => problem.difficulty === 'Easy')).toHaveLength(4);
+	});
+
+	it('gives a 2v2 two Medium problems', async () => {
+		const game = await newGame(2, 2);
+		const { state } = await joinGame(game.players[0].userId, game.gameId);
+		expect(state.problemPool.filter((problem) => problem.difficulty === 'Medium')).toHaveLength(2);
+	});
+
+	it('gives a 1v1 two Easy problems', async () => {
+		const game = await newGame(1, 1);
+		const { state } = await joinGame(game.players[0].userId, game.gameId);
+		expect(state.problemPool.filter((problem) => problem.difficulty === 'Easy')).toHaveLength(2);
+	});
+
+	it('gives a 1v1 one Medium problem', async () => {
+		const game = await newGame(1, 1);
+		const { state } = await joinGame(game.players[0].userId, game.gameId);
+		expect(state.problemPool.filter((problem) => problem.difficulty === 'Medium')).toHaveLength(1);
+	});
+});
 
 describe('ban phase before the clock starts', () => {
 	it('shows the full 20 minutes remaining while banning', async () => {
-		const { state } = await banningGame(1, 1);
-		// The match clock only starts once the bans are in.
+		const { state } = await banningGame(2, 2);
+		// The match clock only starts once the bans (and picks) are in.
 		expect(state.secondsRemaining).toBe(MATCH_SECONDS);
 	});
 
 	it('includes how many seconds are left to ban', async () => {
-		const { state } = await banningGame(1, 1);
+		const { state } = await banningGame(2, 2);
 		// The bans began moments ago, so (nearly) the whole window is left.
 		expect(state.banSecondsRemaining > 0 && state.banSecondsRemaining <= BAN_WINDOW_MS / 1000).toBe(true);
 	});
@@ -733,7 +871,7 @@ describe('problem topics for the ban screen', () => {
 
 describe('banning a problem', () => {
 	it('shows the problem as banned by the player who banned it', async () => {
-		const { game, sockets, pool } = await banningGame(1, 1);
+		const { game, sockets, pool } = await banningGame(2, 2);
 		const banned = nextState(sockets[0], (state) => state.problemPool.some((problem) => problem.bannedBy));
 		await ban(sockets[0], pool[0].questionId);
 		const state = await banned;
@@ -742,7 +880,7 @@ describe('banning a problem', () => {
 	});
 
 	it('gives the ban the banning player\'s display name', async () => {
-		const { sockets, pool } = await banningGame(1, 1);
+		const { sockets, pool } = await banningGame(2, 2);
 		const banned = nextState(sockets[0], (state) => state.problemPool.some((problem) => problem.bannedBy));
 		await ban(sockets[0], pool[0].questionId);
 		const state = await banned;
@@ -752,18 +890,18 @@ describe('banning a problem', () => {
 	});
 
 	it('gives the ban the banning player\'s team', async () => {
-		const { sockets, pool } = await banningGame(1, 1);
+		const { sockets, pool } = await banningGame(2, 2);
 		const banned = nextState(sockets[0], (state) => state.problemPool.some((problem) => problem.bannedBy));
 		await ban(sockets[0], pool[0].questionId);
 		const state = await banned;
-		// sockets[0] is the team a player.
+		// sockets[0] is a team a player.
 		expect(state.problemPool.find((problem) => problem.questionId === pool[0].questionId)?.bannedBy?.team)
 			.toBe('a');
 	});
 
 	it('tells the other players about the ban', async () => {
-		const { game, sockets, pool } = await banningGame(1, 1);
-		// Listening on the other player's socket, not the banner's.
+		const { game, sockets, pool } = await banningGame(2, 2);
+		// Listening on another player's socket, not the banner's.
 		const seen = nextState(sockets[1], (state) => state.problemPool.some((problem) => problem.bannedBy));
 		await ban(sockets[0], pool[0].questionId);
 		const state = await seen;
@@ -772,72 +910,73 @@ describe('banning a problem', () => {
 	});
 
 	it('rejects a player\'s second ban with "already-banned"', async () => {
-		const { sockets, pool } = await banningGame(1, 1);
+		const { sockets, pool } = await banningGame(2, 2);
 		await ban(sockets[0], pool[0].questionId);
-		// The other player hasn't banned yet, so the bans are still going on.
+		// The other players haven't banned yet, so the bans are still going on.
 		const response = await ban(sockets[0], pool[1].questionId);
 		expect(response.error).toBe('already-banned');
 	});
 
 	it('rejects banning a problem another player already banned with "problem-banned"', async () => {
-		const { sockets, pool } = await banningGame(1, 1);
+		const { sockets, pool } = await banningGame(2, 2);
 		await ban(sockets[0], pool[0].questionId);
-		const response = await ban(sockets[1], pool[0].questionId);
+		// Bans are match-wide unique, even between players on different teams.
+		const response = await ban(sockets[2], pool[0].questionId);
 		expect(response.error).toBe('problem-banned');
 	});
 
 	it('rejects banning a problem that isn\'t in the match pool with "unknown-problem"', async () => {
-		const { sockets } = await banningGame(1, 1);
+		const { sockets } = await banningGame(2, 2);
 		const response = await ban(sockets[0], -1);
 		expect(response.error).toBe('unknown-problem');
 	});
 
 	it('rejects a ban once play has started with "not-banning"', async () => {
-		const { sockets, pool } = await playingGame(1, 1);
+		const { sockets, pool } = await playingGame(2, 2);
 		const response = await ban(sockets[0], pool[0].questionId);
 		expect(response.error).toBe('not-banning');
 	});
 
 	it('rejects a submission during the ban phase with "not-playing"', async () => {
-		const { sockets, pool } = await banningGame(1, 1);
+		const { sockets, pool } = await banningGame(2, 2);
 		const response = await submit(sockets[0], pool[0].questionId, 'correct');
 		expect(response.error).toBe('not-playing');
 	});
 });
 
-describe('starting play once the bans are in', () => {
-	it('starts playing once every player has banned', async () => {
-		const { sockets, pool } = await banningGame(1, 1);
+describe('starting picking once the bans are in', () => {
+	it('starts picking once every player has banned', async () => {
+		const { sockets, pool } = await banningGame(2, 2);
 		const state = await banEveryone(sockets, pool);
-		expect(state.phase).toBe('playing');
+		expect(state.phase).toBe('picking');
 	});
 
-	it('lists only the problems that weren\'t banned once play starts', async () => {
-		const { sockets, pool } = await banningGame(1, 1);
+	it('lists only the problems that weren\'t banned once picking starts', async () => {
+		const { sockets, pool } = await banningGame(2, 2);
 		const state = await banEveryone(sockets, pool);
-		// banEveryone bans pool[0] and pool[1]; the other seven are left.
+		// banEveryone bans pool[0] to pool[3] (one per player); the other two are left.
 		expect(state.problemPool.map((problem) => problem.questionId))
-			.toEqual(pool.slice(2).map((problem) => problem.questionId));
+			.toEqual(pool.slice(4).map((problem) => problem.questionId));
 	});
 
-	it('leaves three problems in play after a 3v3\'s six bans', async () => {
+	it('leaves three problems to pick from after a 3v3\'s six bans', async () => {
 		const { sockets, pool } = await banningGame(3, 3);
 		const state = await banEveryone(sockets, pool);
 		expect(state.problemPool).toHaveLength(3);
 	});
 
-	it('leaves seven problems in play after a 1v1\'s two bans', async () => {
-		const { sockets, pool } = await banningGame(1, 1);
+	it('leaves two problems to pick from after a 2v2\'s four bans', async () => {
+		const { sockets, pool } = await banningGame(2, 2);
 		const state = await banEveryone(sockets, pool);
-		expect(state.problemPool).toHaveLength(7);
+		expect(state.problemPool).toHaveLength(2);
 	});
 
-	it('starts playing with the bans made so far when the ban window runs out', async () => {
-		const { sockets, pool } = await banningGame(1, 1);
-		// Only one of the two players bans; the other is skipped.
+	it('starts picking with the bans made so far when the ban window runs out', async () => {
+		const { sockets, pool } = await banningGame(2, 2);
+		// Only one of the four players bans; the rest are skipped.
 		await ban(sockets[0], pool[0].questionId);
-		const state = await nextState(sockets[0], (next) => next.phase === 'playing');
-		expect(state.problemPool).toHaveLength(8);
+		const state = await nextState(sockets[0], (next) => next.phase === 'picking');
+		expect(state.problemPool).toHaveLength(5);
 	});
 
 	it('starts once every remaining player has banned when a player has left', async () => {
@@ -849,9 +988,101 @@ describe('starting play once the bans are in', () => {
 		await left;
 		const bansStarted = Date.now();
 		await banEveryone(sockets.slice(0, 3), pool);
-		// Play starts on the last remaining ban, well before the ban window
+		// Picking starts on the last remaining ban, well before the ban window
 		// would have run out - not because the window ran out.
 		expect(Date.now() - bansStarted < BAN_WINDOW_MS / 2).toBe(true);
+	});
+});
+
+describe('picking a problem', () => {
+	it('shows the problem as picked by the player who picked it', async () => {
+		const { game, sockets, remaining } = await pickingGame(2, 2);
+		const picked = nextState(sockets[0], (state) => state.problemPool.some((problem) => problem.pickedBy.a));
+		await pick(sockets[0], remaining[0].questionId);
+		const state = await picked;
+		expect(state.problemPool.find((problem) => problem.questionId === remaining[0].questionId)?.pickedBy.a?.userId)
+			.toBe(game.players[0].userId);
+	});
+
+	it('gives the pick the picking player\'s display name', async () => {
+		const { sockets, remaining } = await pickingGame(2, 2);
+		const picked = nextState(sockets[0], (state) => state.problemPool.some((problem) => problem.pickedBy.a));
+		await pick(sockets[0], remaining[0].questionId);
+		const state = await picked;
+		// The fixtures name the first player "player-0".
+		expect(state.problemPool.find((problem) => problem.questionId === remaining[0].questionId)?.pickedBy.a?.displayName)
+			.toBe('player-0');
+	});
+
+	it('does not let a player pick a problem a teammate already picked', async () => {
+		const { sockets, remaining } = await pickingGame(2, 2);
+		await pick(sockets[0], remaining[0].questionId);
+		// sockets[1] is sockets[0]'s teammate (both team a).
+		const response = await pick(sockets[1], remaining[0].questionId);
+		expect(response.error).toBe('problem-picked');
+	});
+
+	it('lets a player on the other team independently pick the same problem', async () => {
+		const { sockets, remaining } = await pickingGame(2, 2);
+		await pick(sockets[0], remaining[0].questionId);
+		// sockets[2] is on team b, which picks independently of team a's picks.
+		const response = await pick(sockets[2], remaining[0].questionId);
+		expect(response.ok).toBe(true);
+	});
+
+	it('rejects a player\'s second pick with "already-picked"', async () => {
+		const { sockets, remaining } = await pickingGame(2, 2);
+		await pick(sockets[0], remaining[0].questionId);
+		// The other players haven't picked yet, so the picks are still going on.
+		const response = await pick(sockets[0], remaining[1].questionId);
+		expect(response.error).toBe('already-picked');
+	});
+
+	it('rejects picking a problem that isn\'t in the match pool with "unknown-problem"', async () => {
+		const { sockets } = await pickingGame(2, 2);
+		const response = await pick(sockets[0], -1);
+		expect(response.error).toBe('unknown-problem');
+	});
+
+	it('rejects a pick once play has started with "not-picking"', async () => {
+		const { sockets, pool } = await playingGame(2, 2);
+		const response = await pick(sockets[0], pool[0].questionId);
+		expect(response.error).toBe('not-picking');
+	});
+});
+
+describe('starting play once the picks are in', () => {
+	it('starts playing once every player has picked', async () => {
+		const { sockets, remaining } = await pickingGame(2, 2);
+		const state = await pickEveryone(sockets, remaining);
+		expect(state.phase).toBe('playing');
+	});
+
+	it('auto-assigns whoever hasn\'t picked when the pick window runs out', async () => {
+		const { game, sockets, remaining } = await pickingGame(2, 2);
+		// Only the first player on each team picks remaining[0]; their
+		// teammates (sockets[1] and sockets[3]) are left to be auto-assigned
+		// the only problem their own team hasn't picked, remaining[1].
+		await pick(sockets[0], remaining[0].questionId);
+		await pick(sockets[2], remaining[0].questionId);
+		const state = await nextState(sockets[0], (next) => next.phase === 'playing');
+		const other = state.problemPool.find((problem) => problem.questionId === remaining[1].questionId);
+		expect([other?.pickedBy.a?.userId, other?.pickedBy.b?.userId])
+			.toEqual([game.players[1].userId, game.players[3].userId]);
+	});
+
+	it('starts once every remaining player has picked when a player has left', async () => {
+		const { game, sockets, remaining } = await pickingGame(2, 2);
+		const leaving = game.players[3].userId;
+		// sockets[3] (team b) drops and stays gone until marked as left.
+		const left = nextState(sockets[0], (state) => state.players.some((player) => player.userId === leaving && player.left));
+		sockets[3].disconnect();
+		await left;
+		const picksStarted = Date.now();
+		await pickEveryone(sockets.slice(0, 3), remaining);
+		// Play starts on the last remaining pick, well before the pick window
+		// would have run out - not because the window ran out.
+		expect(Date.now() - picksStarted < PICK_WINDOW_MS / 2).toBe(true);
 	});
 });
 
@@ -867,10 +1098,12 @@ describe('reconnect window during the ban phase', () => {
 	});
 
 	it('gives the other team the win by disconnect when a whole team leaves during the ban phase', async () => {
-		const { sockets } = await banningGame(1, 1);
+		const { sockets } = await banningGame(2, 2);
 		const ended = nextEvent<GameResult>(sockets[0], 'game:ended');
 		const dropped = Date.now();
-		sockets[1].disconnect();
+		// sockets[2] and sockets[3] are team b's whole roster.
+		sockets[2].disconnect();
+		sockets[3].disconnect();
 		const result = await ended;
 		// Decided during the bans, not after the ban window ran out and play began.
 		expect({ result, duringBans: Date.now() - dropped < BAN_WINDOW_MS })
@@ -878,12 +1111,37 @@ describe('reconnect window during the ban phase', () => {
 	});
 });
 
+describe('reconnect window during the pick phase', () => {
+	it('starts a dropped player\'s reconnect window during the pick phase', async () => {
+		const { game, sockets } = await pickingGame(2, 2);
+		const dropping = game.players[1].userId;
+		const left = nextState(sockets[0], (state) => state.players.some((player) => player.userId === dropping && player.left));
+		sockets[1].disconnect();
+		// The reconnect window (300 ms) is shorter than the pick window, so the
+		// player is marked as left while the picks are still going on.
+		expect((await left).phase).toBe('picking');
+	});
+
+	it('gives the other team the win by disconnect when a whole team leaves during the pick phase', async () => {
+		const { sockets } = await pickingGame(2, 2);
+		const ended = nextEvent<GameResult>(sockets[0], 'game:ended');
+		const dropped = Date.now();
+		// sockets[2] and sockets[3] are team b's whole roster.
+		sockets[2].disconnect();
+		sockets[3].disconnect();
+		const result = await ended;
+		// Decided during the picks, not after the pick window ran out and play began.
+		expect({ result, duringPicks: Date.now() - dropped < PICK_WINDOW_MS })
+			.toEqual({ result: { winner: 'a', reason: 'disconnect' }, duringPicks: true });
+	});
+});
+
 describe('saving the bans', () => {
 	it('saves only the problems left in play once play starts', async () => {
-		const { game } = await playingGame(1, 1);
+		const { game } = await playingGame(2, 2);
 		const saved = await pool.query('SELECT task_id FROM game_problems WHERE game_id = $1', [game.gameId]);
-		// Nine problems, two banned.
-		expect(saved.rows).toHaveLength(7);
+		// Six problems, four banned.
+		expect(saved.rows).toHaveLength(2);
 	});
 });
 

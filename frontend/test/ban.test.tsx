@@ -24,13 +24,15 @@ interface TestBanner {
 }
 
 // One problem in the match pool, as GameService sends it on `game:state`
-// during the ban phase.
+// during the ban phase. pickedBy isn't used until the pick phase (US-6-T-10,
+// see test/pick.test.tsx), but BanScreen's shared PoolProblem type requires it.
 interface TestProblem {
 	taskId: string;
 	questionId: number;
 	difficulty: string;
 	topics: string[];
 	bannedBy: TestBanner | null;
+	pickedBy: { a: TestBanner | null; b: TestBanner | null };
 }
 
 const ADA: TestBanner = { userId: 'u1', displayName: 'Ada', team: 'a' };
@@ -40,7 +42,7 @@ const EDSGER: TestBanner = { userId: 'u5', displayName: 'Edsger', team: 'b' };
 
 // Builds an open (unbanned) problem. questionIds follow the list order, 1 to 9.
 function problem(questionId: number, taskId: string, topics: string[]): TestProblem {
-	return { taskId, questionId, difficulty: 'Easy', topics, bannedBy: null };
+	return { taskId, questionId, difficulty: 'Easy', topics, bannedBy: null, pickedBy: { a: null, b: null } };
 }
 
 // The match's nine problems. The taskIds are the problem names, which the

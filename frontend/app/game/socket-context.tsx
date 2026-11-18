@@ -26,14 +26,24 @@ export interface Banner {
 	team: TeamId;
 }
 
+// The player on one team who picked a problem during the pick phase
+// (US-6-T-10). Each team picks independently, so a problem can have up to
+// one picker per team.
+export interface Picker {
+	userId: string;
+	displayName: string;
+	team: TeamId;
+}
+
 // One problem in the match pool: enough to list it, and its question_id to
-// load the full problem from CodeService. topics are all the ban screen shows.
+// load the full problem from CodeService. topics are all the ban and pick screens show.
 export interface PoolProblem {
 	taskId: string;
 	questionId: number;
 	difficulty: string;
 	topics: string[];
 	bannedBy: Banner | null; // null until a player bans it
+	pickedBy: Record<TeamId, Picker | null>; // null per team until a player on it picks
 }
 
 // What GameService sends on `game:state`: the whole match, re-sent whenever
@@ -41,11 +51,13 @@ export interface PoolProblem {
 export interface GameState {
 	gameId: string;
 	// waiting: players are still connecting, the clock hasn't started
-	// banning: every player bans one problem; the clock starts once bans are in
-	phase: 'waiting' | 'banning' | 'playing';
+	// banning: every player bans one problem; skipped for a 1v1 (US-6-T-10)
+	// picking: every player picks one of the problems the bans left; also skipped for a 1v1
+	phase: 'waiting' | 'banning' | 'picking' | 'playing';
 	startedAt: number | null;
 	secondsRemaining: number;
 	banSecondsRemaining: number; // seconds left in the ban window
+	pickSecondsRemaining: number; // seconds left in the pick window (US-6-T-10)
 	scores: Record<TeamId, number>;
 	problemPool: PoolProblem[];
 	players: GamePlayer[];
@@ -86,6 +98,8 @@ interface GameSocketContextValue {
 	forfeit: () => void;
 	// Bans one problem from the pool during the ban phase.
 	ban: (_questionId: number) => void;
+	// Picks one of the problems the bans left during the pick phase (US-6-T-10).
+	pick: (_questionId: number) => void;
 	// Has the game grade a solution; rejects with a readable message if refused.
 	submit: (_questionId: number, _code: string) => Promise<SubmitResult>;
 	// Sends the player's editor for one question to their own team.
@@ -217,6 +231,10 @@ export function GameSocketProvider({ children }: { children: ReactNode }) {
 		socketRef.current?.socket.emit('game:ban', { questionId });
 	}, []);
 
+	const pick = useCallback((questionId: number) => {
+		socketRef.current?.socket.emit('game:pick', { questionId });
+	}, []);
+
 	const submit = useCallback(async (questionId: number, code: string): Promise<SubmitResult> => {
 		const socket = socketRef.current?.socket;
 		if (!socket) throw new Error(SUBMIT_REFUSALS['not-playing']);
@@ -231,7 +249,7 @@ export function GameSocketProvider({ children }: { children: ReactNode }) {
 
 	const clearError = useCallback(() => setError(null), []);
 	return (
-		<GameSocketContext.Provider value={{ socket, connected, game, result, error, connect, forfeit, ban, submit, shareCode, teammateCode, chatHistory, clearError }}>
+		<GameSocketContext.Provider value={{ socket, connected, game, result, error, connect, forfeit, ban, pick, submit, shareCode, teammateCode, chatHistory, clearError }}>
 			{children}
 		</GameSocketContext.Provider>
 	);

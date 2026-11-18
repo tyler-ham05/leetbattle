@@ -43,6 +43,7 @@ Every change should follow **failing test first -> implement -> verify**. A pers
   -frontend/test
   -service/AuthService/test
   -service/CodeService/test
+  In a pinch, the pseudocode from the spec can be converted into tests
 2. Convert the user written pseudocode into thoroughly commented tests that capture the desired behaviour and watch them **fail**.
 3. Implement the **minumum** code to make them pass.
 4. Tests should include only one expect or assert clause per test.

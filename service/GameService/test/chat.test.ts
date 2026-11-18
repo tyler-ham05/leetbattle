@@ -96,7 +96,7 @@ async function joinGame(userId: string, gameIdToJoin: string): Promise<Socket> {
 
 // The parts of the `game:state` payload these tests use.
 interface GameStatePayload {
-	phase: 'waiting' | 'banning' | 'playing';
+	phase: 'waiting' | 'banning' | 'picking' | 'playing';
 	problemPool: { questionId: number }[];
 	forfeitVotes: Record<'a' | 'b', number>;
 }
@@ -121,14 +121,20 @@ function nextState(socket: Socket, predicate: (_state: GameStatePayload) => bool
 	});
 }
 
-// Plays the test's game to its end: every player bans a different problem so
-// play starts, then team b forfeits. `afterLastVote` runs straight after
-// player 5 casts team b's last forfeit vote. Resolves once team a has been
-// told the game ended.
+// Plays the test's game to its end: every player bans a different problem,
+// then picks a different one of the three the bans left (US-6-T-10), so play
+// starts, then team b forfeits. `afterLastVote` runs straight after player 5
+// casts team b's last forfeit vote. Resolves once team a has been told the
+// game ended.
 async function endGameByForfeit(afterLastVote: () => void = () => undefined): Promise<void> {
-	const playing = nextState(sockets[0], (state) => state.phase === 'playing');
+	const picking = nextState(sockets[0], (state) => state.phase === 'picking');
 	for (const [i, socket] of sockets.entries()) {
 		await socket.timeout(2_000).emitWithAck('game:ban', { questionId: problemPool[i].questionId });
+	}
+	const remaining = (await picking).problemPool;
+	const playing = nextState(sockets[0], (state) => state.phase === 'playing');
+	for (const [i, socket] of sockets.entries()) {
+		await socket.timeout(2_000).emitWithAck('game:pick', { questionId: remaining[i % remaining.length].questionId });
 	}
 	await playing;
 	const twoVotes = nextState(sockets[0], (state) => state.forfeitVotes.b === 2);

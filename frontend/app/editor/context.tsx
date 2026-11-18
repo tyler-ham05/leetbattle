@@ -100,11 +100,15 @@ interface EditorProviderProps {
 	// The workspace to show per question while readOnly; a question with
 	// nothing in here yet falls back to its starter code.
 	externalWorkspaces?: Record<number, EditorWorkspace>;
+	// US-6-T-10: the question the player picked on the pick screen, shown as
+	// their first tab instead of whichever problem happens to be first in the
+	// pool, so a pick carries over into the game.
+	defaultQuestionId?: number;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);
 
-export function EditorProvider({ children, questionIds, submit, shareCode, readOnly = false, externalWorkspaces }: EditorProviderProps) {
+export function EditorProvider({ children, questionIds, submit, shareCode, readOnly = false, externalWorkspaces, defaultQuestionId }: EditorProviderProps) {
 	const { user } = useAuth();
 	const inMatch = questionIds !== undefined;
 	// The question_ids as a string, so a new array with the same ids (every
@@ -270,9 +274,11 @@ export function EditorProvider({ children, questionIds, submit, shareCode, readO
 				setQuestions(problems);
 				// Readonly workspace: default to a question the teammate has
 				// actually shared code for, not just the first in the pool.
+				// Otherwise, default to the question the player picked on the pick
+				// screen (US-6-T-10), if any, so their pick carries into the game.
 				const preferred = readOnly && externalWorkspaces
 					? problems.find((problem) => externalWorkspaces[problem.question_id]) ?? problems[0]
-					: problems[0];
+					: problems.find((problem) => problem.question_id === defaultQuestionId) ?? problems[0];
 				setCurrentQuestion(preferred ?? null);
 			})
 			.catch((err) => setError(err.message));

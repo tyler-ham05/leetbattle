@@ -14,6 +14,7 @@ import EditorLayout from '../../editor/components/editor-layout';
 import TeamChat from '../../editor/components/team-chat';
 import { ChatProvider } from '../../editor/chat-context';
 import BanScreen from '../components/ban-screen';
+import PickScreen from '../components/pick-screen';
 import WorkspaceSwitcher from '../components/workspace-switcher';
 import { GameSocketProvider, useGameSocket } from '../socket-context';
 import type { GamePlayer, GameResult, TeammateCode } from '../socket-context';
@@ -75,6 +76,21 @@ function Roster({ team, players, userId }: { team: typeof TEAMS[number]; players
 				))}
 			</ul>
 		</section>
+	);
+}
+
+// The player's connected teammates, by name, just left of Forfeit in the top
+// bar: the people whose confirmation a forfeit needs. Nothing when none are left.
+function ConnectedTeammates({ teammates }: { teammates: GamePlayer[] }) {
+	if (teammates.length === 0) return null;
+	return (
+		<ul aria-label="Teammates" className="flex items-center gap-1.5">
+			{teammates.map((teammate) => (
+				<li key={teammate.userId} className="rounded-full border border-line bg-raised px-2.5 py-0.5 text-[13px] font-medium text-muted">
+					{teammate.displayName}
+				</li>
+			))}
+		</ul>
 	);
 }
 
@@ -146,8 +162,10 @@ function ResultScreen({ result, myTeam, scores }: { result: GameResult; myTeam?:
 // exact same editor UI (EditorLayout, with its QuestionPanel / CodeTabs /
 // Monaco), just driven by a second, read-only EditorProvider fed their shared
 // code instead of this player's own.
-function MatchEditor({ questionIds, submit, shareCode, teammates, teammateCode }: {
+function MatchEditor({ questionIds, defaultQuestionId, submit, shareCode, teammates, teammateCode }: {
 	questionIds: number[];
+	// The question the player picked on the pick screen, if any (US-6-T-10).
+	defaultQuestionId?: number;
 	submit: (_questionId: number, _code: string) => Promise<import('../../editor/controller').SubmitResult>;
 	shareCode: (_questionId: number, _workspace: EditorWorkspace) => void;
 	teammates: GamePlayer[];
@@ -160,7 +178,7 @@ function MatchEditor({ questionIds, submit, shareCode, teammates, teammateCode }
 	// tabs and code never reset just from switching the workspace view away
 	// and back (see context.tsx -- EditorProvider owns that state, not EditorLayout).
 	return (
-		<EditorProvider questionIds={questionIds} submit={submit} shareCode={shareCode}>
+		<EditorProvider questionIds={questionIds} defaultQuestionId={defaultQuestionId} submit={submit} shareCode={shareCode}>
 			<WorkspaceSwitcher teammates={teammates} viewedUserId={viewedUserId} onSelect={setViewedUserId} />
 			{viewedTeammate ? (
 				<div key={viewedTeammate.userId}>
@@ -181,12 +199,15 @@ function MatchEditor({ questionIds, submit, shareCode, teammates, teammateCode }
 function GameContent() {
 	const { gameId } = useParams<{ gameId: string }>();
 	const { user } = useAuth();
-	const { socket, connected, game, result, error, connect, forfeit, ban, submit, shareCode, teammateCode, chatHistory } = useGameSocket();
+	const { socket, connected, game, result, error, connect, forfeit, ban, pick, submit, shareCode, teammateCode, chatHistory } = useGameSocket();
 	const joined = connected && game !== null;
 	const playing = joined && game.phase === 'playing' && !result;
 	const banning = joined && game.phase === 'banning' && !result;
+	const picking = joined && game.phase === 'picking' && !result;
 	const myTeam = game?.players.find((entry) => entry.userId === user?.id)?.team;
 	const teammates = game?.players.filter((entry) => entry.team === myTeam && entry.userId !== user?.id) ?? [];
+	// The player's own pick, if any, so it carries over as their default editor tab.
+	const myPick = myTeam && game?.problemPool.find((problem) => problem.pickedBy?.[myTeam]?.userId === user?.id);
 
 	useEffect(() => {
 		connect(gameId);
@@ -195,7 +216,12 @@ function GameContent() {
 	return (
 		<div className="flex min-h-screen flex-col bg-page font-sans text-ink">
 			<PageLoader variant="pen" />
-			<HomeTopBar actions={playing && <ForfeitControl onForfeit={forfeit} />} />
+			<HomeTopBar actions={playing && (
+				<>
+					<ConnectedTeammates teammates={teammates.filter((entry) => entry.connected)} />
+					<ForfeitControl onForfeit={forfeit} />
+				</>
+			)} />
 			<main className="flex-1 px-5 pt-12 pb-16">
 				<div className="mx-auto flex max-w-[1040px] flex-col gap-8">
 					<div className="flex flex-wrap items-end justify-between gap-4">
@@ -206,9 +232,9 @@ function GameContent() {
 						{joined && !result && (
 							<div className="flex items-center gap-6">
 								<span className="font-mono text-sm font-semibold"><span className="text-primary">{game.scores.a}</span> – <span className="text-secondary">{game.scores.b}</span></span>
-								{banning
-									? <span className="flex items-baseline gap-2"><span className="text-sm text-muted">Bans close in</span><Clock seconds={game.banSecondsRemaining} running /></span>
-									: <Clock seconds={game.secondsRemaining} running={game.phase === 'playing'} />}
+								{banning && <span className="flex items-baseline gap-2"><span className="text-sm text-muted">Bans close in</span><Clock seconds={game.banSecondsRemaining} running /></span>}
+								{picking && <span className="flex items-baseline gap-2"><span className="text-sm text-muted">Picks close in</span><Clock seconds={game.pickSecondsRemaining} running /></span>}
+								{!banning && !picking && <Clock seconds={game.secondsRemaining} running={game.phase === 'playing'} />}
 							</div>
 						)}
 					</div>
@@ -240,6 +266,15 @@ function GameContent() {
 
 							{banning && <BanScreen problems={game.problemPool} playerCount={game.players.length} onBan={ban} />}
 
+							{picking && myTeam && (
+								<PickScreen
+									problems={game.problemPool}
+									teamSize={game.players.filter((player) => player.team === myTeam).length}
+									myTeam={myTeam}
+									onPick={pick}
+								/>
+							)}
+
 							{/* The practice editor on the problems left after the bans. Each
 							    player has their own editor; their code only goes to their team. */}
 							{playing && (
@@ -250,6 +285,7 @@ function GameContent() {
 									<ChatProvider socket={socket} history={chatHistory}>
 										<MatchEditor
 											questionIds={game.problemPool.map((problem) => problem.questionId)}
+											defaultQuestionId={myPick ? myPick.questionId : undefined}
 											submit={submit}
 											shareCode={shareCode}
 											teammates={teammates}

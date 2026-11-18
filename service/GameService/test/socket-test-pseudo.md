@@ -181,3 +181,74 @@
  // when time runs out" compares game.scores.a/b, which this task makes real; "Game
  // should end once a team solves every problem" still means every case passed,
  // not total points, and is untouched)
+
+// ============================================================================
+// DRAFT (Claude, for review): US-6-T-10, pool size by team size, a 1v1
+// skipping banning and picking, and a pick phase after banning. Edit / cut /
+// reword before tests are written.
+//
+// NOTE: this changes REAL, already-passing tests, not just earlier
+// pseudocode:
+//   - Every ban-phase test above (and in socket.test.ts) assumes a fixed
+//     nine-problem pool (6 Easy + 3 Medium) for every team size. Under this
+//     draft the pool becomes 2*teamSize Easy + 1*teamSize Medium (9 for 3v3,
+//     6 for 2v2), so those tests' numbers need updating.
+//   - The 1v1 case of "Play should start once the bans are in" ("In a 1v1,
+//     two bans should leave seven problems in play") and the matching real
+//     test in socket.test.ts ("pool is the seven problems the 1v1's two bans
+//     left") go away entirely: a 1v1 no longer bans or picks at all.
+//
+// Rules this draft assumes:
+//   - teamSize = players.length / 2. Pool = 2*teamSize Easy + 1*teamSize
+//     Medium questions (9/6/3 for 3v3/2v2/1v1).
+//   - A 1v1 (teamSize 1) skips both "banning" and "picking": it goes
+//     straight from "waiting" to "playing" on its full 3-problem pool.
+//   - For teamSize 2 or 3, banning works as today (one ban per player),
+//     which always leaves exactly teamSize problems, shared by both teams.
+//     Picking follows: each player picks exactly one of those teamSize
+//     problems, and no two teammates may pick the same one (teams don't
+//     interact with each other's picks).
+//   - A 30s pick window, same length as banning -- (decide) confirm.
+//   - A player who hasn't picked when the pick window ends is auto-assigned
+//     whichever problem(s) their team hasn't picked yet, in pool order.
+// ============================================================================
+
+ // Pool size should scale with team size
+ //  - A 3v3 (6 players) should get a pool of 6 Easy + 3 Medium problems
+ //  - A 2v2 (4 players) should get a pool of 4 Easy + 2 Medium problems
+ //  - A 1v1 (2 players) should get a pool of 2 Easy + 1 Medium problems
+
+ // A 1v1 should skip banning and picking entirely
+ //  - A 1v1 should move straight from "waiting" to "playing" once both players have connected
+ //  - A 1v1's match pool should be all 3 of its problems, unbanned and unpicked
+ //  - A 1v1 should never show a "banning" or "picking" phase, even briefly
+
+ // Game should hold a pick phase after the bans, before the clock starts (teamSize 2 or 3 only)
+ //  - When every player has banned, the game should move to "picking" instead of "playing"
+ //  - While picking, the game state should show the full 20 minutes remaining
+ //  - While picking, the game state should include how many seconds are left to pick
+
+ // Players should be able to pick one problem each
+ //  - When a player picks a problem, the game state should show that problem as picked by that player
+ //  - The pick should carry the picking player's display name and team
+ //  - When a player picks, their teammates should receive a game state showing the pick
+ //  - A player's second pick should be rejected with "already-picked"
+ //  - Picking a problem a teammate already picked should be rejected with "problem-picked"
+ //  - Picking a problem that isn't in the match pool should be rejected with "unknown-problem"
+ //  - Picking once play has started should be rejected with "not-picking"
+ //  - A player may pick a problem a player on the OTHER team has picked (picks are per team, not match-wide)
+
+ // Play should start once every player has picked
+ //  - When every player has picked, the game should start playing
+ //  - When the pick window runs out, the game should start playing, with whoever hasn't picked auto-assigned the problem(s) their team hasn't picked, in pool order
+ //  - When a player has left during the pick phase, the game should start once every remaining player has picked
+
+ // Game should give a player who drops during the pick phase time to reconnect
+ //  - When a player's socket drops during the pick phase, their reconnect window should start
+ //  - When every player on a team has left during the pick phase, the other team should win by disconnect
+
+ // (decide) does "Questions selected should carry over into the game" (the
+ // acceptance criteria) mean anything for GameService's state beyond the pick
+ // itself (e.g. a pickedBy-style field surviving into the playing phase for
+ // the frontend to read), or is the pick only ever used to decide the
+ // auto-assignment and otherwise forgotten once play starts?

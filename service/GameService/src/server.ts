@@ -16,6 +16,9 @@ const DEFAULT_RECONNECT_GRACE_MS = 30_000;
 const DEFAULT_SUBMIT_COOLDOWN_MS = 5_000;
 // How long players have to ban before play starts with the bans made so far.
 const DEFAULT_BAN_WINDOW_MS = 30_000;
+// How long players have to pick before whoever hasn't is auto-assigned
+// (US-6-T-10). Roughly the same as the ban window.
+const DEFAULT_PICK_WINDOW_MS = 30_000;
 // The longest team chat message GameService accepts, in characters.
 const MAX_CHAT_LENGTH = 500;
 // The shortest time between two team chat messages from the same player.
@@ -29,6 +32,7 @@ interface ServerOptions {
 	reconnectGraceMs?: number;
 	submitCooldownMs?: number;
 	banWindowMs?: number;
+	pickWindowMs?: number;
 }
 
 // What the auth middleware attaches to every accepted socket.
@@ -77,6 +81,14 @@ interface Ban {
 // The answer to `game:ban`.
 type BanResponse = { ok: true } | { error: 'not-banning' | 'unknown-problem' | 'already-banned' | 'problem-banned' };
 
+// What a player sends on `game:pick` (US-6-T-10).
+interface PickRequest {
+	questionId?: unknown;
+}
+
+// The answer to `game:pick`.
+type PickResponse = { ok: true } | { error: 'not-picking' | 'unknown-problem' | 'already-picked' | 'problem-picked' };
+
 // The answer to `game:submit`: CodeService's grading, or why it was refused.
 type SubmitResponse = Grading | { error: 'not-playing' | 'unknown-problem' | 'team-busy' | 'cooldown' | 'grading-failed' };
 
@@ -113,9 +125,15 @@ export function resultOnTime({ a, b }: Record<TeamId, number>): GameResult {
 //
 // Lifecycle (all server-side timers, never trusted to a client):
 //   waiting -> banning  once every player connects, or the join wait runs out
-//   banning -> playing  once every player still in the game has banned one
+//              (teamSize 2 or 3 only -- see beginMatch)
+//   waiting -> playing  same trigger, but straight to playing for a 1v1
+//                       (teamSize 1), which never bans or picks
+//   banning -> picking  once every player still in the game has banned one
 //                       problem, or the ban window runs out
-//   banning/playing -> ended
+//   picking -> playing  once every player still in the game has picked one
+//                       of the problems the bans left, or the pick window
+//                       runs out (whoever hasn't picked is auto-assigned)
+//   banning/picking/playing -> ended
 //                       when a whole team has left; also (playing only) when a
 //                       team forfeits, a team solves every problem, or time runs out
 export function createGameServer(app: Express, options: ServerOptions = {}) {
@@ -127,6 +145,7 @@ export function createGameServer(app: Express, options: ServerOptions = {}) {
 	const reconnectGraceMs = options.reconnectGraceMs ?? DEFAULT_RECONNECT_GRACE_MS;
 	const submitCooldownMs = options.submitCooldownMs ?? DEFAULT_SUBMIT_COOLDOWN_MS;
 	const banWindowMs = options.banWindowMs ?? DEFAULT_BAN_WINDOW_MS;
+	const pickWindowMs = options.pickWindowMs ?? DEFAULT_PICK_WINDOW_MS;
 	const httpServer = createServer(app);
 	const io = new Server(httpServer, { cors: { origin: origins, methods: ['GET', 'POST'] } });
 	// The live socket id for each player, so a stale connection (e.g. the tab
@@ -141,6 +160,7 @@ export function createGameServer(app: Express, options: ServerOptions = {}) {
 	const clearTimers = (game: GameState) => {
 		clearTimeout(game.timers.join);
 		clearTimeout(game.timers.ban);
+		clearTimeout(game.timers.pick);
 		clearTimeout(game.timers.end);
 		for (const timer of game.timers.leave.values()) clearTimeout(timer);
 		game.timers.leave.clear();
@@ -191,9 +211,13 @@ export function createGameServer(app: Express, options: ServerOptions = {}) {
 				void endGame(game, { winner: otherTeam(player.team), reason: 'disconnect' });
 				return;
 			}
-			// A player who left no longer holds up the bans.
+			// A player who left no longer holds up the bans or picks.
 			if (game.phase === 'banning' && everyoneBanned(game)) {
-				void startPlaying(game);
+				void finishBanning(game);
+				return;
+			}
+			if (game.phase === 'picking' && everyonePicked(game)) {
+				void finishPicking(game);
 				return;
 			}
 			broadcastState(game);
@@ -206,6 +230,25 @@ export function createGameServer(app: Express, options: ServerOptions = {}) {
 	const everyoneBanned = (game: GameState) => [...game.players.values()]
 		.every((player) => player.left || game.bans.has(player.userId));
 
+	// Whether every player still in the game (not left) has made their pick.
+	const everyonePicked = (game: GameState) => [...game.players.values()]
+		.every((player) => player.left || game.picks.has(player.userId));
+
+	// Starts the clock on the problems left after banning (and picking). Clears
+	// whatever phase timer is still running, so it's safe to call from either
+	// the normal pick-completion path or the pick window running out.
+	const enterPlaying = (game: GameState) => {
+		clearTimeout(game.timers.ban);
+		clearTimeout(game.timers.pick);
+		game.phase = 'playing';
+		game.banEndsAt = null;
+		game.pickEndsAt = null;
+		game.startedAt = Date.now();
+		game.timers.end = setTimeout(() => endOnTime(game), GAME_DURATION_MS);
+		game.timers.end.unref?.();
+		broadcastState(game);
+	};
+
 	// Starts the bans. Anyone who hasn't connected yet is treated as having
 	// just dropped, so they get the usual reconnect window.
 	const startBanning = (game: GameState) => {
@@ -213,7 +256,7 @@ export function createGameServer(app: Express, options: ServerOptions = {}) {
 		clearTimeout(game.timers.join);
 		game.phase = 'banning';
 		game.banEndsAt = Date.now() + banWindowMs;
-		game.timers.ban = setTimeout(() => void startPlaying(game), banWindowMs);
+		game.timers.ban = setTimeout(() => void finishBanning(game), banWindowMs);
 		game.timers.ban.unref?.();
 		for (const player of game.players.values()) {
 			if (!player.connected) scheduleLeave(game, player);
@@ -221,20 +264,30 @@ export function createGameServer(app: Express, options: ServerOptions = {}) {
 		broadcastState(game);
 	};
 
-	// Starts the clock on the problems the bans left. The banned problems are
-	// removed from game_problems before anyone is told play has started, so the
-	// saved pool always matches the one being played.
-	const startPlaying = async (game: GameState) => {
+	// Begins the match once every player has connected (or the join wait runs
+	// out): a 1v1 (team size 1) has no teammate to ban or pick with, so it
+	// skips straight to playing on its full pool; every other size bans first.
+	const beginMatch = (game: GameState) => {
+		if (game.phase !== 'waiting') return;
+		const teamSize = [...game.players.values()].length / 2;
+		if (teamSize === 1) {
+			clearTimeout(game.timers.join);
+			enterPlaying(game);
+			return;
+		}
+		startBanning(game);
+	};
+
+	// Removes the banned problems from the pool (and from game_problems, so the
+	// saved pool always matches the one being played), then moves on to picking.
+	const finishBanning = async (game: GameState) => {
 		if (game.phase !== 'banning') return;
 		clearTimeout(game.timers.ban);
 		const banned = new Set(game.bans.values());
 		const removed = game.problemPool.filter((problem) => banned.has(problem.questionId));
 		game.problemPool = game.problemPool.filter((problem) => !banned.has(problem.questionId));
-		game.phase = 'playing';
+		game.phase = 'picking';
 		game.banEndsAt = null;
-		game.startedAt = Date.now();
-		game.timers.end = setTimeout(() => endOnTime(game), GAME_DURATION_MS);
-		game.timers.end.unref?.();
 		try {
 			await pool.query(
 				'DELETE FROM game_problems WHERE game_id = $1 AND task_id = ANY($2::text[])',
@@ -243,12 +296,47 @@ export function createGameServer(app: Express, options: ServerOptions = {}) {
 		} catch (err) {
 			console.error('[game-service] failed to save the bans', err);
 		}
-		if (game.phase === 'playing') broadcastState(game);
+		if (game.phase === 'picking') startPicking(game);
+	};
+
+	// Starts the pick window: every player picks one of the problems the bans left.
+	const startPicking = (game: GameState) => {
+		game.pickEndsAt = Date.now() + pickWindowMs;
+		game.timers.pick = setTimeout(() => void finishPicking(game), pickWindowMs);
+		game.timers.pick.unref?.();
+		broadcastState(game);
+	};
+
+	// Auto-assigns whoever hasn't picked the problem(s) their team hasn't
+	// claimed yet, in pool order, so every player ends the pick phase with
+	// exactly one problem of their own even if they never clicked one.
+	const autoAssignPicks = (game: GameState) => {
+		for (const team of ['a', 'b'] as TeamId[]) {
+			const unpicked = teamOf(game, team).filter((player) => !player.left && !game.picks.has(player.userId));
+			if (unpicked.length === 0) continue;
+			const pickedByTeam = new Set(
+				[...game.picks].filter(([userId]) => game.players.get(userId)?.team === team).map(([, questionId]) => questionId),
+			);
+			const available = game.problemPool.filter((problem) => !pickedByTeam.has(problem.questionId));
+			for (const player of unpicked) {
+				const next = available.shift();
+				if (next) game.picks.set(player.userId, next.questionId);
+			}
+		}
+	};
+
+	// Moves on to playing once every pick is in, or the pick window runs out
+	// (auto-assigning anyone who hasn't picked first).
+	const finishPicking = (game: GameState) => {
+		if (game.phase !== 'picking') return;
+		clearTimeout(game.timers.pick);
+		autoAssignPicks(game);
+		enterPlaying(game);
 	};
 
 	const stopListening = onGameCreated((game) => {
 		liveGames.add(game);
-		game.timers.join = setTimeout(() => startBanning(game), joinWaitMs);
+		game.timers.join = setTimeout(() => beginMatch(game), joinWaitMs);
 		game.timers.join.unref?.();
 	});
 
@@ -295,12 +383,12 @@ export function createGameServer(app: Express, options: ServerOptions = {}) {
 		socket.emit('chat:history', game.chat[player.team]);
 
 		if (game.phase === 'waiting' && [...game.players.values()].every((entry) => entry.connected)) {
-			startBanning(game);
+			beginMatch(game);
 		} else {
 			broadcastState(game);
 		}
 
-		// Each player bans one problem from the pool. Play starts once every
+		// Each player bans one problem from the pool. Picking starts once every
 		// player still in the game has banned (or the ban window runs out).
 		socket.on('game:ban', (request: Ban, ack?: (_response: BanResponse) => void) => {
 			const reply = typeof ack === 'function' ? ack : () => undefined;
@@ -313,7 +401,29 @@ export function createGameServer(app: Express, options: ServerOptions = {}) {
 			game.bans.set(user.id, problem.questionId);
 			reply({ ok: true });
 			if (everyoneBanned(game)) {
-				void startPlaying(game);
+				void finishBanning(game);
+				return;
+			}
+			broadcastState(game);
+		});
+
+		// Each player picks one of the problems the bans left, from their own
+		// team's pool of choices (US-6-T-10). Play starts once every player
+		// still in the game has picked (or the pick window runs out).
+		socket.on('game:pick', (request: PickRequest, ack?: (_response: PickResponse) => void) => {
+			const reply = typeof ack === 'function' ? ack : () => undefined;
+			if (game.phase !== 'picking') return reply({ error: 'not-picking' });
+			const problem = game.problemPool.find((entry) => entry.questionId === request?.questionId);
+			if (!problem) return reply({ error: 'unknown-problem' });
+			if (game.picks.has(user.id)) return reply({ error: 'already-picked' });
+			const pickedByTeammate = teamOf(game, player.team)
+				.some((teammate) => game.picks.get(teammate.userId) === problem.questionId);
+			if (pickedByTeammate) return reply({ error: 'problem-picked' });
+
+			game.picks.set(user.id, problem.questionId);
+			reply({ ok: true });
+			if (everyonePicked(game)) {
+				void finishPicking(game);
 				return;
 			}
 			broadcastState(game);
@@ -450,7 +560,7 @@ export function createGameServer(app: Express, options: ServerOptions = {}) {
 			socketsByPlayer.delete(playerKey);
 			if (game.phase === 'ended') return;
 			player.connected = false;
-			if (game.phase === 'banning' || game.phase === 'playing') scheduleLeave(game, player);
+			if (game.phase === 'banning' || game.phase === 'picking' || game.phase === 'playing') scheduleLeave(game, player);
 			broadcastState(game);
 		});
 	});
