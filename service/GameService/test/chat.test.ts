@@ -554,4 +554,12 @@ describe('team chat history', () => {
 
 		expect(history.map((message) => message.text)).toEqual(['this game']);
 	});
+
+	it('US-3-T-3 sends an empty chat:history when the team has no messages', async () => {
+		// Nobody has chatted yet; player 2 reconnects.
+		sockets[2].disconnect();
+		const history = await joinAndGetHistory(players[2].userId);
+
+		expect(history).toEqual([]);
+	});
 });
