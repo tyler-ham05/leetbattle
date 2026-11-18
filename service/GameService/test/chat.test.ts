@@ -562,4 +562,14 @@ describe('team chat history', () => {
 
 		expect(history).toEqual([]);
 	});
+
+	it('US-3-T-3 does not include a chat:send longer than 500 characters in chat:history', async () => {
+		// The "Message too long" answer means the server is done with this message.
+		await sockets[0].timeout(2_000).emitWithAck('chat:send', { text: 'a'.repeat(501) });
+
+		sockets[2].disconnect();
+		const history = await joinAndGetHistory(players[2].userId);
+
+		expect(history).toEqual([]);
+	});
 });
