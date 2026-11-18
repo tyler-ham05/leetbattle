@@ -1,6 +1,7 @@
 // Holds the team chat for the match screen.
 // With a game socket (US-3-T-2), `send` emits `chat:send` to GameService.
 // Without one, messages live in local state only.
+// With a `history` (US-3-T-3), the team's earlier messages are shown first.
 'use client';
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import type { Socket } from 'socket.io-client';
@@ -30,11 +31,15 @@ export function ChatProvider({
 	children,
 	initialMessages = [],
 	socket = null,
+	history,
 }: {
 	children: ReactNode;
 	initialMessages?: ChatMessage[];
 	// The match's game socket; null outside a match.
 	socket?: Socket | null;
+	// The team's chat so far, oldest first, from GameService's "chat:history".
+	// Sent again on every reconnect, so it is followed rather than read once.
+	history?: ChatMessage[];
 }) {
 	const { user } = useAuth();
 	const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
@@ -49,6 +54,15 @@ export function ChatProvider({
 		errorTimer.current = setTimeout(() => setError(null), ERROR_SHOWN_MS);
 	};
 	useEffect(() => () => clearTimeout(errorTimer.current), []);
+
+	// Shows the history first, then any messages already on screen that it
+	// doesn't include, so a new history (e.g. after a reconnect) adds what was
+	// missed without showing anything twice.
+	useEffect(() => {
+		if (!history) return;
+		const inHistory = new Set(history.map((message) => message.id));
+		setMessages((current) => [...history, ...current.filter((message) => !inHistory.has(message.id))]);
+	}, [history]);
 
 	// GameService sends each team message (the player's own included) as `chat:message`.
 	useEffect(() => {

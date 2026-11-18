@@ -181,7 +181,7 @@ function MatchEditor({ questionIds, submit, shareCode, teammates, teammateCode }
 function GameContent() {
 	const { gameId } = useParams<{ gameId: string }>();
 	const { user } = useAuth();
-	const { socket, connected, game, result, error, connect, forfeit, ban, submit, shareCode, teammateCode } = useGameSocket();
+	const { socket, connected, game, result, error, connect, forfeit, ban, submit, shareCode, teammateCode, chatHistory } = useGameSocket();
 	const joined = connected && game !== null;
 	const playing = joined && game.phase === 'playing' && !result;
 	const banning = joined && game.phase === 'banning' && !result;
@@ -244,9 +244,10 @@ function GameContent() {
 							    player has their own editor; their code only goes to their team. */}
 							{playing && (
 								<div className="overflow-hidden rounded-xl border border-line">
-									{/* Team chat (US-3-T-2) goes over the game socket, so only teammates see it.
+									{/* Team chat (US-3-T-2) goes over the game socket, so only teammates see it,
+									    and starts with the team's earlier messages (US-3-T-3).
 									    The provider wraps the whole editor so its messages survive switching workspaces. */}
-									<ChatProvider socket={socket}>
+									<ChatProvider socket={socket} history={chatHistory}>
 										<MatchEditor
 											questionIds={game.problemPool.map((problem) => problem.questionId)}
 											submit={submit}
