@@ -404,3 +404,28 @@ describe('unsafe text in chat messages', () => {
 		expect(screen.getByTestId('chat-text').textContent).toBe('\'); DROP TABLE team_messages; --');
 	});
 });
+
+// US-3-T-3: chat history in the chat panel (all tests use a mocked socket, no backend)
+
+// Renders the chat panel connected to a fake game socket, starting from the
+// team's chat `history` as the match page passes it in.
+function renderChatWithHistory(history: ChatMessage[]) {
+	const fake = fakeSocket();
+	const view = render(
+		<ChatProvider socket={fake.socket as unknown as Socket} history={history}>
+			<TeamChat />
+		</ChatProvider>,
+	);
+	return { ...fake, view };
+}
+
+describe('chat history in the chat panel', () => {
+	it('US-3-T-3 shows a message that is in chat:history and also arrives as a chat:message once', () => {
+		const fake = renderChatWithHistory([fromGrace]);
+
+		// The same message (same id) arrives live too.
+		act(() => fake.fire('chat:message', fromGrace));
+
+		expect(screen.queryAllByText('Try a hash map')).toHaveLength(1);
+	});
+});
