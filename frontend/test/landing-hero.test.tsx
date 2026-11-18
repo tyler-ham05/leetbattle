@@ -53,13 +53,7 @@ describe('landing hero', () => {
 		expect(screen.getByTestId('pen-tip').getAttribute('aria-hidden')).toBe('true');
 	});
 
-	it('US5-Task14 has a "Find a match" link in the hero', () => {
-		expect(within(hero()).getByRole('link', { name: /Find a match/ })).toBeTruthy();
-	});
-
-	it('US5-Task14 has a "Private lobby" link in the hero', () => {
-		expect(within(hero()).getByRole('link', { name: 'Private lobby' })).toBeTruthy();
-	});
+	// (The hero's "Find a match" / "Private lobby" tests were replaced by US5-Task18's "Play" tests.)
 
 	it('US5-Task14 shows the whole wordmark when the player asks for reduced motion', () => {
 		// jsdom does not evaluate media queries, so check the stylesheet: under

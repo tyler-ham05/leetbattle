@@ -87,15 +87,7 @@ describe('clock', () => {
 	});
 });
 
-describe('your move', () => {
-	it('US5-Task15 has a "Find a match" link', () => {
-		expect(within(section('Your move')).getByRole('link', { name: /Find a match/ })).toBeTruthy();
-	});
-
-	it('US5-Task15 has a "Private lobby" link', () => {
-		expect(within(section('Your move')).getByRole('link', { name: 'Private lobby' })).toBeTruthy();
-	});
-});
+// (The "Your move" link tests were replaced by US5-Task18's "Play" tests.)
 
 describe('scroll progress and text', () => {
 	it('US5-Task15 hides the scroll progress bar from screen readers', () => {
