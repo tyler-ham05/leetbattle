@@ -508,4 +508,16 @@ describe('team chat history', () => {
 		// Top (oldest) to bottom (newest), the order they were sent in.
 		expect(history.map((message) => message.text)).toEqual(['first', 'second']);
 	});
+
+	it('US-3-T-3 sends each chat:history message with the same fields as the chat:message that was sent out', async () => {
+		const live = nextEvent<ChatMessage>(sockets[2], 'chat:message');
+		sockets[0].emit('chat:send', { text: 'hello team' });
+		const sentOut = await live;
+
+		sockets[2].disconnect();
+		const history = await joinAndGetHistory(players[2].userId);
+
+		// Same id, userId, displayName, team, text and sentAt as the live message.
+		expect(history).toEqual([sentOut]);
+	});
 });
