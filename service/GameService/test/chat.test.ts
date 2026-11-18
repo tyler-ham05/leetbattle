@@ -492,4 +492,20 @@ describe('team chat history', () => {
 		// Sorted so this only checks both are there; the next test checks the order.
 		expect(history.map((message) => message.text).sort()).toEqual(['first', 'second']);
 	});
+
+	it('US-3-T-3 sends chat:history oldest first', async () => {
+		// Player 0 sends first, then player 1; wait until player 2 has each one.
+		const first = nextEvent<ChatMessage>(sockets[2], 'chat:message');
+		sockets[0].emit('chat:send', { text: 'first' });
+		await first;
+		const second = nextEvent<ChatMessage>(sockets[2], 'chat:message');
+		sockets[1].emit('chat:send', { text: 'second' });
+		await second;
+
+		sockets[2].disconnect();
+		const history = await joinAndGetHistory(players[2].userId);
+
+		// Top (oldest) to bottom (newest), the order they were sent in.
+		expect(history.map((message) => message.text)).toEqual(['first', 'second']);
+	});
 });
