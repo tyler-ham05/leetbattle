@@ -442,4 +442,19 @@ describe('chat history in the chat panel', () => {
 
 		expect(screen.getByText('No messages yet')).toBeTruthy();
 	});
+
+	it('US-3-T-3 shows the team\'s earlier messages from the new chat:history after reconnecting', () => {
+		const fake = renderChatWithHistory([]);
+
+		// The socket reconnects and GameService sends the history again, now
+		// with messages sent while this player was away.
+		const missed = [fromGrace, { ...fromGrace, id: 'm10', text: 'Question 1 is done' }];
+		fake.view.rerender(
+			<ChatProvider socket={fake.socket as unknown as Socket} history={missed}>
+				<TeamChat />
+			</ChatProvider>,
+		);
+
+		expect(screen.getAllByTestId('chat-text').map((text) => text.textContent)).toEqual(['Try a hash map', 'Question 1 is done']);
+	});
 });
