@@ -19,6 +19,7 @@
 //  - With 2 of 3 Team 1 seats filled, Team 1's bar should be two thirds full
 //  - With 1 of 3 Team 2 seats filled, Team 2's bar should be one third full
 //  - During the countdown, both bars should be draining toward VS
+//  - Each bar's empty track should use the line color, so it still shows in light mode
 
 // Seats
 //  - A ready player's row should be marked ready (the team-colour sweep)
@@ -32,6 +33,8 @@
 //  - When the user is on Team 1, Team 1's open seats should not be buttons
 //  - The "Your team" button should no longer be shown
 //  - An open seat the user can take should hold "Open seat" and "Join here" in the same spot, so one fades into the other
+//  - An open seat's dashed outline should use the muted color at 40%, so it still shows in light mode
+//  - An open seat on the user's own team (not a button) should use the same outline
 
 // Display name (edited in the user's own row instead of a separate form)
 //  - The user's row should have an "Edit your display name" button
@@ -220,6 +223,11 @@ describe('lobby team bars', () => {
 		const draining = Array.from(document.querySelectorAll('[data-team-bar]')).map((bar) => bar.getAttribute('data-draining'));
 		expect(draining).toEqual(['true', 'true']);
 	});
+
+	it('gives each bar a track in the line color', () => {
+		render(<LobbyPage />);
+		expect(document.querySelector('[data-team-bar="a"]')?.parentElement?.classList.contains('bg-line')).toBe(true);
+	});
 });
 
 describe('lobby seats', () => {
@@ -273,6 +281,17 @@ describe('lobby team choice through open seats', () => {
 		// Both labels sit in one stacked cell (lb-seat-swap), so the hover swap crossfades in place.
 		const cell = within(seat).getByText('Open seat').parentElement;
 		expect(cell?.classList.contains('lb-seat-swap') && cell.contains(within(seat).getByText('Join here'))).toBe(true);
+	});
+
+	it('outlines an open seat the user can take in the muted color', () => {
+		configureLobby([{ ...ada, team: null }, grace, alan]);
+		render(<LobbyPage />);
+		expect(screen.getAllByRole('button', { name: 'Join Team 1' })[0].classList.contains('border-muted/40')).toBe(true);
+	});
+
+	it('outlines an open seat on the user\'s own team in the muted color', () => {
+		render(<LobbyPage />);
+		expect(screen.getAllByText('Open seat')[0].classList.contains('border-muted/40')).toBe(true);
 	});
 
 	it('US5-Task20 no longer shows a "Your team" button', () => {

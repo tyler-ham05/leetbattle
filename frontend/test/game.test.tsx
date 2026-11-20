@@ -100,6 +100,8 @@
 //  - Otherwise the scores should start at 0 and count up to the final score
 //  - A team that finished without points should show 0
 //  - "Play again" should link to the lobby, and "Home" to the home page
+//  - The crowns should be in the winning team's color (Team 2's crowns in its secondary color)
+//  - The frame around the two halves should come in with them, not before (no empty box while the word slams in)
 // US-6-T-12: The top bar should show the player's connected teammates next to Forfeit
 //  - During a match, the "Teammates" list in the top bar should show each connected teammate's name
 //  - The "Teammates" list should not include the signed-in player
@@ -746,6 +748,20 @@ describe('game page result', () => {
 		render(<GamePage />);
 
 		expect(screen.getByRole('link', { name: 'Play again' }).getAttribute('href')).toBe('/lobby');
+	});
+
+	it('colors Team 2\'s crowns in Team 2\'s color', () => {
+		configureEndedGame({ winner: 'b', reason: 'forfeit' });
+		render(<GamePage />);
+
+		expect(within(half('Team 2')).getAllByRole('img', { name: 'Winner' })[0].getAttribute('class')).toContain('fill-secondary');
+	});
+
+	it('brings the frame around the halves in with them', () => {
+		configureEndedGame({ winner: 'a', reason: 'time' });
+		render(<GamePage />);
+
+		expect(half('Team 1').parentElement?.classList.contains('lb-result-rise')).toBe(true);
 	});
 
 	it('offers a way Home', () => {
