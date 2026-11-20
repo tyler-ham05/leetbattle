@@ -1,4 +1,5 @@
 'use client';
+import type { ReactNode } from 'react';
 import { useMatch } from '../match-context';
 
 function formatTime(totalSeconds: number): string {
@@ -7,22 +8,31 @@ function formatTime(totalSeconds: number): string {
 	return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-// One compact line: Team 1's score, the time left, Team 2's score (US-5-T-17).
-// Screen readers hear the timer as "Time left"; there is no visible label.
-export default function Scoreboard() {
-	const { scores, secondsLeft } = useMatch();
-
+// Team 1's score, the time left, Team 2's score (US-5-T-17). Also the middle
+// of the game page's top bar (US-5-T-19). Screen readers hear the timer as
+// "Time left"; there is no visible label.
+export function ScoreLine({ scores, time }: { scores: { a: number; b: number }; time: ReactNode }) {
 	return (
-		<section aria-label="Scoreboard" className="flex items-center justify-center gap-6 border-b border-line bg-surface px-4 py-1.5 text-ink">
+		<div className="flex items-center gap-6 text-ink">
 			<div className="flex items-baseline gap-2">
 				<span className="text-sm text-muted">Team 1</span>
 				<span data-testid="score-a" className="text-lg font-semibold text-primary">{scores.a}</span>
 			</div>
-			<span aria-label="Time left" className="font-mono text-lg tabular-nums">{formatTime(secondsLeft)}</span>
+			<span aria-label="Time left" className="font-mono text-lg tabular-nums">{time}</span>
 			<div className="flex items-baseline gap-2">
 				<span className="text-sm text-muted">Team 2</span>
 				<span data-testid="score-b" className="text-lg font-semibold text-secondary">{scores.b}</span>
 			</div>
+		</div>
+	);
+}
+
+export default function Scoreboard() {
+	const { scores, secondsLeft } = useMatch();
+
+	return (
+		<section aria-label="Scoreboard" className="flex justify-center border-b border-line bg-surface px-4 py-1.5">
+			<ScoreLine scores={scores} time={formatTime(secondsLeft)} />
 		</section>
 	);
 }

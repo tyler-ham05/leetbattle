@@ -8,7 +8,8 @@
 'use client';
 
 import { useAuth } from '../../login/context';
-import type { PoolProblem, TeamId } from '../socket-context';
+import type { PoolProblem  } from '../socket-context';
+import type { TeamId } from '@/app/lobby/socket-context';
 
 const CARD = 'flex min-h-[168px] w-full flex-col justify-between gap-5 rounded-xl p-5 text-left';
 
@@ -24,8 +25,12 @@ function PickIcon() {
 	);
 }
 
+// A problem as the pick screen needs it: bans are already decided by the
+// time this screen shows, so it never needs bannedBy.
+type PickableProblem = Omit<PoolProblem, 'bannedBy'>;
+
 // The number and topics of a question. A picked question's topics are struck through.
-function QuestionTopics({ position, problem, picked }: { position: number; problem: PoolProblem; picked: boolean }) {
+function QuestionTopics({ position, problem, picked }: { position: number; problem: PickableProblem; picked: boolean }) {
 	const chip = picked
 		? 'border border-line font-medium text-muted line-through'
 		: 'bg-raised font-semibold';
@@ -43,7 +48,7 @@ function QuestionTopics({ position, problem, picked }: { position: number; probl
 
 interface PickScreenProps {
 	// The problems left after banning, shared by both teams.
-	problems: PoolProblem[];
+	problems: PickableProblem[];
 	// How many teammates must pick -- always equal to problems.length.
 	teamSize: number;
 	myTeam: TeamId;
@@ -53,7 +58,7 @@ interface PickScreenProps {
 export default function PickScreen({ problems, teamSize, myTeam, onPick }: PickScreenProps) {
 	const { user } = useAuth();
 
-	const pickerOf = (problem: PoolProblem) => problem.pickedBy[myTeam];
+	const pickerOf = (problem: PickableProblem) => problem.pickedBy[myTeam];
 	const pickers = problems.flatMap((problem) => {
 		const picker = pickerOf(problem);
 		return picker ? [picker] : [];

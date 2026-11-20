@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useEditor } from '../context';
 
 export default function TestCasesPanel() {
-	const { testCases, runResult } = useEditor();
+	const { testCases, hiddenCaseCount, runResult } = useEditor();
 	const [activeCase, setActiveCase] = useState(0);
 
 	useEffect(() => {
@@ -37,6 +37,9 @@ export default function TestCasesPanel() {
             Case {index + 1}
 					</button>
 				))}
+				{hiddenCaseCount > 0 && (
+					<span className="ml-auto text-xs text-muted">+{hiddenCaseCount} hidden, run on submit</span>
+				)}
 			</div>
 
 			<div className="flex-1 overflow-y-auto p-4">

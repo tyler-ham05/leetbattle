@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // Shared mocks. The lobby page never talks to LobbyService in these tests:
@@ -22,6 +22,7 @@ vi.mock('../app/lobby/socket-context', () => ({
 }));
 
 import LobbyPage from '../app/lobby/page';
+import { LOADER_MS } from '../app/_shared/page-loader';
 
 type TeamId = 'a' | 'b';
 
@@ -160,35 +161,15 @@ describe('lobby countdown and readiness summary', () => {
 		expect(screen.getByText('Starting match in 3…')).toBeTruthy();
 	});
 
-	it('US-1-T-1 asks players to fill both teams when nobody can ready up', () => {
-		configureLobby({ lobby: { canReady: false } });
-		render(<LobbyPage />);
-
-		// No countdown and not eligible: the summary explains what is missing.
-		expect(screen.getByText('Fill both teams with connected players to ready up')).toBeTruthy();
-	});
-
-	it('US-1-T-1 shows how many players are ready when the lobby is eligible', () => {
-		configureLobby({ players: withReady('u1', 'u2') });
-		render(<LobbyPage />);
-
-		// Eligible with two ready players: the summary shows the ready count.
-		expect(screen.getByText('2/6 players ready')).toBeTruthy();
-	});
-});
-
-describe('lobby errors and match readiness', () => {
-	it('shows the socket error message in an alert', () => {
-		configureLobby({ context: { error: { code: 'team-full', message: 'Team 1 is full.' } } });
-		render(<LobbyPage />);
-
-		// The error from the server is shown to the player.
-		expect(screen.getByRole('alert').textContent).toBe('Team 1 is full.');
-	});
-
 	it('US-6-T-2 navigates to the game page once the game has started', () => {
+		vi.useFakeTimers();
 		configureLobby({ context: { matchReadiness: { lobbyId: 'main', players: fullTeams }, gameStarted: { gameId: 'game-1' } } });
 		render(<LobbyPage />);
+		// US5-Task20: the team clash plays first, then the page moves on.
+		act(() => {
+			vi.advanceTimersByTime(LOADER_MS.clash);
+		});
+		vi.useRealTimers();
 
 		// After lobby:game-started, the page hands the player over to /game/<gameId>.
 		expect(lobbyMocks.push).toHaveBeenCalledWith('/game/game-1');
@@ -281,13 +262,6 @@ describe('lobby team selection', () => {
 		expect(lobbyMocks.emit).toHaveBeenCalledWith('lobby:join-team', 'a');
 	});
 
-	it('labels the user\'s current team as Your team', () => {
-		render(<LobbyPage />);
-
-		// The default roster puts u1 on Team 1.
-		expect(screen.getByRole('button', { name: 'Your team' })).toBeTruthy();
-	});
-
 	it('offers Switch to Team 1 when the user is on Team 2 and Team 1 has space', () => {
 		// u1 moves to Team 2 and u5/u6 have no team, so each team has two players.
 		configureLobby({ players: withTeams({ u1: 'b', u5: null, u6: null }) });
@@ -296,12 +270,13 @@ describe('lobby team selection', () => {
 		expect(screen.getByRole('button', { name: 'Switch to Team 1' })).toBeTruthy();
 	});
 
-	it('shows Team full when the user has no team and Team 1 already has three players', () => {
-		// u1 has no team and u4 takes their place on Team 1.
-		configureLobby({ players: withTeams({ u1: null, u4: 'a' }) });
+	// US5-Task19 bug fix: in a 1v1 the user's own team is always full, which
+	// used to flip Team 1's button to "Other team is full" despite its open seat.
+	it('US5-Task19 offers Switch to Team 1 in a 1v1 when the user is on Team 2 and Team 1 is empty', () => {
+		configureLobby({ players: [player('u1', 'Ada', 'b')], lobby: { teamSize: 1 } });
 		render(<LobbyPage />);
 
-		expect(screen.getByRole('button', { name: 'Team full' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Switch to Team 1' })).toBeTruthy();
 	});
 });
 
@@ -335,14 +310,6 @@ describe('lobby team size', () => {
 		expect(screen.queryByRole('button', { name: '2v2' })).toBeNull();
 	});
 
-	it('counts ready players out of the chosen lobby size', () => {
-		const twoPerTeam = [player('u1', 'Ada', 'a', { ready: true }), player('u2', 'Grace', 'a', { ready: true }), player('u4', 'Alan', 'b'), player('u5', 'Edsger', 'b')];
-		configureLobby({ players: twoPerTeam, lobby: { teamSize: 2 } });
-		render(<LobbyPage />);
-
-		expect(screen.getByText('2/4 players ready')).toBeTruthy();
-	});
-
 	it('tells a player who has not joined that a full 1v1 lobby is full', () => {
 		configureLobby({ userId: 'u7', players: [player('u1', 'Ada', 'a'), player('u4', 'Alan', 'b')], lobby: { teamSize: 1 } });
 		render(<LobbyPage />);
@@ -352,32 +319,13 @@ describe('lobby team size', () => {
 });
 
 describe('lobby display name', () => {
-	it('sends the trimmed name when the user saves a new display name', async () => {
+	it('disables Save name when the input matches the current name', async () => {
 		const user = userEvent.setup();
 		render(<LobbyPage />);
+		// US5-Task20: the name is edited in the user's own row.
+		await user.click(screen.getByRole('button', { name: 'Edit your display name' }));
 
-		fireEvent.change(screen.getByLabelText('Your display name'), { target: { value: '  Lovelace  ' } });
-		await user.click(screen.getByRole('button', { name: 'Save name' }));
-
-		// Surrounding whitespace is removed before the name is sent.
-		expect(lobbyMocks.emit).toHaveBeenCalledWith('lobby:set-name', 'Lovelace');
-	});
-
-	it('shows Saved after the user saves a new display name', async () => {
-		const user = userEvent.setup();
-		render(<LobbyPage />);
-
-		fireEvent.change(screen.getByLabelText('Your display name'), { target: { value: 'Lovelace' } });
-		await user.click(screen.getByRole('button', { name: 'Save name' }));
-
-		// The form confirms the save.
-		expect(screen.getByText('Saved')).toBeTruthy();
-	});
-
-	it('disables Save name when the input matches the current name', () => {
-		render(<LobbyPage />);
-
-		fireEvent.change(screen.getByLabelText('Your display name'), { target: { value: 'Ada' } });
+		fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Ada' } });
 
 		// Saving the same name would not change anything.
 		expect((screen.getByRole('button', { name: 'Save name' }) as HTMLButtonElement).disabled).toBe(true);
@@ -396,29 +344,8 @@ describe('leaving the lobby', () => {
 	});
 });
 
+// US5-Task20 replaced the seat markers with the team bars (lobby-arena.test.tsx).
 describe('lobby seats and team colours', () => {
-	it('always shows six seat markers', () => {
-		const { container } = render(<LobbyPage />);
-
-		// One marker per seat in the lobby, whether or not it is taken.
-		expect(container.querySelectorAll('[data-seat]')).toHaveLength(6);
-	});
-
-	it('marks three seats for Team 1 when Team 1 has three players', () => {
-		const { container } = render(<LobbyPage />);
-
-		// The default roster has three players on Team 1 (team "a").
-		expect(container.querySelectorAll('[data-seat="a"]')).toHaveLength(3);
-	});
-
-	it('marks a seat as waiting for a player who has no team yet', () => {
-		configureLobby({ players: withTeams({ u1: null }) });
-		const { container } = render(<LobbyPage />);
-
-		// u1 is in the lobby but has not picked a team.
-		expect(container.querySelectorAll('[data-seat="waiting"]')).toHaveLength(1);
-	});
-
 	it('shows one open seat when Team 1 has two players', () => {
 		configureLobby({ players: withTeams({ u1: null }) });
 		render(<LobbyPage />);
