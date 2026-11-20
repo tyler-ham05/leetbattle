@@ -507,42 +507,21 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 .lb-auth-check circle { stroke-dasharray: 120; stroke-dashoffset: 120; animation: lb-draw 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; }
 .lb-auth-check path { stroke-dasharray: 30; stroke-dashoffset: 30; animation: lb-draw 0.35s 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; }
 
-/* US-5-T-15: landing scroll sections. Everything stands still unless the
-   browser has scroll-driven animations and the player has not asked for
-   reduced motion. The clock's hand turns a full circle, and its ring fills,
-   from when the clock comes up the screen until the player has scrolled
-   through its section. */
-@property --lb-clock-deg { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
-.lb-scroll-track { display: none; }
-.lb-scroll-arc {
-  background: conic-gradient(var(--lb-primary) var(--lb-clock-deg), var(--lb-raised) 0deg);
-  mask: radial-gradient(farthest-side, transparent calc(100% - 10px), #000 calc(100% - 9px));
+/* Landing: the tagline under the wordmark types itself out once the pen has
+   drawn the wordmark, then its caret blinks. "Your move" comes into focus as
+   it scrolls in, where the browser supports scroll-driven animations. */
+@keyframes lb-type-in { from { width: 0; } }
+@keyframes lb-type-caret { 50% { border-right-color: transparent; } }
+.lb-typed {
+  display: inline-block; overflow: hidden; white-space: nowrap; vertical-align: bottom;
+  width: var(--w); border-right: 2px solid var(--lb-muted);
+  animation:
+    lb-type-in 1.6s steps(var(--n)) calc(var(--lb-intro-delay) + 0.8s) both,
+    lb-type-caret 1.06s steps(1) calc(var(--lb-intro-delay) + 2.4s) infinite;
 }
-.lb-scroll-hand { transform-origin: 50% 50%; }
-@keyframes lb-scroll-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-@keyframes lb-scroll-word {
-  0% { opacity: 0; transform: scale(0.8); filter: blur(12px); }
-  32%, 68% { opacity: 1; transform: none; filter: blur(0); }
-  100% { opacity: 0; transform: scale(1.06); filter: blur(8px); }
-}
-@keyframes lb-scroll-left { from { opacity: 0.15; transform: translateX(160px); } to { opacity: 1; transform: none; } }
-@keyframes lb-scroll-right { from { opacity: 0.15; transform: translateX(-160px); } to { opacity: 1; transform: none; } }
-@keyframes lb-scroll-hand { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-@keyframes lb-scroll-arc { from { --lb-clock-deg: 0deg; } to { --lb-clock-deg: 360deg; } }
-@keyframes lb-scroll-done { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes lb-focus-in { from { opacity: 0; transform: translateY(28px); filter: blur(8px); } to { opacity: 1; transform: none; filter: blur(0); } }
 @supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .lb-scroll-track { display: block; }
-    .lb-scroll-bar { transform-origin: left; animation: lb-scroll-grow linear both; animation-timeline: scroll(root); }
-    .lb-scroll-word { animation: lb-scroll-word linear both; animation-timeline: view(); animation-range: cover 0% cover 100%; }
-    .lb-scroll-left { animation: lb-scroll-left linear both; animation-timeline: view(); animation-range: entry 20% cover 45%; }
-    .lb-scroll-right { animation: lb-scroll-right linear both; animation-timeline: view(); animation-range: entry 20% cover 45%; }
-    .lb-scroll-clock { view-timeline-name: --lb-clock; height: 900px; }
-    .lb-scroll-clock-pin { position: sticky; top: 0; }
-    .lb-scroll-hand { animation: lb-scroll-hand linear both; animation-timeline: --lb-clock; animation-range: entry 10% contain 95%; }
-    .lb-scroll-arc { animation: lb-scroll-arc linear both; animation-timeline: --lb-clock; animation-range: entry 10% contain 95%; }
-    .lb-scroll-done { animation: lb-scroll-done linear both; animation-timeline: --lb-clock; animation-range: contain 90% contain 98%; }
-  }
+  .lb-reveal-view { animation: lb-focus-in linear both; animation-timeline: view(); animation-range: entry 0% cover 35%; }
 }
 
 /* US-5-T-14: landing hero. The wordmark draws in behind a pen tip, like the
@@ -612,6 +591,8 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
   .lb-title-row, .lb-title-row::before, .lb-title-desc { transition: none; }
   .lb-hero-word { clip-path: none; animation: none; }
   .lb-hero-tip { left: 100%; animation: none; }
+  .lb-typed { width: auto; border-right-color: transparent; animation: none; }
+  .lb-reveal-view { animation: none; }
   .lb-demo-loop { animation: none !important; }
   .lb-demo-line { width: auto; }
 }
