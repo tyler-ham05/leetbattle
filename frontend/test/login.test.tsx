@@ -59,7 +59,7 @@ describe('logging in', () => {
 describe('sign-up page', () => {
 	async function openSignup() {
 		render(<LoginPage />);
-		await userEvent.click(screen.getByRole('button', { name: 'Need an account?' }));
+		await userEvent.click(screen.getByRole('tab', { name: 'Sign up' }));
 	}
 
 	it('can be reached from the login page', async () => {
@@ -99,7 +99,7 @@ describe('sign-up page', () => {
 
 	it('can switch back to logging in', async () => {
 		await openSignup();
-		await userEvent.click(screen.getByRole('button', { name: 'Already have an account?' }));
+		await userEvent.click(screen.getByRole('tab', { name: 'Log in' }));
 		expect(screen.getByRole('heading', { name: 'Log in' })).toBeTruthy();
 	});
 });
