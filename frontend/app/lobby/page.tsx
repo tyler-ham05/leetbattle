@@ -204,10 +204,11 @@ function LobbyContent() {
 						{TEAMS.map((team) => {
 							const teamPlayers = players.filter((player) => player.team === team.id);
 							const otherTeam: TeamId = team.id === 'a' ? 'b' : 'a';
-							const otherTeamFull = players.filter((player) => player.team === otherTeam).length >= teamSize;
+							// Whether this card's team, the one a switch would move into, is full.
+							const teamFull = teamPlayers.length >= teamSize;
 							const isCurrentTeam = currentPlayer?.team === team.id;
 							const isOtherTeam = currentPlayer?.team === otherTeam;
-							const joinDisabled = !connected || (!isCurrentTeam && teamPlayers.length >= teamSize) || isCurrentTeam;
+							const joinDisabled = !connected || (!isCurrentTeam && teamFull) || isCurrentTeam;
 							const openSeats = Math.max(teamSize - teamPlayers.length, 0);
 
 							return (
@@ -256,7 +257,7 @@ function LobbyContent() {
 												disabled={joinDisabled}
 												className={`${BUTTON} w-full ${joinDisabled ? QUIET : `${FILLED} ${team.fill}`}`}
 											>
-												{isCurrentTeam ? 'Your team' : isOtherTeam ? (otherTeamFull ? 'Other team is full' : `Switch to ${team.name}`) : teamPlayers.length >= teamSize ? 'Team full' : `Join ${team.name}`}
+												{isCurrentTeam ? 'Your team' : teamFull ? 'Team full' : isOtherTeam ? `Switch to ${team.name}` : `Join ${team.name}`}
 											</button>
 										)}
 									</section>

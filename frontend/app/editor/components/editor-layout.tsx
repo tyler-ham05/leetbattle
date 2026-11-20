@@ -22,7 +22,7 @@ export default function EditorLayout({ belowQuestion }: EditorLayoutProps) {
 	// nothing here can be run or submitted on their behalf.
 	const { readOnly } = useEditor();
 	return (
-		<div className="flex h-screen bg-page font-sans">
+		<div className="flex min-h-0 flex-1 bg-page font-sans">
 
 			<div className="flex w-1/2 flex-col border-r border-line">
 				<div className="min-h-0 flex-1">
