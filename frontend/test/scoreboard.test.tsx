@@ -3,10 +3,11 @@
 //
 // No backend is touched: `useMatch` is replaced with a fake that serves mocked
 // scores, timer and submissions; the timer test runs the real provider under
-// fake timers; the match screen test stubs fetch and the auth context.
+// fake timers. (The practice-page scoreboard test went with US-5-T-19: practice
+// no longer shows the scoreboard.)
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fakeUser, jsonResponse, stubFetch, threeProblems } from './helpers';
+import { fakeUser } from './helpers';
 
 const matchMocks = vi.hoisted(() => ({ useMatch: vi.fn() }));
 
@@ -27,7 +28,6 @@ vi.mock('../app/editor/match-context', async (importOriginal) => ({
 }));
 
 import Scoreboard from '../app/editor/components/scoreboard';
-import EditorPage from '../app/editor/page';
 
 interface TestSubmission {
 	id: string;
@@ -164,14 +164,5 @@ describe('compact scoreboard', () => {
 	it('US5-Task17 still labels the timer "Time left" for screen readers', () => {
 		renderScoreboard({ secondsLeft: 674 });
 		expect(screen.getByText('11:14').closest('[aria-label]')?.getAttribute('aria-label')).toBe('Time left');
-	});
-});
-
-describe('match screen', () => {
-	it('US4-Task4 shows the scoreboard when the match screen loads', async () => {
-		stubFetch(() => jsonResponse(threeProblems));
-		matchMocks.useMatch.mockReturnValue({ scores: { a: 0, b: 0 }, secondsLeft: 600, submissions: [] });
-		render(<EditorPage />);
-		expect(await screen.findByRole('region', { name: 'Scoreboard' })).toBeTruthy();
 	});
 });

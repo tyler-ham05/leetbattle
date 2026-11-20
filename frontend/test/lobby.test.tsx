@@ -296,6 +296,15 @@ describe('lobby team selection', () => {
 		expect(screen.getByRole('button', { name: 'Switch to Team 1' })).toBeTruthy();
 	});
 
+	// US5-Task19 bug fix: in a 1v1 the user's own team is always full, which
+	// used to flip Team 1's button to "Other team is full" despite its open seat.
+	it('US5-Task19 offers Switch to Team 1 in a 1v1 when the user is on Team 2 and Team 1 is empty', () => {
+		configureLobby({ players: [player('u1', 'Ada', 'b')], lobby: { teamSize: 1 } });
+		render(<LobbyPage />);
+
+		expect(screen.getByRole('button', { name: 'Switch to Team 1' })).toBeTruthy();
+	});
+
 	it('shows Team full when the user has no team and Team 1 already has three players', () => {
 		// u1 has no team and u4 takes their place on Team 1.
 		configureLobby({ players: withTeams({ u1: null, u4: 'a' }) });
