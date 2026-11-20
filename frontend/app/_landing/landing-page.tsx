@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import HomeNav from '../_shared/home-nav';
 import Wordmark from '../_shared/wordmark';
+import ThemeToggle from '../_shared/theme-toggle';
 import MatchDemo from './match-demo';
 import YourMove from './your-move';
 
@@ -16,6 +17,7 @@ export default function LandingPage() {
 						<Wordmark />
 					</Link>
 					<div className="flex flex-wrap items-center gap-6 text-[15px] text-muted">
+						<ThemeToggle />
 						<HomeNav />
 					</div>
 				</nav>
