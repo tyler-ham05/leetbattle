@@ -21,8 +21,6 @@
 //  - After confirming, the Forfeit button should be disabled
 // Game page should show the result once the game ends
 //  - When team b wins, "Team 2 wins" should be displayed
-//  - When the game was won by forfeit, "by forfeit" should be displayed
-//  - The result screen should have a "Back to lobby" link
 //  - When the game ends in a draw, "Draw" should be displayed
 //  - Once the game has ended, the Forfeit button should not be shown
 // (The "Each problem in the match pool should be listed" and "Game page should
@@ -87,20 +85,21 @@
 //  (extends the approved US-6-T-7 draft: a teammate's workspace also has its own question switcher,
 //  independent of your own, so you can look at their other match questions too)
 //  - Switching the teammate's own question switcher should show that question's code for the teammate
-// US-6-T-11: The result screen should tell the player whether they won
-//  - When the player's team wins, "Victory" should be displayed
-//  - When the player's team wins, "Defeat" should not be displayed
-//  - When the other team wins, "Defeat" should be displayed
-//  - When the other team wins, "Victory" should not be displayed
-//  - When the game is a draw, neither "Victory" nor "Defeat" should be displayed
-//  - When the signed-in user isn't one of the match's players, neither "Victory" nor "Defeat" should be displayed
-// The result screen should show the final scores
-//  - With scores of 450 to 300, the "Final scores" list should show "Team 1 450" then "Team 2 300"
-//  - A team that finished on 0 points should show "0" in the "Final scores" list
-// The rest of the result screen should stay as it was
-//  - The "Team 1 wins" heading should still be displayed
-//  - The line explaining why the game ended should still be displayed
-//  - The "Back to lobby" link should still be displayed
+// Sprint 4: the result screen is redesigned (full width, slam, count-up, crowns)
+//  - When the player's team wins, the "Victory!" heading should be displayed, and "Defeat" should not
+//  - When the other team wins, the "Defeat" heading should be displayed, and "Victory!" should not
+//  - Under Defeat, the winning team's heading ("Team 2 wins") should still be displayed
+//  - A draw, or someone who is not a player, should see neither Victory! nor Defeat
+//  - Someone who is not a player should still see "Team 1 wins"
+//  - Victory! should slam in (lb-result-slam); Defeat should sink in (lb-result-sink)
+//  - The line explaining why the game ended should no longer be displayed
+//  - The result should take the whole page: no "Match" heading
+//  - Each team's half ("Team 1" / "Team 2") should list its players in roster order
+//  - Every player on the winning team should get a crown ("Winner"); the losers and a draw get none
+//  - With reduced motion, each half should show its final score straight away
+//  - Otherwise the scores should start at 0 and count up to the final score
+//  - A team that finished without points should show 0
+//  - "Play again" should link to the lobby, and "Home" to the home page
 // US-6-T-12: The top bar should show the player's connected teammates next to Forfeit
 //  - During a match, the "Teammates" list in the top bar should show each connected teammate's name
 //  - The "Teammates" list should not include the signed-in player
@@ -112,7 +111,7 @@
 //  - Once the game has ended, the "Teammates" list should not be shown
 //  - When every teammate is disconnected, the "Teammates" list should not be shown
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { fakeUser, jsonResponse, makeProblem, requestsOf, stubFetch } from './helpers';
 
@@ -532,37 +531,41 @@ describe('game page teammates next to Forfeit', () => {
 	});
 });
 
+// The end of the match (sprint 4 redesign): a full-width screen, "Victory!" or
+// "Defeat" for the players, the winning team under it, then each team's half:
+// name, score (counting up from 0) and players, with a crown on every winner.
+// The signed-in user is always u1 ("Ada"), on Team 1 (team a), so a win for
+// team a is a win for the viewer.
 describe('game page result', () => {
-	function configureEndedGame(result: Record<string, unknown>) {
-		configureGame({ connected: false, game: gameState(), result });
+	// The match as it stood when it ended: the last game:state the page saw
+	// (scores and roster), plus the game:ended result.
+	function configureEndedGame(result: Record<string, unknown>, overrides: Record<string, unknown> = {}) {
+		configureGame({ connected: false, game: gameState(overrides), result });
 	}
+
+	// jsdom has no matchMedia. This stands in for it so a test can turn
+	// "reduce motion" on (the scores then skip the count-up).
+	function stubReducedMotion(reduce: boolean) {
+		vi.stubGlobal('matchMedia', (query: string) => ({
+			matches: reduce && query === '(prefers-reduced-motion: reduce)',
+			media: query,
+			addEventListener: vi.fn(),
+			removeEventListener: vi.fn(),
+		}));
+	}
+
+	// One team's half of the result screen, found by its label ("Team 1" / "Team 2").
+	const half = (name: string) => screen.getByRole('region', { name });
+
+	// Exact-text matcher for either word, so "Victory!" in some other sentence
+	// can't make a "neither is shown" test pass or fail by accident.
+	const victoryOrDefeat = /^(Victory!|Defeat)$/;
 
 	it('US-6-T-2 shows the winning team', () => {
 		configureEndedGame({ winner: 'b', reason: 'forfeit' });
 		render(<GamePage />);
 
 		expect(screen.getByRole('heading', { name: 'Team 2 wins' })).toBeTruthy();
-	});
-
-	it('US-6-T-2 says when the game was won by forfeit', () => {
-		configureEndedGame({ winner: 'b', reason: 'forfeit' });
-		render(<GamePage />);
-
-		expect(screen.getByText(/by forfeit/)).toBeTruthy();
-	});
-
-	it('US-6-T-2 says when the game was won by solving every problem', () => {
-		configureEndedGame({ winner: 'a', reason: 'solved' });
-		render(<GamePage />);
-
-		expect(screen.getByText(/by solving every problem/)).toBeTruthy();
-	});
-
-	it('US-6-T-2 links back to the lobby from the result', () => {
-		configureEndedGame({ winner: 'a', reason: 'disconnect' });
-		render(<GamePage />);
-
-		expect(screen.getByRole('link', { name: 'Back to lobby' })).toBeTruthy();
 	});
 
 	it('US-6-T-2 shows a draw', () => {
@@ -578,65 +581,50 @@ describe('game page result', () => {
 
 		expect(screen.queryByRole('button', { name: 'Forfeit' })).toBeNull();
 	});
-});
 
-// US-6-T-11: the result screen speaks to the player looking at it and shows
-// the final score. The signed-in user is always u1 ("Ada"), who is on Team 1
-// (team a) in the default roster, so a win for team a is a win for the viewer.
-describe('game page result for the viewing player', () => {
-	// The match as it stood when it ended: the last game:state the page saw
-	// (scores and roster), plus the game:ended result.
-	function configureEndedGame(result: Record<string, unknown>, overrides: Record<string, unknown> = {}) {
-		configureGame({ connected: false, game: gameState(overrides), result });
-	}
-
-	// Exact-text matcher for either line, so "Victory" in some other sentence
-	// can't make a "neither is shown" test fail or pass by accident.
-	const victoryOrDefeat = /^(Victory|Defeat)$/;
-
-	// The "Final scores" list's items as plain text, whitespace collapsed, so
-	// "<span>Team 1</span> <span>450</span>" reads as "Team 1 450".
-	function finalScores() {
-		const list = screen.getByRole('list', { name: 'Final scores' });
-		return within(list).getAllByRole('listitem').map((item) => (item.textContent ?? '').replace(/\s+/g, ' ').trim());
-	}
-
-	it('US-6-T-11 shows Victory when the player\'s team wins', () => {
+	it('shows Victory! when the player\'s team wins', () => {
 		configureEndedGame({ winner: 'a', reason: 'time' });
 		render(<GamePage />);
 
-		expect(screen.getByText('Victory')).toBeTruthy();
+		expect(screen.getByRole('heading', { name: 'Victory!' })).toBeTruthy();
 	});
 
-	it('US-6-T-11 does not show Defeat when the player\'s team wins', () => {
+	it('does not show Defeat when the player\'s team wins', () => {
 		configureEndedGame({ winner: 'a', reason: 'time' });
 		render(<GamePage />);
 
 		expect(screen.queryByText('Defeat')).toBeNull();
 	});
 
-	it('US-6-T-11 shows Defeat when the other team wins', () => {
+	it('shows Defeat when the other team wins', () => {
 		configureEndedGame({ winner: 'b', reason: 'forfeit' });
 		render(<GamePage />);
 
-		expect(screen.getByText('Defeat')).toBeTruthy();
+		expect(screen.getByRole('heading', { name: 'Defeat' })).toBeTruthy();
 	});
 
-	it('US-6-T-11 does not show Victory when the other team wins', () => {
+	it('does not show Victory! when the other team wins', () => {
 		configureEndedGame({ winner: 'b', reason: 'forfeit' });
 		render(<GamePage />);
 
-		expect(screen.queryByText('Victory')).toBeNull();
+		expect(screen.queryByText('Victory!')).toBeNull();
 	});
 
-	it('US-6-T-11 shows neither Victory nor Defeat for a draw', () => {
+	it('still names the winning team under Defeat', () => {
+		configureEndedGame({ winner: 'b', reason: 'forfeit' });
+		render(<GamePage />);
+
+		expect(screen.getByRole('heading', { name: 'Team 2 wins' })).toBeTruthy();
+	});
+
+	it('shows neither Victory! nor Defeat for a draw', () => {
 		configureEndedGame({ winner: null, reason: 'time' });
 		render(<GamePage />);
 
 		expect(screen.queryByText(victoryOrDefeat)).toBeNull();
 	});
 
-	it('US-6-T-11 shows neither Victory nor Defeat to someone who is not a player', () => {
+	it('shows neither Victory! nor Defeat to someone who is not a player', () => {
 		// The roster without u1: the signed-in user has no team in this match.
 		configureEndedGame({ winner: 'a', reason: 'time' }, { players: roster.filter((entry) => entry.userId !== 'u1') });
 		render(<GamePage />);
@@ -644,39 +632,127 @@ describe('game page result for the viewing player', () => {
 		expect(screen.queryByText(victoryOrDefeat)).toBeNull();
 	});
 
-	it('US-6-T-11 lists each team\'s final score, Team 1 first', () => {
-		configureEndedGame({ winner: 'a', reason: 'time' }, { scores: { a: 450, b: 300 } });
-		render(<GamePage />);
-
-		expect(finalScores()).toEqual(['Team 1 450', 'Team 2 300']);
-	});
-
-	it('US-6-T-11 shows 0 for a team that finished without points', () => {
-		configureEndedGame({ winner: 'b', reason: 'time' }, { scores: { a: 0, b: 150 } });
-		render(<GamePage />);
-
-		expect(finalScores()[0]).toBe('Team 1 0');
-	});
-
-	it('US-6-T-11 still shows the winning team heading', () => {
-		configureEndedGame({ winner: 'a', reason: 'time' }, { scores: { a: 450, b: 300 } });
+	it('still names the winning team to someone who is not a player', () => {
+		configureEndedGame({ winner: 'a', reason: 'time' }, { players: roster.filter((entry) => entry.userId !== 'u1') });
 		render(<GamePage />);
 
 		expect(screen.getByRole('heading', { name: 'Team 1 wins' })).toBeTruthy();
 	});
 
-	it('US-6-T-11 still says why the game ended', () => {
-		configureEndedGame({ winner: 'a', reason: 'time' }, { scores: { a: 450, b: 300 } });
+	it('slams Victory! in', () => {
+		configureEndedGame({ winner: 'a', reason: 'time' });
 		render(<GamePage />);
 
-		expect(screen.getByText(/when time ran out/)).toBeTruthy();
+		expect(screen.getByTestId('result-word').classList.contains('lb-result-slam')).toBe(true);
 	});
 
-	it('US-6-T-11 still links back to the lobby', () => {
+	it('sinks Defeat in instead of slamming it', () => {
+		configureEndedGame({ winner: 'b', reason: 'time' });
+		render(<GamePage />);
+
+		expect(screen.getByTestId('result-word').classList.contains('lb-result-sink')).toBe(true);
+	});
+
+	it('no longer explains why the game ended', () => {
+		configureEndedGame({ winner: 'b', reason: 'forfeit' });
+		render(<GamePage />);
+
+		expect(screen.queryByText(/by forfeit/)).toBeNull();
+	});
+
+	it('takes the whole page instead of sitting under the Match heading', () => {
+		configureEndedGame({ winner: 'a', reason: 'time' });
+		render(<GamePage />);
+
+		expect(screen.queryByRole('heading', { name: 'Match' })).toBeNull();
+	});
+
+	it('lists Team 1\'s players in its half', () => {
+		configureEndedGame({ winner: 'a', reason: 'time' });
+		render(<GamePage />);
+
+		expect(within(half('Team 1')).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Ada', 'Grace', 'Katherine']);
+	});
+
+	it('lists Team 2\'s players in its half', () => {
+		configureEndedGame({ winner: 'a', reason: 'time' });
+		render(<GamePage />);
+
+		expect(within(half('Team 2')).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Alan', 'Edsger', 'Margaret']);
+	});
+
+	it('puts a crown on every player of the winning team', () => {
+		configureEndedGame({ winner: 'a', reason: 'time' });
+		render(<GamePage />);
+
+		expect(within(half('Team 1')).getAllByRole('img', { name: 'Winner' })).toHaveLength(3);
+	});
+
+	it('puts no crown on the losing team', () => {
+		configureEndedGame({ winner: 'a', reason: 'time' });
+		render(<GamePage />);
+
+		expect(within(half('Team 2')).queryAllByRole('img', { name: 'Winner' })).toHaveLength(0);
+	});
+
+	it('puts no crowns on anyone after a draw', () => {
+		configureEndedGame({ winner: null, reason: 'time' });
+		render(<GamePage />);
+
+		expect(screen.queryAllByRole('img', { name: 'Winner' })).toHaveLength(0);
+	});
+
+	it('shows each team\'s final score straight away when motion is reduced', () => {
+		stubReducedMotion(true);
 		configureEndedGame({ winner: 'a', reason: 'time' }, { scores: { a: 450, b: 300 } });
 		render(<GamePage />);
 
-		expect(screen.getByRole('link', { name: 'Back to lobby' })).toBeTruthy();
+		expect(within(half('Team 1')).getByTestId('final-score').textContent).toBe('450');
+	});
+
+	it('starts the scores counting from 0', () => {
+		stubReducedMotion(false);
+		configureEndedGame({ winner: 'a', reason: 'time' }, { scores: { a: 450, b: 300 } });
+		render(<GamePage />);
+
+		expect(within(half('Team 2')).getByTestId('final-score').textContent).toBe('0');
+	});
+
+	it('counts the scores up to the final score', async () => {
+		stubReducedMotion(false);
+		vi.useFakeTimers();
+		configureEndedGame({ winner: 'a', reason: 'time' }, { scores: { a: 450, b: 300 } });
+		render(<GamePage />);
+
+		// The count-up waits for the halves to come in, then runs: 3s covers both.
+		await act(async () => {
+			vi.advanceTimersByTime(3000);
+		});
+		vi.useRealTimers();
+
+		expect(within(half('Team 2')).getByTestId('final-score').textContent).toBe('300');
+	});
+
+	it('shows 0 for a team that finished without points', () => {
+		stubReducedMotion(true);
+		configureEndedGame({ winner: 'b', reason: 'time' }, { scores: { a: 0, b: 150 } });
+		render(<GamePage />);
+
+		expect(within(half('Team 1')).getByTestId('final-score').textContent).toBe('0');
+	});
+
+	it('offers Play again, which goes to the lobby', () => {
+		configureEndedGame({ winner: 'a', reason: 'time' });
+		render(<GamePage />);
+
+		expect(screen.getByRole('link', { name: 'Play again' }).getAttribute('href')).toBe('/lobby');
+	});
+
+	it('offers a way Home', () => {
+		configureEndedGame({ winner: 'a', reason: 'time' });
+		render(<GamePage />);
+
+		expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
 	});
 });
 

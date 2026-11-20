@@ -21,6 +21,14 @@
 // Home screen should show falling code snippets in the background
 //  - The background should be hidden from screen readers
 //  - The background should not animate when the user has reduced motion turned on
+// Sprint 4: the name above the title is just the name
+//  - The signed-in player's name should be shown on its own
+//  - There should be no "Player" label in front of it
+// Sprint 4: the light/dark button lives in the top bar on every page
+//  - The top bar should have a "Switch to light mode" button while in dark mode
+//  - Clicking it should switch <html> to light mode
+//  - In light mode it should offer "Switch to dark mode"
+//  - It should sit to the left of the account menu button
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
@@ -114,9 +122,10 @@ describe('home screen user profile', () => {
 
 	it('renders no menu wrapper at all when there is no logged-in user', () => {
 		useAuthMock.mockReturnValue({ user: null, logout, isLoading: false });
-		// UserMenu bails out to `null`; only the topbar's own wordmark/link remain.
-		const { container } = render(<HomeTopBar />);
-		expect(container.querySelector('.relative')).toBeNull();
+		// UserMenu bails out to `null`: no account menu button (the light/dark
+		// button stays, so this can't just look for any wrapper element).
+		render(<HomeTopBar />);
+		expect(screen.queryByRole('button', { name: 'Account menu' })).toBeNull();
 	});
 
 	it('shows the email instead of a name when user.name is null', async () => {
@@ -252,5 +261,48 @@ describe('home screen falling code background', () => {
 			expect(snippets.length).toBeGreaterThan(0);
 			snippets.forEach((snippet) => expect(snippet.getAttribute('data-animated')).toBe('false'));
 		});
+	});
+});
+
+describe('home screen name label', () => {
+	it('shows the signed-in player\'s name on its own', () => {
+		render(<HomeActions />);
+		expect(screen.getByText(fakeUser.name as string)).toBeTruthy();
+	});
+
+	it('has no Player label in front of the name', () => {
+		render(<HomeActions />);
+		expect(screen.queryByText(/Player/)).toBeNull();
+	});
+});
+
+describe('top bar light/dark button', () => {
+	afterEach(() => {
+		// The button writes straight to <html>, so reset it between tests.
+		document.documentElement.removeAttribute('data-mode');
+	});
+
+	it('offers to switch to light mode while in dark mode', () => {
+		render(<HomeTopBar />);
+		expect(screen.getByRole('button', { name: 'Switch to light mode' })).toBeTruthy();
+	});
+
+	it('switches the page to light mode when clicked', async () => {
+		render(<HomeTopBar />);
+		await userEvent.click(screen.getByRole('button', { name: 'Switch to light mode' }));
+		expect(document.documentElement.getAttribute('data-mode')).toBe('light');
+	});
+
+	it('offers to switch back to dark mode while in light mode', () => {
+		document.documentElement.setAttribute('data-mode', 'light');
+		render(<HomeTopBar />);
+		expect(screen.getByRole('button', { name: 'Switch to dark mode' })).toBeTruthy();
+	});
+
+	it('sits to the left of the account menu button', () => {
+		render(<HomeTopBar />);
+		const toggle = screen.getByRole('button', { name: 'Switch to light mode' });
+		const menu = screen.getByRole('button', { name: 'Account menu' });
+		expect(toggle.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 	});
 });
