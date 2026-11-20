@@ -3,16 +3,23 @@
 The whole site shares one light/dark + color-scheme system, driven by two
 attributes on `<html>`:
 
-- `data-scheme` — one of `emerald` (default), `volt`, `midnight`, `ultraviolet`
+- `data-scheme` — one of `emerald` (default), `midnight`, `nocturne`, `shoreline`,
+  `merlot`, `coffee`, `performative`, `lilac`, `tidepool`, `sugarplum`, `vim`
 - `data-mode` — `dark` (default) or `light`
 
 Users change these from the settings page (`app/settings/components/form.tsx`),
-via `app/_shared/theme-controls.tsx`. The choice is saved to `localStorage` and
-re-applied before first paint by the init script in `app/theme.ts`, so there's
-no flash of the wrong theme.
+via `app/_shared/theme-controls.tsx` ("Try it on": hovering a scheme name shows
+it in a live match preview, clicking uses it). The choice is saved to
+`localStorage` and re-applied before first paint by the init script in
+`app/theme.ts`, so there's no flash of the wrong theme. A saved scheme that no
+longer exists falls back to the default. Switching turns transitions off for one
+frame (`.theme-switching`), so colors swap at once instead of fading.
 
 All the actual colors live in `app/globals.css` as CSS variables, one block per
-`[data-scheme][data-mode]` combination (e.g. `[data-scheme="volt"][data-mode="light"]`).
+`[data-scheme][data-mode]` combination (e.g. `[data-scheme="coffee"][data-mode="light"]`).
+The selectors aren't tied to `<html>`: any element carrying both attributes
+gets that scheme's colors inside it. The settings preview and the favicon use
+this to show a scheme without changing the page.
 Each block defines the same set of `--lb-*` variables, which Tailwind exposes as
 utility classes via `@theme inline`:
 
@@ -46,3 +53,23 @@ should also shift with the color scheme (not just light/dark). Reach for
 `dark:` only for things with no theme token, like the Easy/Medium/Hard
 difficulty colors in `editor/components/question-panel.tsx`, which are
 intentionally fixed hues (green/yellow/red) across every scheme.
+
+**Team colors:** `--lb-primary` is Team 1 and `--lb-secondary` is Team 2
+everywhere (lobby, scoreboard, results, loaders). The newer schemes are calm on
+purpose: low-saturation accents, tinted near-black pages (no pure black) and
+off-white text in dark mode, and a Team 2 from the same color family as Team 1,
+set apart mostly by depth. Every text color passes WCAG AA (4.5:1) on the page
+and raised backgrounds, except Vim, whose colors match the Vim start screen
+exactly (pure black page, its Team 2 blue is 3.4:1). Merlot and Sugarplum show
+errors in amber so they don't blend into their own team colors.
+
+**Adding a scheme:** add it to `SCHEMES` in `app/theme.ts` (the order is the
+order settings shows), and add a dark and a light block to `globals.css` with
+every `--lb-*` variable.
+
+**Favicon:** `app/_shared/favicon.ts` draws the tab icon (`</>` with a katana
+through it): the brackets in the scheme's two team colors, a white blade, the
+handle in `--lb-muted`, on a tile in `--lb-page`. `app/_shared/theme-favicon.tsx`
+redraws it whenever the scheme changes, always from the scheme's dark colors so
+the white blade stays visible. `app/icon.svg` is the Emerald dark version that
+shows before any script runs; a test keeps it in sync with `faviconSvg`.
