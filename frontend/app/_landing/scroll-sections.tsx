@@ -7,7 +7,7 @@ import Link from 'next/link';
 // animations, and players who ask for reduced motion, get the same sections
 // standing still.
 
-const STATEMENT = 'm-0 text-center text-[clamp(64px,10vw,150px)] font-extrabold leading-[0.95] tracking-[-0.05em]';
+const STATEMENT = 'm-0 text-[clamp(64px,10vw,150px)] font-extrabold leading-[0.95] tracking-[-0.05em]';
 
 // The 12 hour marks around the clock face, as [x1, y1, x2, y2] on a 340 box.
 const TICKS = Array.from({ length: 12 }, (_, i) => {
@@ -34,8 +34,8 @@ export default function ScrollSections() {
 				<div className="lb-scroll-bar h-full bg-primary" />
 			</div>
 
-			<section className="flex h-[440px] flex-col items-center justify-center gap-10 px-8">
-				<h2 className={`lb-scroll-word ${STATEMENT}`}>Two teams</h2>
+			<section className="mx-auto flex h-[440px] max-w-[1080px] flex-col items-start justify-center gap-10 px-8">
+				<h2 className={`lb-scroll-word text-left ${STATEMENT}`}>Two teams</h2>
 				<div data-testid="team-dots" aria-hidden="true" className="flex items-center gap-14">
 					<Dots color="bg-primary" side="left" />
 					<Dots color="bg-secondary" side="right" />
@@ -43,9 +43,9 @@ export default function ScrollSections() {
 				<span className="font-mono text-[15px] tracking-[0.12em] text-muted">1v1 · 2v2 · 3v3</span>
 			</section>
 
-			<section className="flex h-[420px] flex-col items-center justify-center gap-9 px-8">
-				<h2 className={`lb-scroll-word ${STATEMENT}`}>Same problems</h2>
-				<div className="flex flex-wrap justify-center gap-3 font-mono text-[15px] font-semibold">
+			<section className="mx-auto flex h-[420px] max-w-[1080px] flex-col items-end justify-center gap-9 px-8">
+				<h2 className={`lb-scroll-word text-right ${STATEMENT}`}>Same problems</h2>
+				<div className="flex flex-wrap justify-end gap-3 font-mono text-[15px] font-semibold">
 					<span data-testid="difficulty" className="rounded-xl border border-line px-[18px] py-2.5 text-green-600 dark:text-green-400">Easy</span>
 					<span data-testid="difficulty" className="rounded-xl border border-line px-[18px] py-2.5 text-yellow-600 dark:text-yellow-400">Medium</span>
 					<span data-testid="difficulty" className="rounded-xl border border-line px-[18px] py-2.5 text-red-600 dark:text-red-400">Hard</span>
@@ -54,7 +54,7 @@ export default function ScrollSections() {
 
 			<section aria-label="Thirty minutes on the clock" className="lb-scroll-clock">
 				<div className="lb-scroll-clock-pin flex h-[640px] flex-col items-center justify-center gap-8 px-8">
-					<div data-testid="clock-face" aria-hidden="true" className="relative size-[340px]">
+					<div data-testid="clock-face" aria-hidden="true" className="relative size-[340px] max-sm:scale-75">
 						<div className="lb-scroll-arc absolute inset-0 rounded-full" />
 						<svg className="absolute inset-0" width="340" height="340" viewBox="0 0 340 340">
 							<g className="stroke-line" strokeWidth="3" strokeLinecap="round">
@@ -71,22 +71,17 @@ export default function ScrollSections() {
 			</section>
 
 			<section className="flex h-[400px] items-center justify-center px-8">
-				<h2 className={`lb-scroll-word text-primary ${STATEMENT}`}>One winner</h2>
+				<h2 className={`lb-scroll-word text-center text-primary ${STATEMENT}`}>One winner</h2>
 			</section>
 
 			<section className="flex flex-col items-center gap-8 px-8 pt-10 pb-28 text-center">
 				<h2 className="m-0 text-[clamp(56px,8vw,120px)] font-extrabold leading-[0.95] tracking-[-0.05em]">Your move</h2>
-				<div className="flex flex-wrap justify-center gap-3">
-					<Link href="/login" className="inline-flex h-[60px] items-center gap-2.5 rounded-[18px] bg-primary px-8 text-lg font-bold text-on-primary hover:opacity-90">
-						Find a match
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-							<path d="M5 12h14M13 6l6 6-6 6" />
-						</svg>
-					</Link>
-					<Link href="/lobby?private=1" className="inline-flex h-[60px] items-center rounded-[18px] border border-line px-7 text-lg font-semibold hover:bg-raised">
-						Private lobby
-					</Link>
-				</div>
+				<Link href="/login" className="inline-flex h-[60px] items-center gap-2.5 rounded-[18px] bg-primary px-9 text-lg font-bold text-on-primary hover:opacity-90">
+					Play
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+						<path d="M5 12h14M13 6l6 6-6 6" />
+					</svg>
+				</Link>
 			</section>
 		</div>
 	);
