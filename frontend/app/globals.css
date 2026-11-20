@@ -857,6 +857,48 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
   }
 }
 
+
+/* =========================================================
+   RESULT SCREEN (end of a match)
+   ========================================================= */
+
+/* Victory! drops in oversized and slams down in the middle of the screen,
+   holds, then slides up to its place. --lb-drop is how far below its place it
+   lands (about the middle of the screen). */
+@keyframes lb-result-slam {
+  0%   { opacity: 0; transform: translateY(var(--lb-drop)) scale(1.6); }
+  16%  { opacity: 1; transform: translateY(var(--lb-drop)) scale(0.97); }
+  24%  { transform: translateY(var(--lb-drop)) scale(1); }
+  60%  { transform: translateY(var(--lb-drop)) scale(1); }
+  100% { opacity: 1; transform: none; }
+}
+/* Defeat sinks in instead: no bounce, holds a beat longer, then slides up. */
+@keyframes lb-result-sink {
+  0%   { opacity: 0; transform: translateY(calc(var(--lb-drop) - 18px)); }
+  26%  { opacity: 1; transform: translateY(var(--lb-drop)); }
+  64%  { transform: translateY(var(--lb-drop)); }
+  100% { opacity: 1; transform: none; }
+}
+/* The page jolts once as Victory! lands. */
+@keyframes lb-result-jolt {
+  0%, 100% { transform: none; }
+  20% { transform: translateY(6px); }
+  45% { transform: translateY(-3px); }
+  70% { transform: translateY(1px); }
+}
+/* Crowns drop onto the winners one by one. */
+@keyframes lb-result-crown {
+  0%   { opacity: 0; transform: translateY(-10px) scale(0.97); }
+  60%  { opacity: 1; transform: translateY(0) scale(1.15); }
+  100% { opacity: 1; transform: none; }
+}
+.lb-result-slam { --lb-drop: calc(50vh - 180px); animation: lb-result-slam 1.7s cubic-bezier(0.3, 0.7, 0.2, 1) both; }
+.lb-result-sink { --lb-drop: calc(50vh - 180px); animation: lb-result-sink 2s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.lb-result-jolt { animation: lb-result-jolt 0.3s ease-out 0.27s both; }
+/* The halves and buttons rise in after the word has moved up (--d staggers them). */
+.lb-result-rise { animation: lb-rise 0.5s ease-out both; animation-delay: var(--d, 0s); }
+.lb-result-crown { display: inline-flex; animation: lb-result-crown 0.45s ease-out both; animation-delay: var(--d, 0s); }
+
 @media (prefers-reduced-motion: reduce) {
   .lb-auth-check circle, .lb-auth-check path { stroke-dashoffset: 0; animation: none; }
   .lb-press, .lb-seat-pip, .lb-fold { transition: none; }
@@ -878,4 +920,5 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
   .lb-reveal-view { animation: none; }
   .lb-demo-loop { animation: none !important; }
   .lb-demo-line { width: auto; }
+  .lb-result-slam, .lb-result-sink, .lb-result-jolt, .lb-result-rise, .lb-result-crown { animation: none; }
 }

@@ -11,8 +11,9 @@ MOTION section of `app/globals.css`; `test/motion-rules.test.tsx` checks them.
 | **Steppers** slide the next step in from the direction you're going, no crossfade | `data-step="forward"` / `data-step="back"`; `AuthCard` takes `step={{ id, direction }}` | login → forgot password → check your email |
 | **Accordions** animate `height: auto` | `:root { interpolate-size: allow-keywords }` + `.lb-fold` with `data-collapsed` | sign-up Name field |
 | **Moving things** animate `transform`, never `top`/`left` | — | lobby team-size highlight, pen-tip lines |
-| **Theme switches** turn transitions off while the theme changes | `.theme-switching * { transition: none !important }`, added by `save()` in `app/_shared/theme-controls.tsx` | settings scheme/mode controls |
-| **Tooltips** delay only the first one; once one is open, the rest show instantly | `app/_shared/tooltip.tsx` (500ms first delay, 300ms warm window) | theme swatches, light/dark toggle |
+| **Theme switches** turn transitions off while the theme changes | `.theme-switching * { transition: none !important }`, added by `saveTheme()` in `app/_shared/theme-state.ts` | settings scheme picker, top-bar light/dark button |
+| **Tooltips** delay only the first one; once one is open, the rest show instantly | `app/_shared/tooltip.tsx` (500ms first delay, 300ms warm window) | theme swatches, top-bar light/dark button |
+| **Match result** (end of a match): Victory! slams in oversized in the middle of the screen and the page jolts once; Defeat sinks in with no bounce. The word then slides up, the two team halves rise in, the scores count up from 0, crowns drop onto the winners one by one, then the buttons | `.lb-result-slam` / `.lb-result-sink` (word), `.lb-result-jolt` (page), `.lb-result-rise` and `.lb-result-crown` (staggered with `--d`); scores use `useCountUp` in `app/_shared/use-count-up.ts` (final number at once with reduced motion) | `app/game/components/result-screen.tsx` |
 | **Flicks and drags**: on release, hand off to a spring that keeps the release velocity (e.g. `animate(y, 0, { type: "spring", duration: 0.5, bounce: 0, velocity })`), not a fixed-duration transition | — | nothing draggable yet |
 | **Carousels**: past either end, add resistance that grows the further you pull, then spring back | — | no carousel in use yet |
 
