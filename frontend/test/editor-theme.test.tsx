@@ -6,6 +6,8 @@
 //   - In light mode the editor theme should be based on Monaco's light theme
 //   - In dark mode the editor theme should be based on Monaco's dark theme
 //   - The theme colors should be read from the --lb-* variables on the page
+//   - A short color like "#fff" (the CSS build shortens #ffffff) should be read as "#ffffff",
+//     since Monaco rejects 3-digit colors and the practice page crashed in light mode
 // The question tabs should match the theme
 //   - The question tabs should not have a colored bottom border
 //   - The tab of the open question should be marked as current
@@ -65,6 +67,13 @@ describe('code editor theme', () => {
 
 		// Surrounding whitespace in the variable is dropped.
 		expect(readThemeColors(root).primary).toBe('#b8f53d');
+	});
+
+	it('reads a short #fff as the full #ffffff', () => {
+		const root = document.createElement('div');
+		root.style.setProperty('--lb-surface', '#fff');
+
+		expect(readThemeColors(root).surface).toBe('#ffffff');
 	});
 });
 

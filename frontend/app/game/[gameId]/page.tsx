@@ -17,23 +17,15 @@ import { ChatProvider } from '../../editor/chat-context';
 import BanScreen from '../components/ban-screen';
 import PickScreen from '../components/pick-screen';
 import WorkspaceSwitcher from '../components/workspace-switcher';
+import ResultScreen from '../components/result-screen';
 import { GameSocketProvider, useGameSocket } from '../socket-context';
-import type { GamePlayer, GameResult, TeammateCode } from '../socket-context';
+import type { GamePlayer, TeammateCode } from '../socket-context';
 
 const TEAMS: { id: TeamId; name: string; nameColor: string }[] = [
 	{ id: 'a', name: 'Team 1', nameColor: 'text-primary' },
 	{ id: 'b', name: 'Team 2', nameColor: 'text-secondary' },
 ];
 
-const teamName = (team: TeamId) => TEAMS.find((entry) => entry.id === team)?.name ?? '';
-
-// How the result screen explains why the game ended.
-const END_REASONS: Record<GameResult['reason'], string> = {
-	forfeit: 'by forfeit',
-	disconnect: 'by disconnect: the other team left the match',
-	time: 'when time ran out',
-	solved: 'by solving every problem',
-};
 
 const BUTTON = 'lb-press inline-flex min-h-9 items-center justify-center rounded-lg px-4 text-sm font-semibold disabled:cursor-not-allowed';
 
@@ -131,32 +123,6 @@ function ForfeitControl({ onForfeit }: { onForfeit: () => void }) {
 	);
 }
 
-// The end of the match. myTeam is the viewer's team (undefined when they aren't
-// one of the players), so a draw or an onlooker gets neither Victory nor Defeat.
-// scores are the last game:state's, as the match stood when it ended.
-function ResultScreen({ result, myTeam, scores }: { result: GameResult; myTeam?: TeamId; scores?: Record<TeamId, number> }) {
-	const outcome = result.winner && myTeam ? (result.winner === myTeam ? 'Victory' : 'Defeat') : null;
-	return (
-		<section className="flex flex-col items-start gap-4 rounded-xl border border-line bg-surface p-8">
-			{outcome && <p className={`text-sm font-semibold uppercase tracking-wide ${outcome === 'Victory' ? 'text-primary' : 'text-danger'}`}>{outcome}</p>}
-			<h2 className="text-4xl font-extrabold tracking-[-0.035em]">{result.winner ? `${teamName(result.winner)} wins` : 'Draw'}</h2>
-			<p className="text-[15px] text-muted">
-				{result.winner ? `Won ${END_REASONS[result.reason]}.` : 'Time ran out with the scores level.'}
-			</p>
-			{scores && (
-				<ul aria-label="Final scores" className="flex flex-col gap-1">
-					{TEAMS.map((team) => (
-						<li key={team.id} className="flex items-baseline gap-3 text-[15px]">
-							<span className={`font-semibold ${team.nameColor}`}>{team.name}</span> <span className="tabular-nums">{scores[team.id]}</span>
-						</li>
-					))}
-				</ul>
-			)}
-			<Link href="/lobby" className={`${BUTTON} min-h-11 bg-primary text-on-primary`}>Back to lobby</Link>
-		</section>
-	);
-}
-
 // The practice editor on the problems left after the bans, plus a switcher
 // above it so the player can look at their teammates' workspaces without
 // losing their own editable tabs and code. A teammate's workspace reuses the
@@ -249,6 +215,16 @@ function GameContent() {
 		);
 	}
 
+	// Once the match is over, the result takes the whole page (full width, like settings).
+	if (result) {
+		return (
+			<div className="flex min-h-screen flex-col bg-page font-sans text-ink">
+				<HomeTopBar />
+				<ResultScreen result={result} myTeam={myTeam} scores={game?.scores ?? { a: 0, b: 0 }} players={game?.players ?? []} />
+			</div>
+		);
+	}
+
 	return (
 		<div className="flex min-h-screen flex-col bg-page font-sans text-ink">
 			<PageLoader variant="pen" />
@@ -260,7 +236,7 @@ function GameContent() {
 							<h1 className="text-4xl font-extrabold leading-[1.05] tracking-[-0.035em]">Match</h1>
 							<p className="text-[15px] text-muted">Two teams, the same problems, twenty minutes.</p>
 						</div>
-						{joined && !result && (
+						{joined && (
 							<div className="flex items-center gap-6">
 								<span className="font-mono text-sm font-semibold"><span className="text-primary">{game.scores.a}</span> – <span className="text-secondary">{game.scores.b}</span></span>
 								{banning && <span className="flex items-baseline gap-2"><span className="text-sm text-muted">Bans close in</span><Clock seconds={game.banSecondsRemaining} running /></span>}
@@ -270,13 +246,11 @@ function GameContent() {
 						)}
 					</div>
 
-					{result && <ResultScreen result={result} myTeam={myTeam} scores={game?.scores} />}
-
 					{errorAlert}
 
-					{!joined && !error && !result && <p role="status" aria-live="polite" className="text-sm text-muted">Joining match…</p>}
+					{!joined && !error && <p role="status" aria-live="polite" className="text-sm text-muted">Joining match…</p>}
 
-					{joined && !result && (
+					{joined && (
 						<>
 							{game.phase === 'waiting' && (
 								<p role="status" aria-live="polite" className="text-sm text-muted">

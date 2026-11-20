@@ -7,9 +7,13 @@ attributes on `<html>`:
   `merlot`, `coffee`, `performative`, `lilac`, `tidepool`, `sugarplum`, `vim`
 - `data-mode` — `dark` (default) or `light`
 
-Users change these from the settings page (`app/settings/components/form.tsx`),
-via `app/_shared/theme-controls.tsx` ("Try it on": hovering a scheme name shows
-it in a live match preview, clicking uses it). The choice is saved to
+Users switch light/dark with the sun/moon button in the top bar of every page
+(`app/_shared/theme-toggle.tsx`: in `HomeTopBar`, on the signed-in home screen
+and in the landing page's nav). They pick a scheme on the settings page
+(`app/settings/components/form.tsx`) via `app/_shared/theme-controls.tsx`
+("Try it on": hovering a scheme name shows it in a live match preview, clicking
+uses it). Both read and write `<html>` through `app/_shared/theme-state.ts`
+(`useHtmlAttribute`, `saveTheme`). The choice is saved to
 `localStorage` and re-applied before first paint by the init script in
 `app/theme.ts`, so there's no flash of the wrong theme. A saved scheme that no
 longer exists falls back to the default. Switching turns transitions off for one

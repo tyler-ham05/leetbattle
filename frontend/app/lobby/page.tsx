@@ -33,7 +33,7 @@ function TeamBar({ team, fill, draining, seconds }: { team: typeof TEAMS[number]
 
 	const edge = team.mirrored ? 'right' : 'left';
 	return (
-		<div className="relative h-[3px] overflow-hidden rounded-full bg-raised">
+		<div className="relative h-[3px] overflow-hidden rounded-full bg-line">
 			<div
 				data-team-bar={team.id}
 				data-draining={String(draining)}
@@ -262,7 +262,7 @@ function LobbyContent() {
 															aria-label={seatAction}
 															onClick={() => send('lobby:join-team', team.id)}
 															disabled={!connected}
-															className={`lb-seat-open ${BUTTON} min-h-[54px] w-full rounded-[10px] border border-dashed border-line px-4 text-sm text-muted hover:bg-surface`}
+															className={`lb-seat-open ${BUTTON} min-h-[54px] w-full rounded-[10px] border border-dashed border-muted/40 px-4 text-sm text-muted hover:bg-surface`}
 														>
 															{/* One cell: on hover "Open seat" fades up and out as the hint fades in. */}
 															<span className="lb-seat-swap">
@@ -271,7 +271,7 @@ function LobbyContent() {
 															</span>
 														</button>
 													) : (
-														<div className="flex min-h-[54px] items-center justify-center rounded-[10px] border border-dashed border-line px-4 text-sm text-muted">Open seat</div>
+														<div className="flex min-h-[54px] items-center justify-center rounded-[10px] border border-dashed border-muted/40 px-4 text-sm text-muted">Open seat</div>
 													)}
 												</li>
 											))}

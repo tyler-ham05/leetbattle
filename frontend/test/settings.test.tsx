@@ -3,6 +3,7 @@
 // - user should not be able to change their password if they do not remember their password
 // - clicking the Back link navigates back
 // - clicking the light/dark mode button toggles the theme
+// - Sprint 4: the light/dark button is only in the top bar, not repeated in the Theme section
 // - clicking each color scheme button marks it as the pressed/selected one
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
@@ -206,5 +207,12 @@ describe('settings sections', () => {
 	it('lays the account and theme columns side by side on wide screens', () => {
 		render(<SettingsPage />);
 		expect(screen.getByRole('region', { name: 'Theme' }).parentElement?.className).toContain('lg:grid-cols-');
+	});
+});
+
+describe('light/dark button placement', () => {
+	it('shows the button once, in the top bar', () => {
+		render(<SettingsPage />);
+		expect(screen.getAllByRole('button', { name: 'Switch to light mode' })).toHaveLength(1);
 	});
 });

@@ -7,6 +7,7 @@
 // - moving things animate transform, never top or left
 // - theme switches turn transitions off while the theme changes
 // - tooltips: only the first one waits; once one is open the rest show at once
+// - Sprint 4: the result screen's slam, sink, jolt, rise and crown animations are off with reduced motion
 import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -250,5 +251,14 @@ describe('tooltips', () => {
 		fireEvent.pointerLeave(sun);
 		fireEvent.pointerEnter(screen.getByRole('button', { name: 'menu' }));
 		expect(screen.getByRole('tooltip').textContent).toBe('Account');
+	});
+});
+
+describe('result screen motion', () => {
+	// The prefers-reduced-motion block(s) at the bottom of globals.css, joined.
+	const reduced = css.split('@media (prefers-reduced-motion: reduce)').slice(1).join('\n');
+
+	it.each(['lb-result-slam', 'lb-result-sink', 'lb-result-jolt', 'lb-result-rise', 'lb-result-crown'])('turns %s off with reduced motion', (name) => {
+		expect(reduced).toContain(`.${name}`);
 	});
 });
