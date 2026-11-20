@@ -5,7 +5,37 @@ import { useAuth } from './context';
 import PageLoader from '../_shared/page-loader';
 import HomeTopBar from '../_home/components/topbar';
 import { AuthAPIService } from './controller';
-import { AuthCard, AuthCheck, AuthField, AuthMessage, AuthSubmitButton, AuthTextButton } from './components/components';
+import { AuthCard, AuthCheck, AuthField, AuthMessage, AuthSubmitButton, AuthTabs, AuthTextButton, PasswordStrength } from './components/components';
+
+const RESEND_SECONDS = 30;
+
+// "Resend in 0:30", counting down, then a "Resend link" button.
+function ResendButton({ onResend }: { onResend: () => void }) {
+	const [left, setLeft] = useState(RESEND_SECONDS);
+	const counting = left > 0;
+
+	// One interval per countdown; it stops itself at zero.
+	useEffect(() => {
+		if (!counting) return;
+		const timer = setInterval(() => setLeft((value) => Math.max(0, value - 1)), 1_000);
+		return () => clearInterval(timer);
+	}, [counting]);
+
+	const label = left > 0 ? `Resend in 0:${String(left).padStart(2, '0')}` : 'Resend link';
+	return (
+		<button
+			type="button"
+			disabled={left > 0}
+			onClick={() => {
+				onResend();
+				setLeft(RESEND_SECONDS);
+			}}
+			className="lb-press h-[46px] w-full rounded-lg border border-line text-sm font-semibold text-ink hover:bg-raised disabled:cursor-default disabled:text-muted disabled:hover:bg-transparent"
+		>
+			{label}
+		</button>
+	);
+}
 
 type Mode = 'login' | 'signup' | 'forgot' | 'sent';
 
@@ -65,10 +95,14 @@ export default function LoginPage() {
 				<AuthCard title="Check your email">
 					<div className="flex flex-col gap-4">
 						<AuthCheck />
-						<p role="status" className="text-sm text-muted">
+						<p role="status" className="lb-rise text-sm text-muted" style={{ animationDelay: '0.35s' }}>
 							If an account exists for that address, a reset link is on its way. The link works for 30 minutes.
 						</p>
-						<AuthTextButton onClick={backToLogin}>Back to log in</AuthTextButton>
+						<div className="lb-rise flex flex-col gap-3" style={{ animationDelay: '0.5s' }}>
+							<ResendButton onResend={() => new AuthAPIService().requestPasswordReset(email).catch(() => undefined)} />
+							<AuthTextButton onClick={() => setMode('forgot')}>Use a different email</AuthTextButton>
+							<AuthTextButton onClick={backToLogin}>Back to log in</AuthTextButton>
+						</div>
 					</div>
 				</AuthCard>
 			</>
@@ -98,16 +132,33 @@ export default function LoginPage() {
 			<PageLoader variant="pen" />
 			<HomeTopBar />
 			<AuthCard title={mode === 'signup' ? 'Sign up' : 'Log in'}>
+				<AuthTabs
+					signup={mode === 'signup'}
+					onChange={(toSignup) => {
+						setError(null);
+						setMode(toSignup ? 'signup' : 'login');
+					}}
+				/>
 				<form onSubmit={onSubmit} className="flex flex-col gap-4">
-					{mode === 'signup' && (
-						<AuthField
-							label="Name"
-							type="text"
-							required
-							value={name}
-							onChange={(e) => setName(e.target.value)}
-						/>
-					)}
+					{/* The Name field folds open and shut instead of popping in. */}
+					<div
+						data-collapsed={String(mode !== 'signup')}
+						inert={mode !== 'signup'}
+						className={`-mb-4 grid transition-[grid-template-rows,opacity] duration-[450ms] ease-[cubic-bezier(0.2,0.7,0.2,1)] ${mode === 'signup' ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
+					>
+						<div className="overflow-hidden">
+							<div className="pb-4">
+								<AuthField
+									label="Name"
+									type="text"
+									required
+									disabled={mode !== 'signup'}
+									value={name}
+									onChange={(e) => setName(e.target.value)}
+								/>
+							</div>
+						</div>
+					</div>
 					<AuthField
 						label="Email"
 						type="email"
@@ -123,6 +174,7 @@ export default function LoginPage() {
 						value={password}
 						onChange={(e) => setPassword(e.target.value)}
 					/>
+					{mode === 'signup' && <PasswordStrength password={password} />}
 					{mode === 'login' && (
 						<AuthTextButton
 							className="-mt-2 self-end"
@@ -141,14 +193,6 @@ export default function LoginPage() {
 						{mode === 'signup' ? 'Sign up' : 'Log in'}
 					</AuthSubmitButton>
 
-					<AuthTextButton
-						onClick={() => {
-							setError(null);
-							setMode(mode === 'signup' ? 'login' : 'signup');
-						}}
-					>
-						{mode === 'signup' ? 'Already have an account?' : 'Need an account?'}
-					</AuthTextButton>
 				</form>
 			</AuthCard>
 		</>
