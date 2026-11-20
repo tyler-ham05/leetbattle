@@ -184,14 +184,59 @@ body {
    MOTION
    ========================================================= */
 
+/* Site-wide motion rules.
+   - height: auto can animate (accordions, the sign-up Name field).
+   - Every enabled button presses in to 0.97; it sits in the base layer so a
+     button's own transition utilities still win, and those add `scale` back.
+   - While the theme changes nothing transitions, so colors swap in one frame. */
+:root { interpolate-size: allow-keywords; }
+@layer base {
+  button { transition: scale 150ms ease-out; }
+}
+button:active:not(:disabled) { scale: 0.97; }
+.theme-switching * { transition: none !important; }
+
+/* Entrances start just under full size, never from nothing. */
+@keyframes lb-enter {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.lb-enter { animation: lb-enter 160ms ease-out both; }
+
+/* A wrong password shakes its field (it also turns red). */
+@keyframes lb-shake {
+  0% { transform: translateX(0px); }
+  16% { transform: translateX(-10px); }
+  33% { transform: translateX(10px); }
+  50% { transform: translateX(-6px); }
+  66% { transform: translateX(6px); }
+  83% { transform: translateX(-3px); }
+  100% { transform: translateX(0px); }
+}
+.lb-shake { animation: lb-shake 360ms ease-out; }
+
+/* Steppers: the next step slides in from the side you're heading to. */
+@keyframes lb-step-forward { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes lb-step-back { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+[data-step="forward"] { animation: lb-step-forward 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+[data-step="back"] { animation: lb-step-back 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+/* Accordion: animates to and from height: auto (see interpolate-size above). */
+.lb-fold { overflow: hidden; transition: height 450ms cubic-bezier(0.2, 0.7, 0.2, 1), opacity 450ms cubic-bezier(0.2, 0.7, 0.2, 1); }
+.lb-fold[data-collapsed="true"] { height: 0; opacity: 0; }
+.lb-fold[data-collapsed="false"] { height: auto; opacity: 1; }
+
+/* Tooltip: the first one waits and enters; later ones (warm) show at once. */
+.lb-tooltip[data-instant="false"] { animation: lb-enter 140ms ease-out both; }
+
 @keyframes lb-wipe {
   from { clip-path: inset(0 100% 0 0); }
   to { clip-path: inset(0 0 0 0); }
 }
 @keyframes lb-tip {
-  from { left: 0; opacity: 1; }
+  from { transform: translateX(-100%); opacity: 1; }
   90% { opacity: 1; }
-  to { left: 100%; opacity: 0; }
+  to { transform: translateX(0); opacity: 0; }
 }
 @keyframes lb-lift {
   to { transform: translateY(-100%); visibility: hidden; }
@@ -236,13 +281,16 @@ body {
   clip-path: inset(0 100% 0 0);
   animation: lb-wipe var(--dur, 1.7s) cubic-bezier(0.6, 0.05, 0.4, 0.95) forwards var(--d, 0.2s);
 }
+.lb-tip, .lb-p-tip, .lb-hero-tip { left: 0; width: 100%; transform: translateX(-100%); pointer-events: none; }
+.lb-tip::after, .lb-p-tip::after, .lb-hero-tip::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 100%;
+  width: var(--bar, 3px); margin-left: var(--gap, 0px); border-radius: 2px;
+  background: var(--lb-primary);
+}
 .lb-tip {
   position: absolute;
   top: -6%;
   height: 112%;
-  width: 3px;
-  border-radius: 2px;
-  background: var(--lb-primary);
   animation: lb-tip var(--dur, 1.7s) cubic-bezier(0.6, 0.05, 0.4, 0.95) forwards var(--d, 0.2s);
 }
 html.lb-intro-seen .lb-intro { display: none; }
@@ -311,7 +359,7 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
   line-height: 1.12;
   color: color-mix(in oklab, var(--lb-muted) 60%, var(--lb-page));
   cursor: pointer;
-  transition: color 0.2s ease;
+  transition: color 0.2s ease, scale 150ms ease-out;
 }
 .lb-title-row::before {
   content: '▸';
@@ -371,7 +419,7 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 
 /* Katana (home), about 2.3s. The cut runs from 70% down the left edge to 30% down
    the right. The word stays whole until the blade passes so no seam shows early. */
-@keyframes lb-k-word-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes lb-k-word-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: none; } }
 @keyframes lb-k-streak { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
 @keyframes lb-k-slip-top { to { transform: translate(5px, -6px); } }
 @keyframes lb-k-slip-bottom { to { transform: translate(-5px, 6px); } }
@@ -446,14 +494,12 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 }
 .lb-p-word { clip-path: inset(0 100% 0 0); animation: lb-wipe 0.7s cubic-bezier(0.6, 0.05, 0.4, 0.95) forwards 0.1s; }
 .lb-p-tip {
-  position: absolute; top: -8%; height: 116%; width: 3px; border-radius: 2px;
-  background: var(--lb-primary);
+  position: absolute; top: -8%; height: 116%;
   animation: lb-tip 0.7s cubic-bezier(0.6, 0.05, 0.4, 0.95) forwards 0.1s;
 }
 
 /* Lobby: buttons press in fast and ease back; filled ones lift a little on hover. */
-.lb-press { transition: transform 0.18s cubic-bezier(0.2, 0.7, 0.2, 1), background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, opacity 0.25s ease; }
-.lb-press:active:not(:disabled) { transform: scale(0.96); transition-duration: 0.06s; }
+.lb-press { transition: scale 150ms ease-out, transform 0.18s cubic-bezier(0.2, 0.7, 0.2, 1), background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, opacity 0.25s ease; }
 .lb-press-lift:hover:not(:disabled) { transform: translateY(-1px); }
 
 /* Lobby: one marker per seat, filled with the colour of the team sitting in it. */
@@ -468,7 +514,7 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 
 /* Lobby: a player slides into their seat, the ready check mark draws itself,
    each countdown second drops in and a line drains while the countdown runs. */
-@keyframes lb-seat-in { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes lb-seat-in { from { opacity: 0; transform: translateY(10px) scale(0.97); } to { opacity: 1; transform: none; } }
 @keyframes lb-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes lb-draw { to { stroke-dashoffset: 0; } }
 @keyframes lb-second-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
@@ -532,14 +578,13 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
   animation: lb-hero-wipe 0.7s cubic-bezier(0.6, 0.05, 0.4, 0.95) forwards var(--lb-intro-delay);
 }
 .lb-hero-tip {
-  position: absolute; top: -8%; left: 0; height: 116%; width: 4px; margin-left: 10px; border-radius: 2px;
-  background: var(--lb-primary);
+  position: absolute; top: -8%; height: 116%; --bar: 4px; --gap: 10px;
   animation:
     lb-hero-tip 0.7s cubic-bezier(0.6, 0.05, 0.4, 0.95) forwards var(--lb-intro-delay),
     lb-caret 1.06s linear infinite calc(var(--lb-intro-delay) + 0.7s);
 }
 @keyframes lb-hero-wipe { to { clip-path: inset(-10% -0.15em -10% 0); } }
-@keyframes lb-hero-tip { to { left: 100%; } }
+@keyframes lb-hero-tip { to { transform: translateX(0); } }
 
 /* US-5-T-14: landing match demo, one 12s loop. Team 1 types faster, submits,
    passes, scores 100 and wins; Team 2 fades; then it starts again. */
@@ -557,7 +602,7 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 @keyframes lb-demo-r3 { 0%, 32% { width: 0; } 58%, 100% { width: 32ch; } }
 @keyframes lb-demo-r4 { 0%, 62% { width: 0; } 92%, 100% { width: 14ch; } }
 @keyframes lb-demo-fade { 0%, 100% { opacity: 1; } }
-@keyframes lb-demo-press { 0%, 36% { transform: none; } 38% { transform: scale(0.92); } 41%, 100% { transform: none; } }
+@keyframes lb-demo-press { 0%, 36% { transform: none; } 38% { transform: scale(0.97); } 41%, 100% { transform: none; } }
 @keyframes lb-demo-submit { 0%, 38% { opacity: 1; } 39%, 100% { opacity: 0; } }
 @keyframes lb-demo-running { 0%, 38% { opacity: 0; } 39%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
 @keyframes lb-demo-passed { 0%, 49% { opacity: 0; } 50%, 100% { opacity: 1; } }
@@ -565,7 +610,7 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 @keyframes lb-demo-t2 { 0%, 53% { opacity: 0; transform: translateY(8px); } 55%, 100% { opacity: 1; transform: none; } }
 @keyframes lb-demo-t3 { 0%, 56% { opacity: 0; transform: translateY(8px); } 58%, 100% { opacity: 1; transform: none; } }
 @keyframes lb-demo-s0 { 0%, 59% { opacity: 1; } 60%, 100% { opacity: 0; } }
-@keyframes lb-demo-s100 { 0%, 59% { opacity: 0; transform: scale(0.4); } 62% { opacity: 1; transform: scale(1.3); } 66%, 100% { opacity: 1; transform: none; } }
+@keyframes lb-demo-s100 { 0%, 59% { opacity: 0; transform: scale(0.97); } 62% { opacity: 1; transform: scale(1.3); } 66%, 100% { opacity: 1; transform: none; } }
 @keyframes lb-demo-dim { 0%, 64% { opacity: 1; } 68%, 100% { opacity: 0.15; } }
 @keyframes lb-demo-win { 0%, 64% { opacity: 0; transform: translateY(10px); } 69%, 100% { opacity: 1; transform: none; } }
 @keyframes lb-demo-tilt { from { opacity: 0.4; transform: perspective(1600px) rotateX(26deg) scale(0.86) translateY(40px); } to { opacity: 1; transform: none; } }
@@ -577,7 +622,8 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 
 @media (prefers-reduced-motion: reduce) {
   .lb-auth-check circle, .lb-auth-check path { stroke-dashoffset: 0; animation: none; }
-  .lb-press, .lb-seat-pip { transition: none; }
+  .lb-press, .lb-seat-pip, .lb-fold { transition: none; }
+  .lb-enter, .lb-shake, .lb-tooltip, [data-step] { animation: none !important; }
   .lb-seat-in, .lb-fade-in, .lb-second { animation: none; }
   .lb-rise, .lb-in-a, .lb-in-b, .lb-digit { animation: none; }
   [data-team-bar], [data-ready] > span, .lb-seat-swap > * { transition: none !important; }
@@ -590,7 +636,7 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
   .lb-rise-in { opacity: 1; animation: none; }
   .lb-title-row, .lb-title-row::before, .lb-title-desc { transition: none; }
   .lb-hero-word { clip-path: none; animation: none; }
-  .lb-hero-tip { left: 100%; animation: none; }
+  .lb-hero-tip { transform: none; animation: none; }
   .lb-typed { width: auto; border-right-color: transparent; animation: none; }
   .lb-reveal-view { animation: none; }
   .lb-demo-loop { animation: none !important; }

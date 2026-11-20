@@ -16,6 +16,7 @@ export function SettingsForm() {
 	const [newPassword, setNewPassword] = useState('');
 	const [passwordStatus, setPasswordStatus] = useState<AuthStatus | null>(null);
 	const [isSavingPassword, setIsSavingPassword] = useState(false);
+	const [failedPasswordChanges, setFailedPasswordChanges] = useState(0);
 
 	const onSaveName = async (e: SubmitEvent) => {
 		e.preventDefault();
@@ -44,6 +45,7 @@ export function SettingsForm() {
 			setNewPassword('');
 			setPasswordStatus({ type: 'success', text: 'Password changed.' });
 		} catch (err) {
+			setFailedPasswordChanges((count) => count + 1);
 			setPasswordStatus({ type: 'error', text: err instanceof Error ? err.message : 'failed to change password' });
 		} finally {
 			setIsSavingPassword(false);
@@ -85,6 +87,8 @@ export function SettingsForm() {
 						required
 						value={currentPassword}
 						onChange={(e) => setCurrentPassword(e.target.value)}
+						invalid={passwordStatus?.type === 'error'}
+						shake={failedPasswordChanges}
 					/>
 					<AuthField
 						label="New password"
