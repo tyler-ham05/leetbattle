@@ -8,10 +8,17 @@
 
 /* =========================================================
    THEME TOKENS
-   Four schemes (emerald, volt, midnight, ultraviolet), each
-   with a dark and a light mode, set on <html> as
-   data-scheme / data-mode. Every text color passes WCAG AA
-   (4.5:1) on its page and raised backgrounds.
+   Eleven schemes (emerald, midnight, nocturne, shoreline,
+   merlot, coffee, performative, lilac, tidepool, sugarplum,
+   vim), each with a dark and a light mode, set on <html> as
+   data-scheme / data-mode. The selectors aren't tied to <html>,
+   so any element carrying both attributes gets that scheme's
+   colors (the settings preview uses this). Every text color
+   passes WCAG AA (4.5:1) on its page and raised backgrounds,
+   except Vim's dark Team 2 blue, kept exact on purpose.
+   The newer schemes are calm on purpose: low-saturation
+   accents, tinted near-blacks, off-white text, and Team 2
+   from the same family as Team 1, set apart by depth.
    ========================================================= */
 
 :root,
@@ -47,38 +54,6 @@
   --lb-num: #92600a;
 }
 
-[data-scheme="volt"][data-mode="dark"] {
-  color-scheme: dark;
-  --lb-page: #0d110a;
-  --lb-surface: #131a0f;
-  --lb-raised: #1a2214;
-  --lb-line: #27311e;
-  --lb-ink: #eef4e4;
-  --lb-muted: #9aa98b;
-  --lb-primary: #b8f53d;
-  --lb-on-primary: #0d110a;
-  --lb-secondary: #ffd43b;
-  --lb-danger: #ff8a7a;
-  --lb-kw: #ffd43b;
-  --lb-num: #b8f53d;
-}
-
-[data-scheme="volt"][data-mode="light"] {
-  color-scheme: light;
-  --lb-page: #f7f9f2;
-  --lb-surface: #ffffff;
-  --lb-raised: #eef2e6;
-  --lb-line: #dbe2cf;
-  --lb-ink: #141a0e;
-  --lb-muted: #5a6650;
-  --lb-primary: #3f6212;
-  --lb-on-primary: #ffffff;
-  --lb-secondary: #8a5a00;
-  --lb-danger: #b42318;
-  --lb-kw: #3f6212;
-  --lb-num: #8a5a00;
-}
-
 [data-scheme="midnight"][data-mode="dark"] {
   color-scheme: dark;
   --lb-page: #07060d;
@@ -111,36 +86,301 @@
   --lb-num: #204ef1;
 }
 
-[data-scheme="ultraviolet"][data-mode="dark"] {
+/* Nocturne: meadow mauve vs indigo, on blackberry */
+[data-scheme="nocturne"][data-mode="dark"] {
   color-scheme: dark;
-  --lb-page: #0e0919;
-  --lb-surface: #150d24;
-  --lb-raised: #1f1433;
-  --lb-line: #2e2148;
-  --lb-ink: #f3effc;
-  --lb-muted: #ada1cc;
-  --lb-primary: #e8ff47;
-  --lb-on-primary: #0e0919;
-  --lb-secondary: #a57bff;
-  --lb-danger: #ff8a7a;
-  --lb-kw: #b99bff;
-  --lb-num: #e8ff47;
+  --lb-page: #1a0f17;
+  --lb-surface: #23141f;
+  --lb-raised: #2e1a29;
+  --lb-line: #3d2536;
+  --lb-ink: #ece6e9;
+  --lb-muted: #ad9aa8;
+  --lb-primary: #c49fbd;
+  --lb-on-primary: #1a0f17;
+  --lb-secondary: #9cb8e8;
+  --lb-danger: #ff7a85;
+  --lb-kw: #c49fbd;
+  --lb-num: #9cb8e8;
 }
 
-[data-scheme="ultraviolet"][data-mode="light"] {
+[data-scheme="nocturne"][data-mode="light"] {
   color-scheme: light;
-  --lb-page: #f8f6fc;
-  --lb-surface: #ffffff;
-  --lb-raised: #efeaf8;
-  --lb-line: #e0d9ee;
-  --lb-ink: #160f24;
-  --lb-muted: #625877;
-  --lb-primary: #6d28d9;
+  --lb-page: #efebe8;
+  --lb-surface: #f8f6f4;
+  --lb-raised: #e0dad5;
+  --lb-line: #d2cbc6;
+  --lb-ink: #2a1525;
+  --lb-muted: #6a5864;
+  --lb-primary: #6e3358;
   --lb-on-primary: #ffffff;
-  --lb-secondary: #6b6400;
+  --lb-secondary: #385794;
   --lb-danger: #b42318;
-  --lb-kw: #6d28d9;
-  --lb-num: #6b6400;
+  --lb-kw: #6e3358;
+  --lb-num: #385794;
+}
+
+/* Shoreline: deep teal vs soft peach */
+[data-scheme="shoreline"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #0c181b;
+  --lb-surface: #112024;
+  --lb-raised: #172a2e;
+  --lb-line: #22383d;
+  --lb-ink: #e7efee;
+  --lb-muted: #97aaa9;
+  --lb-primary: #5fb3b3;
+  --lb-on-primary: #0c181b;
+  --lb-secondary: #eab08a;
+  --lb-danger: #ff7b8f;
+  --lb-kw: #5fb3b3;
+  --lb-num: #eab08a;
+}
+
+[data-scheme="shoreline"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #f6f2ea;
+  --lb-surface: #fcfaf6;
+  --lb-raised: #e9e3d7;
+  --lb-line: #d9d1c2;
+  --lb-ink: #11292c;
+  --lb-muted: #55666a;
+  --lb-primary: #0f5e6b;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #944826;
+  --lb-danger: #b4183c;
+  --lb-kw: #0f5e6b;
+  --lb-num: #944826;
+}
+
+/* Merlot: burgundy rose vs baby pink; errors in amber */
+[data-scheme="merlot"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #1b1114;
+  --lb-surface: #23171b;
+  --lb-raised: #2e1e24;
+  --lb-line: #3d2a31;
+  --lb-ink: #f0e6e8;
+  --lb-muted: #b29ca2;
+  --lb-primary: #cf7f8e;
+  --lb-on-primary: #1b1114;
+  --lb-secondary: #f4cfd6;
+  --lb-danger: #e9a35e;
+  --lb-kw: #cf7f8e;
+  --lb-num: #f4cfd6;
+}
+
+[data-scheme="merlot"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #fbf3f0;
+  --lb-surface: #fffaf8;
+  --lb-raised: #f2e3df;
+  --lb-line: #e6d2cd;
+  --lb-ink: #36161e;
+  --lb-muted: #7a5a62;
+  --lb-primary: #7a2234;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #9a4360;
+  --lb-danger: #a04a00;
+  --lb-kw: #7a2234;
+  --lb-num: #9a4360;
+}
+
+/* Coffee: latte cream vs cinnamon, on espresso */
+[data-scheme="coffee"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #1a1410;
+  --lb-surface: #221a15;
+  --lb-raised: #2c231c;
+  --lb-line: #3b3027;
+  --lb-ink: #efe9e2;
+  --lb-muted: #ab9d90;
+  --lb-primary: #e6c9a3;
+  --lb-on-primary: #1a1410;
+  --lb-secondary: #cf8462;
+  --lb-danger: #ff8a8a;
+  --lb-kw: #e6c9a3;
+  --lb-num: #cf8462;
+}
+
+[data-scheme="coffee"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #f7f0e7;
+  --lb-surface: #fdf9f4;
+  --lb-raised: #ece1d3;
+  --lb-line: #ddcfbe;
+  --lb-ink: #2b1b14;
+  --lb-muted: #6e5a4b;
+  --lb-primary: #5f3f2b;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #934827;
+  --lb-danger: #b42318;
+  --lb-kw: #5f3f2b;
+  --lb-num: #934827;
+}
+
+/* Performative: matcha vs oat milk */
+[data-scheme="performative"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #12160f;
+  --lb-surface: #191e15;
+  --lb-raised: #22291c;
+  --lb-line: #303a28;
+  --lb-ink: #eef0e6;
+  --lb-muted: #a3ab95;
+  --lb-primary: #aec47e;
+  --lb-on-primary: #12160f;
+  --lb-secondary: #d9bd92;
+  --lb-danger: #ff8a8a;
+  --lb-kw: #aec47e;
+  --lb-num: #d9bd92;
+}
+
+[data-scheme="performative"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #f5f3ea;
+  --lb-surface: #fcfbf6;
+  --lb-raised: #e8e6d6;
+  --lb-line: #d8d5c1;
+  --lb-ink: #1f2a17;
+  --lb-muted: #5e6553;
+  --lb-primary: #4a6220;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #86592c;
+  --lb-danger: #b42318;
+  --lb-kw: #4a6220;
+  --lb-num: #86592c;
+}
+
+/* Lilac: lavender vs sage */
+[data-scheme="lilac"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #14121b;
+  --lb-surface: #1b1824;
+  --lb-raised: #24202f;
+  --lb-line: #332e40;
+  --lb-ink: #eeebf4;
+  --lb-muted: #a7a1b6;
+  --lb-primary: #b8a9e0;
+  --lb-on-primary: #14121b;
+  --lb-secondary: #a9c4a6;
+  --lb-danger: #ff8a8a;
+  --lb-kw: #b8a9e0;
+  --lb-num: #a9c4a6;
+}
+
+[data-scheme="lilac"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #f6f4f9;
+  --lb-surface: #fdfcfe;
+  --lb-raised: #ebe7f2;
+  --lb-line: #dcd6e6;
+  --lb-ink: #221d30;
+  --lb-muted: #625b72;
+  --lb-primary: #5b4a97;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #466844;
+  --lb-danger: #b42318;
+  --lb-kw: #5b4a97;
+  --lb-num: #466844;
+}
+
+/* Tidepool: teal on teal, deep vs pale aqua */
+[data-scheme="tidepool"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #0a1214;
+  --lb-surface: #0e1a1d;
+  --lb-raised: #14262a;
+  --lb-line: #1e383d;
+  --lb-ink: #eef3f3;
+  --lb-muted: #93abae;
+  --lb-primary: #5aa6b3;
+  --lb-on-primary: #0a1214;
+  --lb-secondary: #bcdde2;
+  --lb-danger: #ff8a8a;
+  --lb-kw: #5aa6b3;
+  --lb-num: #bcdde2;
+}
+
+[data-scheme="tidepool"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #f3f6f6;
+  --lb-surface: #fbfcfc;
+  --lb-raised: #e1eaeb;
+  --lb-line: #cfdcde;
+  --lb-ink: #133336;
+  --lb-muted: #4f6669;
+  --lb-primary: #285f6b;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #33707a;
+  --lb-danger: #b42318;
+  --lb-kw: #285f6b;
+  --lb-num: #33707a;
+}
+
+/* Sugarplum: berry vs golden olive; errors in amber */
+[data-scheme="sugarplum"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #1a1016;
+  --lb-surface: #22161d;
+  --lb-raised: #2c1d26;
+  --lb-line: #3c2934;
+  --lb-ink: #f1e8ec;
+  --lb-muted: #b39ca8;
+  --lb-primary: #d27aa6;
+  --lb-on-primary: #1a1016;
+  --lb-secondary: #b8c072;
+  --lb-danger: #ffa36b;
+  --lb-kw: #d27aa6;
+  --lb-num: #b8c072;
+}
+
+[data-scheme="sugarplum"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #f6f2ec;
+  --lb-surface: #fcfaf6;
+  --lb-raised: #ebe4da;
+  --lb-line: #dcd3c6;
+  --lb-ink: #2a121e;
+  --lb-muted: #6b5560;
+  --lb-primary: #8a1f5a;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #565e1c;
+  --lb-danger: #a04a00;
+  --lb-kw: #8a1f5a;
+  --lb-num: #565e1c;
+}
+
+/* Vim: the Vim start screen, exact: green and blue on pure black */
+[data-scheme="vim"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #000000;
+  --lb-surface: #0a0a0a;
+  --lb-raised: #141414;
+  --lb-line: #242424;
+  --lb-ink: #6fcb59;
+  --lb-muted: #559b43;
+  --lb-primary: #6fcb59;
+  --lb-on-primary: #000000;
+  --lb-secondary: #5353f0;
+  --lb-danger: #ff5f5f;
+  --lb-kw: #5353f0;
+  --lb-num: #6fcb59;
+}
+
+[data-scheme="vim"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #ffffff;
+  --lb-surface: #ffffff;
+  --lb-raised: #ececec;
+  --lb-line: #d6d6d6;
+  --lb-ink: #1f6b12;
+  --lb-muted: #4a6a42;
+  --lb-primary: #1f6b12;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #2a2ad0;
+  --lb-danger: #b42318;
+  --lb-kw: #2a2ad0;
+  --lb-num: #1f6b12;
 }
 
 :root {
@@ -150,7 +390,6 @@
   /* the same font stack Monaco uses, so code looks identical to the editor */
   --lb-code-font: Menlo, Monaco, Consolas, "Courier New", monospace;
 }
-
 
 /* Tailwind utilities: bg-page, bg-surface, text-ink, text-muted, border-line, bg-primary, ... */
 @theme inline {
@@ -184,14 +423,59 @@ body {
    MOTION
    ========================================================= */
 
+/* Site-wide motion rules.
+   - height: auto can animate (accordions, the sign-up Name field).
+   - Every enabled button presses in to 0.97; it sits in the base layer so a
+     button's own transition utilities still win, and those add `scale` back.
+   - While the theme changes nothing transitions, so colors swap in one frame. */
+:root { interpolate-size: allow-keywords; }
+@layer base {
+  button { transition: scale 150ms ease-out; }
+}
+button:active:not(:disabled) { scale: 0.97; }
+.theme-switching * { transition: none !important; }
+
+/* Entrances start just under full size, never from nothing. */
+@keyframes lb-enter {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.lb-enter { animation: lb-enter 160ms ease-out both; }
+
+/* A wrong password shakes its field (it also turns red). */
+@keyframes lb-shake {
+  0% { transform: translateX(0px); }
+  16% { transform: translateX(-10px); }
+  33% { transform: translateX(10px); }
+  50% { transform: translateX(-6px); }
+  66% { transform: translateX(6px); }
+  83% { transform: translateX(-3px); }
+  100% { transform: translateX(0px); }
+}
+.lb-shake { animation: lb-shake 360ms ease-out; }
+
+/* Steppers: the next step slides in from the side you're heading to. */
+@keyframes lb-step-forward { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes lb-step-back { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+[data-step="forward"] { animation: lb-step-forward 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+[data-step="back"] { animation: lb-step-back 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+/* Accordion: animates to and from height: auto (see interpolate-size above). */
+.lb-fold { overflow: hidden; transition: height 450ms cubic-bezier(0.2, 0.7, 0.2, 1), opacity 450ms cubic-bezier(0.2, 0.7, 0.2, 1); }
+.lb-fold[data-collapsed="true"] { height: 0; opacity: 0; }
+.lb-fold[data-collapsed="false"] { height: auto; opacity: 1; }
+
+/* Tooltip: the first one waits and enters; later ones (warm) show at once. */
+.lb-tooltip[data-instant="false"] { animation: lb-enter 140ms ease-out both; }
+
 @keyframes lb-wipe {
   from { clip-path: inset(0 100% 0 0); }
   to { clip-path: inset(0 0 0 0); }
 }
 @keyframes lb-tip {
-  from { left: 0; opacity: 1; }
+  from { transform: translateX(-100%); opacity: 1; }
   90% { opacity: 1; }
-  to { left: 100%; opacity: 0; }
+  to { transform: translateX(0); opacity: 0; }
 }
 @keyframes lb-lift {
   to { transform: translateY(-100%); visibility: hidden; }
@@ -236,13 +520,16 @@ body {
   clip-path: inset(0 100% 0 0);
   animation: lb-wipe var(--dur, 1.7s) cubic-bezier(0.6, 0.05, 0.4, 0.95) forwards var(--d, 0.2s);
 }
+.lb-tip, .lb-p-tip, .lb-hero-tip { left: 0; width: 100%; transform: translateX(-100%); pointer-events: none; }
+.lb-tip::after, .lb-p-tip::after, .lb-hero-tip::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 100%;
+  width: var(--bar, 3px); margin-left: var(--gap, 0px); border-radius: 2px;
+  background: var(--lb-primary);
+}
 .lb-tip {
   position: absolute;
   top: -6%;
   height: 112%;
-  width: 3px;
-  border-radius: 2px;
-  background: var(--lb-primary);
   animation: lb-tip var(--dur, 1.7s) cubic-bezier(0.6, 0.05, 0.4, 0.95) forwards var(--d, 0.2s);
 }
 html.lb-intro-seen .lb-intro { display: none; }
@@ -277,8 +564,6 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 .lb-tick { opacity: 0; animation: lb-tick 0.35s ease forwards var(--d); }
 .lb-pop { animation: lb-pop 0.4s ease both; }
 
-/* Theme picker: ring the active scheme without needing client state on first paint */
-.lb-swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--lb-page), 0 0 0 4px var(--lb-ink); }
 
 /* =========================================================
    HOME SCREEN
@@ -311,7 +596,7 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
   line-height: 1.12;
   color: color-mix(in oklab, var(--lb-muted) 60%, var(--lb-page));
   cursor: pointer;
-  transition: color 0.2s ease;
+  transition: color 0.2s ease, scale 150ms ease-out;
 }
 .lb-title-row::before {
   content: '▸';
@@ -371,7 +656,7 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 
 /* Katana (home), about 2.3s. The cut runs from 70% down the left edge to 30% down
    the right. The word stays whole until the blade passes so no seam shows early. */
-@keyframes lb-k-word-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes lb-k-word-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: none; } }
 @keyframes lb-k-streak { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
 @keyframes lb-k-slip-top { to { transform: translate(5px, -6px); } }
 @keyframes lb-k-slip-bottom { to { transform: translate(-5px, 6px); } }
@@ -446,14 +731,12 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 }
 .lb-p-word { clip-path: inset(0 100% 0 0); animation: lb-wipe 0.7s cubic-bezier(0.6, 0.05, 0.4, 0.95) forwards 0.1s; }
 .lb-p-tip {
-  position: absolute; top: -8%; height: 116%; width: 3px; border-radius: 2px;
-  background: var(--lb-primary);
+  position: absolute; top: -8%; height: 116%;
   animation: lb-tip 0.7s cubic-bezier(0.6, 0.05, 0.4, 0.95) forwards 0.1s;
 }
 
 /* Lobby: buttons press in fast and ease back; filled ones lift a little on hover. */
-.lb-press { transition: transform 0.18s cubic-bezier(0.2, 0.7, 0.2, 1), background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, opacity 0.25s ease; }
-.lb-press:active:not(:disabled) { transform: scale(0.96); transition-duration: 0.06s; }
+.lb-press { transition: scale 150ms ease-out, transform 0.18s cubic-bezier(0.2, 0.7, 0.2, 1), background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, opacity 0.25s ease; }
 .lb-press-lift:hover:not(:disabled) { transform: translateY(-1px); }
 
 /* Lobby: one marker per seat, filled with the colour of the team sitting in it. */
@@ -468,7 +751,7 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 
 /* Lobby: a player slides into their seat, the ready check mark draws itself,
    each countdown second drops in and a line drains while the countdown runs. */
-@keyframes lb-seat-in { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes lb-seat-in { from { opacity: 0; transform: translateY(10px) scale(0.97); } to { opacity: 1; transform: none; } }
 @keyframes lb-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes lb-draw { to { stroke-dashoffset: 0; } }
 @keyframes lb-second-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
@@ -532,14 +815,13 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
   animation: lb-hero-wipe 0.7s cubic-bezier(0.6, 0.05, 0.4, 0.95) forwards var(--lb-intro-delay);
 }
 .lb-hero-tip {
-  position: absolute; top: -8%; left: 0; height: 116%; width: 4px; margin-left: 10px; border-radius: 2px;
-  background: var(--lb-primary);
+  position: absolute; top: -8%; height: 116%; --bar: 4px; --gap: 10px;
   animation:
     lb-hero-tip 0.7s cubic-bezier(0.6, 0.05, 0.4, 0.95) forwards var(--lb-intro-delay),
     lb-caret 1.06s linear infinite calc(var(--lb-intro-delay) + 0.7s);
 }
 @keyframes lb-hero-wipe { to { clip-path: inset(-10% -0.15em -10% 0); } }
-@keyframes lb-hero-tip { to { left: 100%; } }
+@keyframes lb-hero-tip { to { transform: translateX(0); } }
 
 /* US-5-T-14: landing match demo, one 12s loop. Team 1 types faster, submits,
    passes, scores 100 and wins; Team 2 fades; then it starts again. */
@@ -557,7 +839,7 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 @keyframes lb-demo-r3 { 0%, 32% { width: 0; } 58%, 100% { width: 32ch; } }
 @keyframes lb-demo-r4 { 0%, 62% { width: 0; } 92%, 100% { width: 14ch; } }
 @keyframes lb-demo-fade { 0%, 100% { opacity: 1; } }
-@keyframes lb-demo-press { 0%, 36% { transform: none; } 38% { transform: scale(0.92); } 41%, 100% { transform: none; } }
+@keyframes lb-demo-press { 0%, 36% { transform: none; } 38% { transform: scale(0.97); } 41%, 100% { transform: none; } }
 @keyframes lb-demo-submit { 0%, 38% { opacity: 1; } 39%, 100% { opacity: 0; } }
 @keyframes lb-demo-running { 0%, 38% { opacity: 0; } 39%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
 @keyframes lb-demo-passed { 0%, 49% { opacity: 0; } 50%, 100% { opacity: 1; } }
@@ -565,7 +847,7 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 @keyframes lb-demo-t2 { 0%, 53% { opacity: 0; transform: translateY(8px); } 55%, 100% { opacity: 1; transform: none; } }
 @keyframes lb-demo-t3 { 0%, 56% { opacity: 0; transform: translateY(8px); } 58%, 100% { opacity: 1; transform: none; } }
 @keyframes lb-demo-s0 { 0%, 59% { opacity: 1; } 60%, 100% { opacity: 0; } }
-@keyframes lb-demo-s100 { 0%, 59% { opacity: 0; transform: scale(0.4); } 62% { opacity: 1; transform: scale(1.3); } 66%, 100% { opacity: 1; transform: none; } }
+@keyframes lb-demo-s100 { 0%, 59% { opacity: 0; transform: scale(0.97); } 62% { opacity: 1; transform: scale(1.3); } 66%, 100% { opacity: 1; transform: none; } }
 @keyframes lb-demo-dim { 0%, 64% { opacity: 1; } 68%, 100% { opacity: 0.15; } }
 @keyframes lb-demo-win { 0%, 64% { opacity: 0; transform: translateY(10px); } 69%, 100% { opacity: 1; transform: none; } }
 @keyframes lb-demo-tilt { from { opacity: 0.4; transform: perspective(1600px) rotateX(26deg) scale(0.86) translateY(40px); } to { opacity: 1; transform: none; } }
@@ -577,7 +859,8 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 
 @media (prefers-reduced-motion: reduce) {
   .lb-auth-check circle, .lb-auth-check path { stroke-dashoffset: 0; animation: none; }
-  .lb-press, .lb-seat-pip { transition: none; }
+  .lb-press, .lb-seat-pip, .lb-fold { transition: none; }
+  .lb-enter, .lb-shake, .lb-tooltip, [data-step] { animation: none !important; }
   .lb-seat-in, .lb-fade-in, .lb-second { animation: none; }
   .lb-rise, .lb-in-a, .lb-in-b, .lb-digit { animation: none; }
   [data-team-bar], [data-ready] > span, .lb-seat-swap > * { transition: none !important; }
@@ -590,7 +873,7 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
   .lb-rise-in { opacity: 1; animation: none; }
   .lb-title-row, .lb-title-row::before, .lb-title-desc { transition: none; }
   .lb-hero-word { clip-path: none; animation: none; }
-  .lb-hero-tip { left: 100%; animation: none; }
+  .lb-hero-tip { transform: none; animation: none; }
   .lb-typed { width: auto; border-right-color: transparent; animation: none; }
   .lb-reveal-view { animation: none; }
   .lb-demo-loop { animation: none !important; }

@@ -10,6 +10,7 @@
 //  - Settings should play the pen-tip wipe
 //  - Sign in should play the pen-tip wipe
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Activity } from 'react';
 import { act, cleanup, render } from '@testing-library/react';
 import { fakeUser, jsonResponse, stubFetch, threeProblems } from './helpers';
 
@@ -89,6 +90,24 @@ describe('page loader', () => {
 		// ...and coming back to (or refreshing) the same page plays it again.
 		render(<PageLoader variant="katana" />);
 		expect(loader()).not.toBeNull();
+	});
+
+	// Bug: Next keeps visited pages alive in the background (React <Activity>)
+	// instead of remounting them, so coming back to Lobby skipped the loader.
+	it('plays again when a kept-alive page is shown again', () => {
+		vi.useFakeTimers();
+		const page = (mode: 'visible' | 'hidden') => <Activity mode={mode}><PageLoader variant="katana" /></Activity>;
+		const view = render(page('visible'));
+		// The first visit plays to the end...
+		act(() => {
+			vi.advanceTimersByTime(LOADER_MS.katana + 50);
+		});
+		// ...the user goes to another page (this one is hidden, not unmounted)...
+		view.rerender(page('hidden'));
+		// ...and comes back.
+		view.rerender(page('visible'));
+		expect(loader()).not.toBeNull();
+		vi.useRealTimers();
 	});
 });
 

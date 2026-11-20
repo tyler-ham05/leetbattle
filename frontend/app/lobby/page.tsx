@@ -185,7 +185,7 @@ function LobbyContent() {
 				<>
 					{isHost ? (
 						<div role="group" aria-label="Players per team" className={`relative flex gap-0.5 rounded-[9px] border border-line p-[3px] transition-opacity duration-300 ${counting ? 'opacity-40' : ''}`}>
-							<span aria-hidden="true" className="absolute top-[3px] h-7 w-11 rounded-md bg-raised transition-[left] duration-300 ease-[cubic-bezier(0.2,0.7,0.2,1)]" style={{ left: `${3 + (teamSize - 1) * 46}px` }} />
+							<span aria-hidden="true" className="absolute left-[3px] top-[3px] h-7 w-11 rounded-md bg-raised transition-transform duration-300 ease-[cubic-bezier(0.2,0.7,0.2,1)]" style={{ transform: `translateX(${(teamSize - 1) * 46}px)` }} />
 							{TEAM_SIZES.map((size) => (
 								<button
 									key={size}

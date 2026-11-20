@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { prefersReducedMotion } from './motion';
 
 // How long each loader runs before it removes itself (matches the CSS in globals.css).
@@ -68,12 +68,16 @@ const SCENES: Record<LoaderVariant, () => React.JSX.Element> = { katana: Katana,
 export default function PageLoader({ variant }: { variant: LoaderVariant }) {
 	const [show, setShow] = useState(true);
 
-	useEffect(() => {
-		// Plays every time the page opens or refreshes, unless the user asked for less motion.
+	// Plays every time the page opens, refreshes or is shown again, unless the
+	// user asked for less motion. Next keeps visited pages alive in the
+	// background (React <Activity>), so this runs again each time the page comes
+	// back. It is a layout effect so the cover is up before the page paints.
+	useLayoutEffect(() => {
 		if (prefersReducedMotion()) {
 			setShow(false);
 			return;
 		}
+		setShow(true);
 		const timer = setTimeout(() => setShow(false), LOADER_MS[variant]);
 		return () => clearTimeout(timer);
 	}, [variant]);

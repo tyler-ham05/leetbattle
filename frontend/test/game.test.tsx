@@ -394,6 +394,17 @@ describe('game page forfeit', () => {
 		expect(screen.getByRole('dialog', { name: 'Forfeit the match?' })).toBeTruthy();
 	});
 
+	// Motion rule: the dialog enters from scale 0.97 and opacity 0 (lb-enter), not from nothing.
+	it('plays the entrance animation on the forfeit dialog', async () => {
+		const user = userEvent.setup();
+		configureConnectedGame();
+		render(<GamePage />);
+
+		await user.click(forfeitButton());
+
+		expect(screen.getByRole('dialog', { name: 'Forfeit the match?' }).classList.contains('lb-enter')).toBe(true);
+	});
+
 	it('US-6-T-2 closes the dialog without forfeiting when Cancel is clicked', async () => {
 		const user = userEvent.setup();
 		configureConnectedGame();

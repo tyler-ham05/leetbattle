@@ -108,7 +108,7 @@ function ForfeitControl({ onForfeit }: { onForfeit: () => void }) {
 			</button>
 			{confirming && (
 				<div className="fixed inset-0 z-40 flex items-center justify-center bg-page/70 px-4">
-					<div role="dialog" aria-modal="true" aria-labelledby="forfeit-title" className="flex w-full max-w-sm flex-col gap-4 rounded-xl border border-line bg-surface p-6 shadow-lg">
+					<div role="dialog" aria-modal="true" aria-labelledby="forfeit-title" className="lb-enter flex w-full max-w-sm flex-col gap-4 rounded-xl border border-line bg-surface p-6 shadow-lg">
 						<h2 id="forfeit-title" className="text-lg font-bold">Forfeit the match?</h2>
 						<p className="text-sm text-muted">Your team forfeits once every connected teammate confirms. This can&apos;t be undone.</p>
 						<div className="flex justify-end gap-3">
