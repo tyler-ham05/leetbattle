@@ -8,10 +8,17 @@
 
 /* =========================================================
    THEME TOKENS
-   Four schemes (emerald, volt, midnight, ultraviolet), each
-   with a dark and a light mode, set on <html> as
-   data-scheme / data-mode. Every text color passes WCAG AA
-   (4.5:1) on its page and raised backgrounds.
+   Eleven schemes (emerald, midnight, nocturne, shoreline,
+   merlot, coffee, performative, lilac, tidepool, sugarplum,
+   vim), each with a dark and a light mode, set on <html> as
+   data-scheme / data-mode. The selectors aren't tied to <html>,
+   so any element carrying both attributes gets that scheme's
+   colors (the settings preview uses this). Every text color
+   passes WCAG AA (4.5:1) on its page and raised backgrounds,
+   except Vim's dark Team 2 blue, kept exact on purpose.
+   The newer schemes are calm on purpose: low-saturation
+   accents, tinted near-blacks, off-white text, and Team 2
+   from the same family as Team 1, set apart by depth.
    ========================================================= */
 
 :root,
@@ -47,38 +54,6 @@
   --lb-num: #92600a;
 }
 
-[data-scheme="volt"][data-mode="dark"] {
-  color-scheme: dark;
-  --lb-page: #0d110a;
-  --lb-surface: #131a0f;
-  --lb-raised: #1a2214;
-  --lb-line: #27311e;
-  --lb-ink: #eef4e4;
-  --lb-muted: #9aa98b;
-  --lb-primary: #b8f53d;
-  --lb-on-primary: #0d110a;
-  --lb-secondary: #ffd43b;
-  --lb-danger: #ff8a7a;
-  --lb-kw: #ffd43b;
-  --lb-num: #b8f53d;
-}
-
-[data-scheme="volt"][data-mode="light"] {
-  color-scheme: light;
-  --lb-page: #f7f9f2;
-  --lb-surface: #ffffff;
-  --lb-raised: #eef2e6;
-  --lb-line: #dbe2cf;
-  --lb-ink: #141a0e;
-  --lb-muted: #5a6650;
-  --lb-primary: #3f6212;
-  --lb-on-primary: #ffffff;
-  --lb-secondary: #8a5a00;
-  --lb-danger: #b42318;
-  --lb-kw: #3f6212;
-  --lb-num: #8a5a00;
-}
-
 [data-scheme="midnight"][data-mode="dark"] {
   color-scheme: dark;
   --lb-page: #07060d;
@@ -111,36 +86,301 @@
   --lb-num: #204ef1;
 }
 
-[data-scheme="ultraviolet"][data-mode="dark"] {
+/* Nocturne: meadow mauve vs indigo, on blackberry */
+[data-scheme="nocturne"][data-mode="dark"] {
   color-scheme: dark;
-  --lb-page: #0e0919;
-  --lb-surface: #150d24;
-  --lb-raised: #1f1433;
-  --lb-line: #2e2148;
-  --lb-ink: #f3effc;
-  --lb-muted: #ada1cc;
-  --lb-primary: #e8ff47;
-  --lb-on-primary: #0e0919;
-  --lb-secondary: #a57bff;
-  --lb-danger: #ff8a7a;
-  --lb-kw: #b99bff;
-  --lb-num: #e8ff47;
+  --lb-page: #1a0f17;
+  --lb-surface: #23141f;
+  --lb-raised: #2e1a29;
+  --lb-line: #3d2536;
+  --lb-ink: #ece6e9;
+  --lb-muted: #ad9aa8;
+  --lb-primary: #c49fbd;
+  --lb-on-primary: #1a0f17;
+  --lb-secondary: #9cb8e8;
+  --lb-danger: #ff7a85;
+  --lb-kw: #c49fbd;
+  --lb-num: #9cb8e8;
 }
 
-[data-scheme="ultraviolet"][data-mode="light"] {
+[data-scheme="nocturne"][data-mode="light"] {
   color-scheme: light;
-  --lb-page: #f8f6fc;
-  --lb-surface: #ffffff;
-  --lb-raised: #efeaf8;
-  --lb-line: #e0d9ee;
-  --lb-ink: #160f24;
-  --lb-muted: #625877;
-  --lb-primary: #6d28d9;
+  --lb-page: #efebe8;
+  --lb-surface: #f8f6f4;
+  --lb-raised: #e0dad5;
+  --lb-line: #d2cbc6;
+  --lb-ink: #2a1525;
+  --lb-muted: #6a5864;
+  --lb-primary: #6e3358;
   --lb-on-primary: #ffffff;
-  --lb-secondary: #6b6400;
+  --lb-secondary: #385794;
   --lb-danger: #b42318;
-  --lb-kw: #6d28d9;
-  --lb-num: #6b6400;
+  --lb-kw: #6e3358;
+  --lb-num: #385794;
+}
+
+/* Shoreline: deep teal vs soft peach */
+[data-scheme="shoreline"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #0c181b;
+  --lb-surface: #112024;
+  --lb-raised: #172a2e;
+  --lb-line: #22383d;
+  --lb-ink: #e7efee;
+  --lb-muted: #97aaa9;
+  --lb-primary: #5fb3b3;
+  --lb-on-primary: #0c181b;
+  --lb-secondary: #eab08a;
+  --lb-danger: #ff7b8f;
+  --lb-kw: #5fb3b3;
+  --lb-num: #eab08a;
+}
+
+[data-scheme="shoreline"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #f6f2ea;
+  --lb-surface: #fcfaf6;
+  --lb-raised: #e9e3d7;
+  --lb-line: #d9d1c2;
+  --lb-ink: #11292c;
+  --lb-muted: #55666a;
+  --lb-primary: #0f5e6b;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #944826;
+  --lb-danger: #b4183c;
+  --lb-kw: #0f5e6b;
+  --lb-num: #944826;
+}
+
+/* Merlot: burgundy rose vs baby pink; errors in amber */
+[data-scheme="merlot"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #1b1114;
+  --lb-surface: #23171b;
+  --lb-raised: #2e1e24;
+  --lb-line: #3d2a31;
+  --lb-ink: #f0e6e8;
+  --lb-muted: #b29ca2;
+  --lb-primary: #cf7f8e;
+  --lb-on-primary: #1b1114;
+  --lb-secondary: #f4cfd6;
+  --lb-danger: #e9a35e;
+  --lb-kw: #cf7f8e;
+  --lb-num: #f4cfd6;
+}
+
+[data-scheme="merlot"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #fbf3f0;
+  --lb-surface: #fffaf8;
+  --lb-raised: #f2e3df;
+  --lb-line: #e6d2cd;
+  --lb-ink: #36161e;
+  --lb-muted: #7a5a62;
+  --lb-primary: #7a2234;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #9a4360;
+  --lb-danger: #a04a00;
+  --lb-kw: #7a2234;
+  --lb-num: #9a4360;
+}
+
+/* Coffee: latte cream vs cinnamon, on espresso */
+[data-scheme="coffee"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #1a1410;
+  --lb-surface: #221a15;
+  --lb-raised: #2c231c;
+  --lb-line: #3b3027;
+  --lb-ink: #efe9e2;
+  --lb-muted: #ab9d90;
+  --lb-primary: #e6c9a3;
+  --lb-on-primary: #1a1410;
+  --lb-secondary: #cf8462;
+  --lb-danger: #ff8a8a;
+  --lb-kw: #e6c9a3;
+  --lb-num: #cf8462;
+}
+
+[data-scheme="coffee"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #f7f0e7;
+  --lb-surface: #fdf9f4;
+  --lb-raised: #ece1d3;
+  --lb-line: #ddcfbe;
+  --lb-ink: #2b1b14;
+  --lb-muted: #6e5a4b;
+  --lb-primary: #5f3f2b;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #934827;
+  --lb-danger: #b42318;
+  --lb-kw: #5f3f2b;
+  --lb-num: #934827;
+}
+
+/* Performative: matcha vs oat milk */
+[data-scheme="performative"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #12160f;
+  --lb-surface: #191e15;
+  --lb-raised: #22291c;
+  --lb-line: #303a28;
+  --lb-ink: #eef0e6;
+  --lb-muted: #a3ab95;
+  --lb-primary: #aec47e;
+  --lb-on-primary: #12160f;
+  --lb-secondary: #d9bd92;
+  --lb-danger: #ff8a8a;
+  --lb-kw: #aec47e;
+  --lb-num: #d9bd92;
+}
+
+[data-scheme="performative"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #f5f3ea;
+  --lb-surface: #fcfbf6;
+  --lb-raised: #e8e6d6;
+  --lb-line: #d8d5c1;
+  --lb-ink: #1f2a17;
+  --lb-muted: #5e6553;
+  --lb-primary: #4a6220;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #86592c;
+  --lb-danger: #b42318;
+  --lb-kw: #4a6220;
+  --lb-num: #86592c;
+}
+
+/* Lilac: lavender vs sage */
+[data-scheme="lilac"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #14121b;
+  --lb-surface: #1b1824;
+  --lb-raised: #24202f;
+  --lb-line: #332e40;
+  --lb-ink: #eeebf4;
+  --lb-muted: #a7a1b6;
+  --lb-primary: #b8a9e0;
+  --lb-on-primary: #14121b;
+  --lb-secondary: #a9c4a6;
+  --lb-danger: #ff8a8a;
+  --lb-kw: #b8a9e0;
+  --lb-num: #a9c4a6;
+}
+
+[data-scheme="lilac"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #f6f4f9;
+  --lb-surface: #fdfcfe;
+  --lb-raised: #ebe7f2;
+  --lb-line: #dcd6e6;
+  --lb-ink: #221d30;
+  --lb-muted: #625b72;
+  --lb-primary: #5b4a97;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #466844;
+  --lb-danger: #b42318;
+  --lb-kw: #5b4a97;
+  --lb-num: #466844;
+}
+
+/* Tidepool: teal on teal, deep vs pale aqua */
+[data-scheme="tidepool"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #0a1214;
+  --lb-surface: #0e1a1d;
+  --lb-raised: #14262a;
+  --lb-line: #1e383d;
+  --lb-ink: #eef3f3;
+  --lb-muted: #93abae;
+  --lb-primary: #5aa6b3;
+  --lb-on-primary: #0a1214;
+  --lb-secondary: #bcdde2;
+  --lb-danger: #ff8a8a;
+  --lb-kw: #5aa6b3;
+  --lb-num: #bcdde2;
+}
+
+[data-scheme="tidepool"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #f3f6f6;
+  --lb-surface: #fbfcfc;
+  --lb-raised: #e1eaeb;
+  --lb-line: #cfdcde;
+  --lb-ink: #133336;
+  --lb-muted: #4f6669;
+  --lb-primary: #285f6b;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #33707a;
+  --lb-danger: #b42318;
+  --lb-kw: #285f6b;
+  --lb-num: #33707a;
+}
+
+/* Sugarplum: berry vs golden olive; errors in amber */
+[data-scheme="sugarplum"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #1a1016;
+  --lb-surface: #22161d;
+  --lb-raised: #2c1d26;
+  --lb-line: #3c2934;
+  --lb-ink: #f1e8ec;
+  --lb-muted: #b39ca8;
+  --lb-primary: #d27aa6;
+  --lb-on-primary: #1a1016;
+  --lb-secondary: #b8c072;
+  --lb-danger: #ffa36b;
+  --lb-kw: #d27aa6;
+  --lb-num: #b8c072;
+}
+
+[data-scheme="sugarplum"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #f6f2ec;
+  --lb-surface: #fcfaf6;
+  --lb-raised: #ebe4da;
+  --lb-line: #dcd3c6;
+  --lb-ink: #2a121e;
+  --lb-muted: #6b5560;
+  --lb-primary: #8a1f5a;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #565e1c;
+  --lb-danger: #a04a00;
+  --lb-kw: #8a1f5a;
+  --lb-num: #565e1c;
+}
+
+/* Vim: the Vim start screen, exact: green and blue on pure black */
+[data-scheme="vim"][data-mode="dark"] {
+  color-scheme: dark;
+  --lb-page: #000000;
+  --lb-surface: #0a0a0a;
+  --lb-raised: #141414;
+  --lb-line: #242424;
+  --lb-ink: #6fcb59;
+  --lb-muted: #559b43;
+  --lb-primary: #6fcb59;
+  --lb-on-primary: #000000;
+  --lb-secondary: #5353f0;
+  --lb-danger: #ff5f5f;
+  --lb-kw: #5353f0;
+  --lb-num: #6fcb59;
+}
+
+[data-scheme="vim"][data-mode="light"] {
+  color-scheme: light;
+  --lb-page: #ffffff;
+  --lb-surface: #ffffff;
+  --lb-raised: #ececec;
+  --lb-line: #d6d6d6;
+  --lb-ink: #1f6b12;
+  --lb-muted: #4a6a42;
+  --lb-primary: #1f6b12;
+  --lb-on-primary: #ffffff;
+  --lb-secondary: #2a2ad0;
+  --lb-danger: #b42318;
+  --lb-kw: #2a2ad0;
+  --lb-num: #1f6b12;
 }
 
 :root {
@@ -150,7 +390,6 @@
   /* the same font stack Monaco uses, so code looks identical to the editor */
   --lb-code-font: Menlo, Monaco, Consolas, "Courier New", monospace;
 }
-
 
 /* Tailwind utilities: bg-page, bg-surface, text-ink, text-muted, border-line, bg-primary, ... */
 @theme inline {
@@ -325,8 +564,6 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 .lb-tick { opacity: 0; animation: lb-tick 0.35s ease forwards var(--d); }
 .lb-pop { animation: lb-pop 0.4s ease both; }
 
-/* Theme picker: ring the active scheme without needing client state on first paint */
-.lb-swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--lb-page), 0 0 0 4px var(--lb-ink); }
 
 /* =========================================================
    HOME SCREEN

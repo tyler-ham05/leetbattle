@@ -35,6 +35,7 @@ import LoginPage from '../app/login/page';
 import SettingsPage from '../app/settings/page';
 import UserMenu from '../app/_home/components/user-menu';
 import ThemeControls from '../app/_shared/theme-controls';
+import Tooltip from '../app/_shared/tooltip';
 
 const css = fs.readFileSync(path.resolve(__dirname, '../app/globals.css'), 'utf8');
 
@@ -191,7 +192,7 @@ describe('theme switches', () => {
 	it('adds theme-switching to <html> when a scheme is picked', () => {
 		vi.useFakeTimers();
 		render(<ThemeControls />);
-		fireEvent.click(screen.getByRole('button', { name: 'Volt color scheme' }));
+		fireEvent.click(screen.getByRole('button', { name: 'Coffee color scheme' }));
 		expect(document.documentElement.classList.contains('theme-switching')).toBe(true);
 	});
 
@@ -199,7 +200,7 @@ describe('theme switches', () => {
 	it('removes theme-switching right after the switch', () => {
 		vi.useFakeTimers();
 		render(<ThemeControls />);
-		fireEvent.click(screen.getByRole('button', { name: 'Volt color scheme' }));
+		fireEvent.click(screen.getByRole('button', { name: 'Coffee color scheme' }));
 		act(() => {
 			vi.runAllTimers();
 		});
@@ -208,36 +209,46 @@ describe('theme switches', () => {
 });
 
 describe('tooltips', () => {
+	// Two icons side by side, each with a tooltip (like the icon buttons in the top bar).
+	function TwoIcons() {
+		return (
+			<>
+				<Tooltip label="Light mode"><button type="button">sun</button></Tooltip>
+				<Tooltip label="Account"><button type="button">menu</button></Tooltip>
+			</>
+		);
+	}
+
 	// The first tooltip waits before it opens.
 	it('does not show the first tooltip straight away', () => {
 		vi.useFakeTimers();
-		render(<ThemeControls />);
-		fireEvent.pointerEnter(screen.getByRole('button', { name: 'Volt color scheme' }));
+		render(<TwoIcons />);
+		fireEvent.pointerEnter(screen.getByRole('button', { name: 'sun' }));
 		expect(screen.queryByRole('tooltip')).toBeNull();
 	});
 
-	// After the delay it shows the scheme's name.
+	// After the delay it shows its label.
 	it('shows the first tooltip after the delay', () => {
 		vi.useFakeTimers();
-		render(<ThemeControls />);
-		fireEvent.pointerEnter(screen.getByRole('button', { name: 'Volt color scheme' }));
+		render(<TwoIcons />);
+		fireEvent.pointerEnter(screen.getByRole('button', { name: 'sun' }));
 		act(() => {
 			vi.advanceTimersByTime(600);
 		});
-		expect(screen.getByRole('tooltip').textContent).toBe('Volt');
+		expect(screen.getByRole('tooltip').textContent).toBe('Light mode');
 	});
 
 	// Once one is open, moving to the next shows its tooltip at once.
 	it('shows the next tooltip instantly while one is open', () => {
 		vi.useFakeTimers();
-		render(<ThemeControls />);
-		const volt = screen.getByRole('button', { name: 'Volt color scheme' });
-		fireEvent.pointerEnter(volt);
+		render(<TwoIcons />);
+		const sun = screen.getByRole('button', { name: 'sun' });
+		fireEvent.pointerEnter(sun);
 		act(() => {
 			vi.advanceTimersByTime(600);
 		});
-		fireEvent.pointerLeave(volt);
-		fireEvent.pointerEnter(screen.getByRole('button', { name: 'Midnight color scheme' }));
-		expect(screen.getByRole('tooltip').textContent).toBe('Midnight');
+		fireEvent.pointerLeave(sun);
+		fireEvent.pointerEnter(screen.getByRole('button', { name: 'menu' }));
+		expect(screen.getByRole('tooltip').textContent).toBe('Account');
 	});
 });

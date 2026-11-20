@@ -11,7 +11,7 @@ export default function SettingsPage() {
 			<div className="flex flex-1 flex-col bg-page font-sans">
 				<PageLoader variant="pen" />
 				<HomeTopBar />
-				<main className="flex flex-1 items-center justify-center p-8">
+				<main className="flex flex-1 items-start justify-center px-[clamp(24px,8vw,110px)] py-8 lg:py-12">
 					<SettingsForm />
 				</main>
 			</div>
