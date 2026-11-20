@@ -2,6 +2,7 @@
 @leetbattle/docs 
 Frontend Structure: docs/frontend/frontend.md
 Frontend theming: docs/frontend/theming.md
+Frontend animation: docs/frontend/animation.md
 Backend Service: docs/service/services.md
 
 
