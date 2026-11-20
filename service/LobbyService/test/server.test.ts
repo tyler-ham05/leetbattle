@@ -438,8 +438,13 @@ describe('team size', () => {
 
 	it('passes the host to the next player who joined when the host leaves', async () => {
 		const clients = await joinPlayers('size-handover', 3);
-		const state = await emitAndWaitForState(clients[0], 'lobby:leave') as SizedSnapshot;
-		expect(state.hostId).toBe('size-handover-1');
+		// Wait for the state where the host has actually left (two players
+		// remain), as seen by a player who stays. Taking the very next state
+		// could pick up the third player's late join broadcast instead, which
+		// still has the old host and made this test flaky in CI.
+		const afterLeave = nextLobbyState(clients[1], (state) => state.playerCount === 2) as Promise<SizedSnapshot>;
+		clients[0].emit('lobby:leave');
+		expect((await afterLeave).hostId).toBe('size-handover-1');
 	});
 
 	it('shows the new team size to every lobby client', async () => {
