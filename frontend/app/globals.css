@@ -494,9 +494,13 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 .lb-in-a { animation: lb-in-a 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 .lb-in-b { animation: lb-in-b 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 .lb-digit { animation: lb-digit 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-/* An open seat the user can take says so on hover. */
-.lb-seat-hint { opacity: 0; transition: opacity 0.2s ease; }
-.lb-seat-open:hover .lb-seat-hint, .lb-seat-open:focus-visible .lb-seat-hint { opacity: 1; }
+/* An open seat the user can take: on hover "Open seat" lifts out and the
+   hint ("Join here" / "Switch here") rises into the same spot. */
+.lb-seat-swap { display: grid; }
+.lb-seat-swap > * { grid-area: 1 / 1; transition: opacity 0.25s ease, transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.lb-seat-hint { opacity: 0; transform: translateY(8px); }
+.lb-seat-open:hover .lb-seat-label, .lb-seat-open:focus-visible .lb-seat-label { opacity: 0; transform: translateY(-8px); }
+.lb-seat-open:hover .lb-seat-hint, .lb-seat-open:focus-visible .lb-seat-hint { opacity: 1; transform: none; }
 
 /* Sign in: the check mark above "Check your email" draws itself. */
 .lb-auth-check { color: var(--lb-primary); }
@@ -597,7 +601,7 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
   .lb-press, .lb-seat-pip { transition: none; }
   .lb-seat-in, .lb-fade-in, .lb-second { animation: none; }
   .lb-rise, .lb-in-a, .lb-in-b, .lb-digit { animation: none; }
-  [data-team-bar], [data-ready] > span { transition: none !important; }
+  [data-team-bar], [data-ready] > span, .lb-seat-swap > * { transition: none !important; }
   .lb-check { stroke-dashoffset: 0; animation: none; }
   .lb-drain { display: none; }
   .lb-intro, .lb-loader { display: none; }

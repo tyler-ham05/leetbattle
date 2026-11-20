@@ -262,13 +262,16 @@ function LobbyContent() {
 															aria-label={seatAction}
 															onClick={() => send('lobby:join-team', team.id)}
 															disabled={!connected}
-															className={`lb-seat-open ${BUTTON} min-h-[54px] w-full justify-between rounded-[10px] border border-dashed border-line px-4 text-sm text-muted hover:bg-surface hover:text-ink ${team.mirrored ? 'flex-row-reverse' : ''}`}
+															className={`lb-seat-open ${BUTTON} min-h-[54px] w-full rounded-[10px] border border-dashed border-line px-4 text-sm text-muted hover:bg-surface`}
 														>
-															<span>Open seat</span>
-															<span className={`lb-seat-hint text-[13px] font-semibold ${team.nameColor}`}>{currentPlayer?.team ? 'Switch here' : 'Join here'}</span>
+															{/* One cell: on hover "Open seat" fades up and out as the hint fades in. */}
+															<span className="lb-seat-swap">
+																<span className="lb-seat-label">Open seat</span>
+																<span className={`lb-seat-hint font-semibold ${team.nameColor}`}>{currentPlayer?.team ? 'Switch here' : 'Join here'}</span>
+															</span>
 														</button>
 													) : (
-														<div className={`flex min-h-[54px] items-center rounded-[10px] border border-dashed border-line px-4 text-sm text-muted ${team.mirrored ? 'justify-end' : ''}`}>Open seat</div>
+														<div className="flex min-h-[54px] items-center justify-center rounded-[10px] border border-dashed border-line px-4 text-sm text-muted">Open seat</div>
 													)}
 												</li>
 											))}
