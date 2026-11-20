@@ -6,9 +6,9 @@ import type { TeamId } from '../../lobby/socket-context';
 import type { GamePlayer, GameResult } from '../socket-context';
 import { useCountUp } from '../../_shared/use-count-up';
 
-const TEAMS: { id: TeamId; name: string; color: string }[] = [
-	{ id: 'a', name: 'Team 1', color: 'text-primary' },
-	{ id: 'b', name: 'Team 2', color: 'text-secondary' },
+const TEAMS: { id: TeamId; name: string; color: string; fill: string }[] = [
+	{ id: 'a', name: 'Team 1', color: 'text-primary', fill: 'fill-primary' },
+	{ id: 'b', name: 'Team 2', color: 'text-secondary', fill: 'fill-secondary' },
 ];
 
 // When things come in, in seconds: the word lands and moves up first, then
@@ -21,10 +21,10 @@ const BUTTONS_AT = 2.2;
 
 const BUTTON = 'lb-press inline-flex min-h-11 items-center rounded-lg px-5 text-sm font-semibold';
 
-function Crown({ delay }: { delay: number }) {
+function Crown({ delay, fill }: { delay: number; fill: string }) {
 	return (
 		<span className="lb-result-crown" style={{ '--d': `${delay}s` } as CSSProperties}>
-			<svg role="img" aria-label="Winner" width="22" height="22" viewBox="0 0 24 24" className="fill-primary">
+			<svg role="img" aria-label="Winner" width="22" height="22" viewBox="0 0 24 24" className={fill}>
 				<path d="M3 7l5 5 4-7 4 7 5-5-2 12H5z" />
 			</svg>
 		</span>
@@ -44,8 +44,7 @@ function TeamHalf({ team, score, players, won, side }: { team: (typeof TEAMS)[nu
 	return (
 		<section
 			aria-label={team.name}
-			className={`lb-result-rise flex flex-[1_1_320px] flex-col gap-6 py-10 ${left ? 'border-line md:border-r md:pr-12' : 'md:pl-12'}`}
-			style={{ '--d': `${left ? HALVES_AT : HALVES_AT + 0.1}s` } as CSSProperties}
+			className={`flex flex-[1_1_320px] flex-col gap-6 py-10 ${left ? 'border-line md:border-r md:pr-12' : 'md:pl-12'}`}
 		>
 			<div className="flex items-baseline justify-between gap-4">
 				{left ? <>{name}{number}</> : <>{number}{name}</>}
@@ -53,7 +52,7 @@ function TeamHalf({ team, score, players, won, side }: { team: (typeof TEAMS)[nu
 			<ul className={`flex flex-col gap-3.5 ${left ? '' : 'items-end'}`}>
 				{players.map((player, i) => (
 					<li key={player.userId} className={`flex items-center gap-3 text-2xl tracking-[-0.02em] ${won ? 'font-bold text-ink' : 'font-semibold text-muted'}`}>
-						{won && <Crown delay={CROWNS_AT + i * 0.12} />}
+						{won && <Crown delay={CROWNS_AT + i * 0.12} fill={team.fill} />}
 						{player.displayName}
 					</li>
 				))}
@@ -80,7 +79,8 @@ export default function ResultScreen({ result, myTeam, scores, players }: { resu
 				{winnerTeam && <h2 className={`text-[28px] font-extrabold tracking-[-0.03em] ${winnerTeam.color}`}>{winnerTeam.name} wins</h2>}
 			</div>
 
-			<div className="flex flex-wrap border-y border-line">
+			{/* The frame comes in with the halves, so the word never slams into an empty box. */}
+			<div className="lb-result-rise flex flex-wrap border-y border-line" style={{ '--d': `${HALVES_AT}s` } as CSSProperties}>
 				{TEAMS.map((team, i) => (
 					<TeamHalf
 						key={team.id}
