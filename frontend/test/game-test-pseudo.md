@@ -139,14 +139,6 @@
  //  - On connecting, a "game:code:snapshot" of teammates' saved workspaces should be loaded into state
  //  - A later "game:code" event for the same teammate and question should replace, not merge with, the earlier one
 
-// ============================================================================
-// DRAFT (Claude, for review): US-6-T-8, scoring submissions by percent of
-// testcases passed. Edit / cut / reword before tests are written. GameService
-// now computes real points (see socket-test-pseudo.md); these tests check the
-// game page keeps showing whatever score it's given, now that it's no longer
-// always 0-0. All socket traffic is mocked; no test touches GameService.
-// ============================================================================
-
  // Game page should show the live team score
  //  - The team score shown in the header should match the game state's scores
  //  - A new game state with an updated score should update what's shown, without needing to submit again

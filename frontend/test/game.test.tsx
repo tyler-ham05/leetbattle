@@ -294,19 +294,21 @@ describe('game page connection problems', () => {
 });
 
 describe('game page match view', () => {
+	// The rosters show before the match starts; while playing the editor fills
+	// the page instead (US-5-T-19), so these render the ban phase.
+	const banPool = problemPool.map((entry) => ({ ...entry, topics: ['Array'], bannedBy: null }));
+
 	it('US-6-T-2 renders each player\'s display name', () => {
-		configureConnectedGame();
+		configureConnectedGame({ phase: 'banning', banSecondsRemaining: 25, problemPool: banPool });
 		render(<GamePage />);
 
-		// Scoped to the rosters: the workspace switcher also shows teammates'
-		// display names (see "game page workspace switcher" below).
 		const rosters = [screen.getByRole('list', { name: 'Team 1 players' }), screen.getByRole('list', { name: 'Team 2 players' })];
 		const shown = roster.filter((entry) => rosters.some((list) => within(list).queryByText(entry.displayName) !== null));
 		expect(shown).toHaveLength(6);
 	});
 
 	it('US-6-T-2 lists Team 1\'s three players', () => {
-		configureConnectedGame();
+		configureConnectedGame({ phase: 'banning', banSecondsRemaining: 25, problemPool: banPool });
 		render(<GamePage />);
 
 		const teamOne = screen.getByRole('list', { name: 'Team 1 players' });
@@ -314,7 +316,7 @@ describe('game page match view', () => {
 	});
 
 	it('US-6-T-2 shows "Reconnecting…" for a player who is not connected', () => {
-		configureConnectedGame({ players: roster.map((entry) => (entry.userId === 'u4' ? { ...entry, connected: false } : entry)) });
+		configureConnectedGame({ phase: 'banning', banSecondsRemaining: 25, problemPool: banPool, players: roster.map((entry) => (entry.userId === 'u4' ? { ...entry, connected: false } : entry)) });
 		render(<GamePage />);
 
 		// Only Alan dropped, so exactly one row shows the reconnecting label.
@@ -332,7 +334,8 @@ describe('game page match view', () => {
 		configureConnectedGame({ scores: { a: 120, b: 80 } });
 		render(<GamePage />);
 
-		expect(screen.getByText('120').closest('span.font-mono')?.textContent).toBe('120 – 80');
+		// The score sits in the middle of the top bar (US-5-T-19): Team 1's is score-a.
+		expect(within(screen.getAllByRole('banner')[0]).getByTestId('score-a').textContent).toBe('120');
 	});
 
 	it('US-6-T-8 updates the shown score when a new game state arrives', () => {

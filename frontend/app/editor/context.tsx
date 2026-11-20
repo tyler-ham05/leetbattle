@@ -61,7 +61,11 @@ export interface EditorContextValue {
 	questions: Problem[];
 	currentQuestion: Problem | null;
 	setCurrentQuestion: (_question: Problem) => void;
+	// Only the first VISIBLE_CASES of the problem's cases, like LeetCode: Run
+	// uses just these; Submit runs every case on CodeService.
 	testCases: TestCase[];
+	// How many of the problem's cases are not shown (they still run on Submit).
+	hiddenCaseCount: number;
 	tabs: EditorTab[];
 	activeTabId: string;
 	selectTab: (_tabId: string) => void;
@@ -83,6 +87,8 @@ export interface EditorContextValue {
 	// True when this provider is showing someone else's workspace: nothing can
 	// be edited, created, renamed or removed, and nothing is ever sent anywhere.
 	readOnly: boolean;
+	// Whose workspace a read-only provider shows, e.g. "Grace".
+	ownerName?: string;
 }
 
 // Practice (/editor) passes none of these. In a match the game page passes all
@@ -100,15 +106,20 @@ interface EditorProviderProps {
 	// The workspace to show per question while readOnly; a question with
 	// nothing in here yet falls back to its starter code.
 	externalWorkspaces?: Record<number, EditorWorkspace>;
+	// Whose workspace this is while readOnly, shown in the code tab bar.
+	ownerName?: string;
 	// US-6-T-10: the question the player picked on the pick screen, shown as
 	// their first tab instead of whichever problem happens to be first in the
 	// pool, so a pick carries over into the game.
 	defaultQuestionId?: number;
 }
 
+// How many test cases a problem shows (and Run runs).
+const VISIBLE_CASES = 3;
+
 const EditorContext = createContext<EditorContextValue | null>(null);
 
-export function EditorProvider({ children, questionIds, submit, shareCode, readOnly = false, externalWorkspaces, defaultQuestionId }: EditorProviderProps) {
+export function EditorProvider({ children, questionIds, submit, shareCode, readOnly = false, externalWorkspaces, ownerName, defaultQuestionId }: EditorProviderProps) {
 	const { user } = useAuth();
 	const inMatch = questionIds !== undefined;
 	// The question_ids as a string, so a new array with the same ids (every
@@ -128,7 +139,9 @@ export function EditorProvider({ children, questionIds, submit, shareCode, readO
 	const shareTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 	const [loadingAction, setLoadingAction] = useState<LoadingAction>(null);
 	const socketRef = useRef<Socket | null>(null);
-	const testCases = currentQuestion ? parseTestCases(currentQuestion.input_output) : [];
+	const allTestCases = currentQuestion ? parseTestCases(currentQuestion.input_output) : [];
+	const testCases = allTestCases.slice(0, VISIBLE_CASES);
+	const hiddenCaseCount = allTestCases.length - testCases.length;
 	const workspaceSource = readOnly ? (externalWorkspaces ?? {}) : workspaces;
 	const workspace = currentQuestion
 		? workspaceSource[currentQuestion.question_id] ?? createWorkspace(currentQuestion)
@@ -319,6 +332,7 @@ export function EditorProvider({ children, questionIds, submit, shareCode, readO
 				currentQuestion,
 				setCurrentQuestion,
 				testCases,
+				hiddenCaseCount,
 				tabs: workspace.tabs,
 				activeTabId,
 				selectTab,
@@ -337,6 +351,7 @@ export function EditorProvider({ children, questionIds, submit, shareCode, readO
 				loadingAction,
 				isLoading: loadingAction !== null,
 				readOnly,
+				ownerName,
 			}}
 		>
 			{children}

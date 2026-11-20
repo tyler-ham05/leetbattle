@@ -74,35 +74,39 @@ export function SettingsForm() {
 				</div>
 			</form>
 
-			<form onSubmit={onChangePassword} className="flex flex-col gap-3">
-				<h2 className="text-sm font-semibold">Change password</h2>
-				<AuthField
-					label="Current password"
-					type="password"
-					required
-					value={currentPassword}
-					onChange={(e) => setCurrentPassword(e.target.value)}
-				/>
-				<AuthField
-					label="New password"
-					type="password"
-					required
-					minLength={8}
-					value={newPassword}
-					onChange={(e) => setNewPassword(e.target.value)}
-				/>
-				<AuthMessage status={passwordStatus} />
-				<div>
-					<AuthSubmitButton pending={isSavingPassword} pendingLabel="Saving…">
-						Change password
-					</AuthSubmitButton>
-				</div>
-			</form>
+			{/* Each section sits under a divider with a heading a step above the
+			    field labels, so "Change password" doesn't read as another label. */}
+			<section aria-labelledby="settings-password" className="flex flex-col gap-4 border-t border-line pt-8">
+				<h2 id="settings-password" className="text-base font-semibold">Change password</h2>
+				<form onSubmit={onChangePassword} className="flex flex-col gap-3">
+					<AuthField
+						label="Current password"
+						type="password"
+						required
+						value={currentPassword}
+						onChange={(e) => setCurrentPassword(e.target.value)}
+					/>
+					<AuthField
+						label="New password"
+						type="password"
+						required
+						minLength={8}
+						value={newPassword}
+						onChange={(e) => setNewPassword(e.target.value)}
+					/>
+					<AuthMessage status={passwordStatus} />
+					<div>
+						<AuthSubmitButton pending={isSavingPassword} pendingLabel="Saving…">
+							Change password
+						</AuthSubmitButton>
+					</div>
+				</form>
+			</section>
 
-			<div className="flex flex-col gap-3">
-				<h2 className="text-sm font-semibold">Theme</h2>
+			<section aria-labelledby="settings-theme" className="flex flex-col gap-4 border-t border-line pt-8">
+				<h2 id="settings-theme" className="text-base font-semibold">Theme</h2>
 				<ThemeControls />
-			</div>
+			</section>
 		</div>
 	);
 }

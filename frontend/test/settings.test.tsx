@@ -141,3 +141,38 @@ describe('changing password', () => {
 		expect(screen.queryByText('Password changed.')).toBeNull();
 	});
 });
+
+// Settings sections (UI fix, see settings-sections-test-pseudo.md): "Change password"
+// used to look like one more field label above "Current password".
+describe('settings sections', () => {
+	it('has a "Change password" section', () => {
+		render(<SettingsPage />);
+		expect(screen.getByRole('region', { name: 'Change password' })).toBeTruthy();
+	});
+
+	it('puts the "Current password" field inside the "Change password" section', () => {
+		render(<SettingsPage />);
+		const section = screen.getByRole('region', { name: 'Change password' });
+		expect(section.contains(screen.getByLabelText('Current password'))).toBe(true);
+	});
+
+	it('separates the "Change password" section from the name with a divider', () => {
+		render(<SettingsPage />);
+		expect(screen.getByRole('region', { name: 'Change password' }).className).toContain('border-t');
+	});
+
+	it('makes the "Change password" heading larger than the field labels', () => {
+		render(<SettingsPage />);
+		expect(screen.getByRole('heading', { name: 'Change password' }).className).toContain('text-base');
+	});
+
+	it('has a "Theme" section', () => {
+		render(<SettingsPage />);
+		expect(screen.getByRole('region', { name: 'Theme' })).toBeTruthy();
+	});
+
+	it('separates the "Theme" section from the password section with a divider', () => {
+		render(<SettingsPage />);
+		expect(screen.getByRole('region', { name: 'Theme' }).className).toContain('border-t');
+	});
+});

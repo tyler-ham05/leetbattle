@@ -3,13 +3,13 @@
 // Pseudocode these tests were written from: test/chat-test-pseudo.md
 //
 // Nothing here talks to a backend: the comments are mocked data handed to the
-// chat provider, the signed-in player is a fake, the one test that renders
-// the whole match screen serves its problems from a stubbed fetch, and the
-// US-3-T-2 tests hand the provider a fake game socket.
+// chat provider, the signed-in player is a fake, and the US-3-T-2 tests hand
+// the provider a fake game socket. (US-3-T-1's practice-page test went with
+// US-5-T-19: practice no longer has team chat; the game page's chat is in game.test.tsx.)
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { fakeUser, jsonResponse, stubFetch, threeProblems } from './helpers';
+import { fakeUser } from './helpers';
 
 // Monaco needs a real browser; swap it for a plain textarea.
 vi.mock('@monaco-editor/react', () => ({
@@ -26,7 +26,6 @@ vi.mock('next/navigation', () => ({
 	useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
-import EditorPage from '../app/editor/page';
 import TeamChat from '../app/editor/components/team-chat';
 import { ChatProvider } from '../app/editor/chat-context';
 import type { ChatMessage } from '../app/editor/chat-context';
@@ -97,17 +96,6 @@ beforeEach(() => {
 });
 
 afterEach(() => cleanup());
-
-describe('team chat panel on the match screen', () => {
-	it('US-3-T-1 shows a "Team chat" panel when the match screen loads', async () => {
-		// The match screen loads its problems from CodeService; serve them from a fake.
-		stubFetch(() => jsonResponse(threeProblems));
-		render(<EditorPage />);
-
-		// The panel is a labelled region of the match screen.
-		expect(await screen.findByRole('region', { name: 'Team chat' })).toBeTruthy();
-	});
-});
 
 describe('reading team comments', () => {
 	it('US-3-T-1 shows the text of each team comment', () => {
