@@ -53,61 +53,66 @@ export function SettingsForm() {
 	};
 
 	return (
-		<div className="flex w-full max-w-md flex-col gap-8">
-			<div>
-				<BackLink label="Back" />
-				<h1 className="mt-4 text-xl font-semibold">Account settings</h1>
-				<p className="text-sm text-muted">{user?.email}</p>
-			</div>
-
-			<form onSubmit={onSaveName} className="flex flex-col gap-3">
-				<AuthField
-					label="Name"
-					type="text"
-					required
-					value={name}
-					onChange={(e) => setName(e.target.value)}
-				/>
-				<AuthMessage status={nameStatus} />
+		// Layout A: on wide screens the account forms are a narrow left column and
+		// Theme gets the wide right column; on small screens they stack.
+		<div className="grid w-full max-w-md gap-8 lg:max-w-none lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)] lg:items-start lg:gap-12">
+			<div className="flex flex-col gap-8">
 				<div>
-					<AuthSubmitButton pending={isSavingName} pendingLabel="Saving…">
-						Save name
-					</AuthSubmitButton>
+					<BackLink label="Back" />
+					<h1 className="mt-4 text-xl font-semibold">Account settings</h1>
+					<p className="text-sm text-muted">{user?.email}</p>
 				</div>
-			</form>
 
-			{/* Each section sits under a divider with a heading a step above the
-			    field labels, so "Change password" doesn't read as another label. */}
-			<section aria-labelledby="settings-password" className="flex flex-col gap-4 border-t border-line pt-8">
-				<h2 id="settings-password" className="text-base font-semibold">Change password</h2>
-				<form onSubmit={onChangePassword} className="flex flex-col gap-3">
+				<form onSubmit={onSaveName} className="flex flex-col gap-3">
 					<AuthField
-						label="Current password"
-						type="password"
+						label="Name"
+						type="text"
 						required
-						value={currentPassword}
-						onChange={(e) => setCurrentPassword(e.target.value)}
-						invalid={passwordStatus?.type === 'error'}
-						shake={failedPasswordChanges}
+						value={name}
+						onChange={(e) => setName(e.target.value)}
 					/>
-					<AuthField
-						label="New password"
-						type="password"
-						required
-						minLength={8}
-						value={newPassword}
-						onChange={(e) => setNewPassword(e.target.value)}
-					/>
-					<AuthMessage status={passwordStatus} />
+					<AuthMessage status={nameStatus} />
 					<div>
-						<AuthSubmitButton pending={isSavingPassword} pendingLabel="Saving…">
-							Change password
+						<AuthSubmitButton pending={isSavingName} pendingLabel="Saving…">
+						Save name
 						</AuthSubmitButton>
 					</div>
 				</form>
-			</section>
 
-			<section aria-labelledby="settings-theme" className="flex flex-col gap-4 border-t border-line pt-8">
+				{/* Each section sits under a divider with a heading a step above the
+			    field labels, so "Change password" doesn't read as another label. */}
+				<section aria-labelledby="settings-password" className="flex flex-col gap-4 border-t border-line pt-8">
+					<h2 id="settings-password" className="text-base font-semibold">Change password</h2>
+					<form onSubmit={onChangePassword} className="flex flex-col gap-3">
+						<AuthField
+							label="Current password"
+							type="password"
+							required
+							value={currentPassword}
+							onChange={(e) => setCurrentPassword(e.target.value)}
+							invalid={passwordStatus?.type === 'error'}
+							shake={failedPasswordChanges}
+						/>
+						<AuthField
+							label="New password"
+							type="password"
+							required
+							minLength={8}
+							value={newPassword}
+							onChange={(e) => setNewPassword(e.target.value)}
+						/>
+						<AuthMessage status={passwordStatus} />
+						<div>
+							<AuthSubmitButton pending={isSavingPassword} pendingLabel="Saving…">
+							Change password
+							</AuthSubmitButton>
+						</div>
+					</form>
+				</section>
+
+			</div>
+
+			<section aria-labelledby="settings-theme" className="flex flex-col gap-4 border-t border-line pt-8 lg:border-t-0 lg:pt-0">
 				<h2 id="settings-theme" className="text-base font-semibold">Theme</h2>
 				<ThemeControls />
 			</section>
