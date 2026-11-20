@@ -12,6 +12,7 @@ import { EditorProvider } from '../../editor/context';
 import type { EditorWorkspace } from '../../editor/context';
 import EditorLayout from '../../editor/components/editor-layout';
 import TeamChat from '../../editor/components/team-chat';
+import { ScoreLine } from '../../editor/components/scoreboard';
 import { ChatProvider } from '../../editor/chat-context';
 import BanScreen from '../components/ban-screen';
 import PickScreen from '../components/pick-screen';
@@ -45,7 +46,7 @@ function formatClock(totalSeconds: number): string {
 
 // Counts down locally from the server's last `secondsRemaining`; every new
 // game state resyncs it, so clients never drift far from the server's clock.
-function Clock({ seconds, running }: { seconds: number; running: boolean }) {
+function Clock({ seconds, running, className = 'font-mono text-[28px] font-bold leading-none text-ink' }: { seconds: number; running: boolean; className?: string }) {
 	const [left, setLeft] = useState(seconds);
 
 	useEffect(() => {
@@ -55,7 +56,7 @@ function Clock({ seconds, running }: { seconds: number; running: boolean }) {
 		return () => clearInterval(timer);
 	}, [seconds, running]);
 
-	return <span className="font-mono text-[28px] font-bold leading-none text-ink">{formatClock(left)}</span>;
+	return <span className={className}>{formatClock(left)}</span>;
 }
 
 function Roster({ team, players, userId }: { team: typeof TEAMS[number]; players: GamePlayer[]; userId?: string }) {
@@ -181,14 +182,10 @@ function MatchEditor({ questionIds, defaultQuestionId, submit, shareCode, teamma
 		<EditorProvider questionIds={questionIds} defaultQuestionId={defaultQuestionId} submit={submit} shareCode={shareCode}>
 			<WorkspaceSwitcher teammates={teammates} viewedUserId={viewedUserId} onSelect={setViewedUserId} />
 			{viewedTeammate ? (
-				<div key={viewedTeammate.userId}>
-					<p className="border-b border-line bg-surface px-4 py-2 text-xs font-medium text-muted">
-						Viewing {viewedTeammate.displayName}&apos;s workspace (read only)
-					</p>
-					<EditorProvider questionIds={questionIds} readOnly externalWorkspaces={teammateCode[viewedTeammate.userId] ?? {}}>
-						<EditorLayout belowQuestion={<TeamChat />} />
-					</EditorProvider>
-				</div>
+				// The code tab bar says whose code this is (US-5-T-19).
+				<EditorProvider key={viewedTeammate.userId} questionIds={questionIds} readOnly ownerName={viewedTeammate.displayName} externalWorkspaces={teammateCode[viewedTeammate.userId] ?? {}}>
+					<EditorLayout belowQuestion={<TeamChat />} />
+				</EditorProvider>
 			) : (
 				<EditorLayout belowQuestion={<TeamChat />} />
 			)}
@@ -213,15 +210,49 @@ function GameContent() {
 		connect(gameId);
 	}, [connect, gameId]);
 
+	const errorAlert = error && !result && (
+		<div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+			<span>{error.message}</span>
+			<Link href="/lobby" className="font-semibold underline underline-offset-4">Back to lobby</Link>
+		</div>
+	);
+
+	// While playing, the editor fills the page like practice: no heading or
+	// rosters, the score and clock in the middle of the top bar (US-5-T-19).
+	if (playing) {
+		return (
+			<div className="flex h-screen flex-col bg-page font-sans text-ink">
+				<PageLoader variant="pen" />
+				<HomeTopBar
+					center={<ScoreLine scores={game.scores} time={<Clock seconds={game.secondsRemaining} running className="" />} />}
+					actions={(
+						<>
+							<ConnectedTeammates teammates={teammates.filter((entry) => entry.connected)} />
+							<ForfeitControl onForfeit={forfeit} />
+						</>
+					)}
+				/>
+				{errorAlert}
+				{/* Team chat (US-3-T-2) goes over the game socket, so only teammates see it.
+				    The provider wraps the whole editor so its messages survive switching workspaces. */}
+				<ChatProvider socket={socket}>
+					<MatchEditor
+						questionIds={game.problemPool.map((problem) => problem.questionId)}
+						defaultQuestionId={myPick ? myPick.questionId : undefined}
+						submit={submit}
+						shareCode={shareCode}
+						teammates={teammates}
+						teammateCode={teammateCode}
+					/>
+				</ChatProvider>
+			</div>
+		);
+	}
+
 	return (
 		<div className="flex min-h-screen flex-col bg-page font-sans text-ink">
 			<PageLoader variant="pen" />
-			<HomeTopBar actions={playing && (
-				<>
-					<ConnectedTeammates teammates={teammates.filter((entry) => entry.connected)} />
-					<ForfeitControl onForfeit={forfeit} />
-				</>
-			)} />
+			<HomeTopBar />
 			<main className="flex-1 px-5 pt-12 pb-16">
 				<div className="mx-auto flex max-w-[1040px] flex-col gap-8">
 					<div className="flex flex-wrap items-end justify-between gap-4">
@@ -241,12 +272,7 @@ function GameContent() {
 
 					{result && <ResultScreen result={result} myTeam={myTeam} scores={game?.scores} />}
 
-					{error && !result && (
-						<div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
-							<span>{error.message}</span>
-							<Link href="/lobby" className="font-semibold underline underline-offset-4">Back to lobby</Link>
-						</div>
-					)}
+					{errorAlert}
 
 					{!joined && !error && !result && <p role="status" aria-live="polite" className="text-sm text-muted">Joining match…</p>}
 
@@ -273,25 +299,6 @@ function GameContent() {
 									myTeam={myTeam}
 									onPick={pick}
 								/>
-							)}
-
-							{/* The practice editor on the problems left after the bans. Each
-							    player has their own editor; their code only goes to their team. */}
-							{playing && (
-								<div className="overflow-hidden rounded-xl border border-line">
-									{/* Team chat (US-3-T-2) goes over the game socket, so only teammates see it.
-									    The provider wraps the whole editor so its messages survive switching workspaces. */}
-									<ChatProvider socket={socket}>
-										<MatchEditor
-											questionIds={game.problemPool.map((problem) => problem.questionId)}
-											defaultQuestionId={myPick ? myPick.questionId : undefined}
-											submit={submit}
-											shareCode={shareCode}
-											teammates={teammates}
-											teammateCode={teammateCode}
-										/>
-									</ChatProvider>
-								</div>
 							)}
 						</>
 					)}

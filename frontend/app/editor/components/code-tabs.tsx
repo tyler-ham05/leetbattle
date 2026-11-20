@@ -10,7 +10,7 @@ interface ContextMenuState {
 }
 
 export default function CodeTabs() {
-	const { tabs, activeTabId, selectTab, createTab, copyTab, renameTab, removeTab, readOnly } = useEditor();
+	const { tabs, activeTabId, selectTab, createTab, copyTab, renameTab, removeTab, readOnly, ownerName } = useEditor();
 	const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 	const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
 	const [nameDraft, setNameDraft] = useState('');
@@ -124,6 +124,9 @@ export default function CodeTabs() {
 					</button>
 				)}
 			</div>
+			{readOnly && ownerName && (
+				<span className="shrink-0 pr-2 text-xs text-muted">{ownerName}&apos;s code, read only</span>
+			)}
 			{contextMenu && (
 				<div
 					ref={contextMenuRef}
