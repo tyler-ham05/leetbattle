@@ -31,6 +31,7 @@
 //  - When the user is on Team 2 and Team 1 has an open seat, it should be a "Switch to Team 1" button
 //  - When the user is on Team 1, Team 1's open seats should not be buttons
 //  - The "Your team" button should no longer be shown
+//  - An open seat the user can take should hold "Open seat" and "Join here" in the same spot, so one fades into the other
 
 // Display name (edited in the user's own row instead of a separate form)
 //  - The user's row should have an "Edit your display name" button
@@ -263,6 +264,15 @@ describe('lobby team choice through open seats', () => {
 	it('US5-Task20 does not make the user\'s own team\'s open seats buttons', () => {
 		render(<LobbyPage />);
 		expect(screen.queryByRole('button', { name: /Team 1/ })).toBeNull();
+	});
+
+	it('US5-Task20 stacks "Open seat" and "Join here" in the same spot on a seat the user can take', () => {
+		configureLobby([{ ...ada, team: null }, grace, alan]);
+		render(<LobbyPage />);
+		const seat = screen.getAllByRole('button', { name: 'Join Team 1' })[0];
+		// Both labels sit in one stacked cell (lb-seat-swap), so the hover swap crossfades in place.
+		const cell = within(seat).getByText('Open seat').parentElement;
+		expect(cell?.classList.contains('lb-seat-swap') && cell.contains(within(seat).getByText('Join here'))).toBe(true);
 	});
 
 	it('US5-Task20 no longer shows a "Your team" button', () => {

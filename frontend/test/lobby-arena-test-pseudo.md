@@ -31,6 +31,7 @@
  //  - When the user is on Team 2 and Team 1 has an open seat, it should be a "Switch to Team 1" button
  //  - When the user is on Team 1, Team 1's open seats should not be buttons
  //  - The "Your team" button should no longer be shown
+ //  - An open seat the user can take should hold "Open seat" and "Join here" in the same spot, so one fades into the other
 
  // Display name (edited in the user's own row instead of a separate form)
  //  - The user's row should have an "Edit your display name" button
