@@ -556,7 +556,7 @@ describe('game page result', () => {
 		}));
 	}
 
-	// One team's half of the result screen, found by its label ("Team 1" / "Team 2").
+	// One team's half of the result screen, found by its label ("Your team" / "Rival team").
 	const half = (name: string) => screen.getByRole('region', { name });
 
 	// Exact-text matcher for either word, so "Victory!" in some other sentence
@@ -567,7 +567,7 @@ describe('game page result', () => {
 		configureEndedGame({ winner: 'b', reason: 'forfeit' });
 		render(<GamePage />);
 
-		expect(screen.getByRole('heading', { name: 'Team 2 wins' })).toBeTruthy();
+		expect(screen.getByRole('heading', { name: 'Rival team wins' })).toBeTruthy();
 	});
 
 	it('US-6-T-2 shows a draw', () => {
@@ -616,7 +616,7 @@ describe('game page result', () => {
 		configureEndedGame({ winner: 'b', reason: 'forfeit' });
 		render(<GamePage />);
 
-		expect(screen.getByRole('heading', { name: 'Team 2 wins' })).toBeTruthy();
+		expect(screen.getByRole('heading', { name: 'Rival team wins' })).toBeTruthy();
 	});
 
 	it('shows neither Victory! nor Defeat for a draw', () => {
@@ -669,32 +669,32 @@ describe('game page result', () => {
 		expect(screen.queryByRole('heading', { name: 'Match' })).toBeNull();
 	});
 
-	it('lists Team 1\'s players in its half', () => {
+	it('lists your team\'s players in its half', () => {
 		configureEndedGame({ winner: 'a', reason: 'time' });
 		render(<GamePage />);
 
-		expect(within(half('Team 1')).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Ada', 'Grace', 'Katherine']);
+		expect(within(half('Your team')).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Ada', 'Grace', 'Katherine']);
 	});
 
-	it('lists Team 2\'s players in its half', () => {
+	it('lists the rival team\'s players in its half', () => {
 		configureEndedGame({ winner: 'a', reason: 'time' });
 		render(<GamePage />);
 
-		expect(within(half('Team 2')).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Alan', 'Edsger', 'Margaret']);
+		expect(within(half('Rival team')).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Alan', 'Edsger', 'Margaret']);
 	});
 
 	it('puts a crown on every player of the winning team', () => {
 		configureEndedGame({ winner: 'a', reason: 'time' });
 		render(<GamePage />);
 
-		expect(within(half('Team 1')).getAllByRole('img', { name: 'Winner' })).toHaveLength(3);
+		expect(within(half('Your team')).getAllByRole('img', { name: 'Winner' })).toHaveLength(3);
 	});
 
 	it('puts no crown on the losing team', () => {
 		configureEndedGame({ winner: 'a', reason: 'time' });
 		render(<GamePage />);
 
-		expect(within(half('Team 2')).queryAllByRole('img', { name: 'Winner' })).toHaveLength(0);
+		expect(within(half('Rival team')).queryAllByRole('img', { name: 'Winner' })).toHaveLength(0);
 	});
 
 	it('puts no crowns on anyone after a draw', () => {
@@ -709,7 +709,7 @@ describe('game page result', () => {
 		configureEndedGame({ winner: 'a', reason: 'time' }, { scores: { a: 450, b: 300 } });
 		render(<GamePage />);
 
-		expect(within(half('Team 1')).getByTestId('final-score').textContent).toBe('450');
+		expect(within(half('Your team')).getByTestId('final-score').textContent).toBe('450');
 	});
 
 	it('starts the scores counting from 0', () => {
@@ -717,7 +717,7 @@ describe('game page result', () => {
 		configureEndedGame({ winner: 'a', reason: 'time' }, { scores: { a: 450, b: 300 } });
 		render(<GamePage />);
 
-		expect(within(half('Team 2')).getByTestId('final-score').textContent).toBe('0');
+		expect(within(half('Rival team')).getByTestId('final-score').textContent).toBe('0');
 	});
 
 	it('counts the scores up to the final score', async () => {
@@ -732,7 +732,7 @@ describe('game page result', () => {
 		});
 		vi.useRealTimers();
 
-		expect(within(half('Team 2')).getByTestId('final-score').textContent).toBe('300');
+		expect(within(half('Rival team')).getByTestId('final-score').textContent).toBe('300');
 	});
 
 	it('shows 0 for a team that finished without points', () => {
@@ -740,7 +740,7 @@ describe('game page result', () => {
 		configureEndedGame({ winner: 'b', reason: 'time' }, { scores: { a: 0, b: 150 } });
 		render(<GamePage />);
 
-		expect(within(half('Team 1')).getByTestId('final-score').textContent).toBe('0');
+		expect(within(half('Your team')).getByTestId('final-score').textContent).toBe('0');
 	});
 
 	it('offers Play again, which goes to the lobby', () => {
@@ -750,18 +750,18 @@ describe('game page result', () => {
 		expect(screen.getByRole('link', { name: 'Play again' }).getAttribute('href')).toBe('/lobby');
 	});
 
-	it('colors Team 2\'s crowns in Team 2\'s color', () => {
+	it('colors the rival team\'s crowns in the rival team\'s color', () => {
 		configureEndedGame({ winner: 'b', reason: 'forfeit' });
 		render(<GamePage />);
 
-		expect(within(half('Team 2')).getAllByRole('img', { name: 'Winner' })[0].getAttribute('class')).toContain('fill-secondary');
+		expect(within(half('Rival team')).getAllByRole('img', { name: 'Winner' })[0].getAttribute('class')).toContain('fill-secondary');
 	});
 
 	it('brings the frame around the halves in with them', () => {
 		configureEndedGame({ winner: 'a', reason: 'time' });
 		render(<GamePage />);
 
-		expect(half('Team 1').parentElement?.classList.contains('lb-result-rise')).toBe(true);
+		expect(half('Your team').parentElement?.classList.contains('lb-result-rise')).toBe(true);
 	});
 
 	it('offers a way Home', () => {
@@ -1290,3 +1290,84 @@ describe('game page team chat', () => {
 		expect(chatSends.map((call) => call.slice(0, 2))).toEqual([['chat:send', { text: 'Question 1 is done' }]]);
 	});
 });
+
+// Sprint 4 polish (pseudocode: test/sprint4-polish-test-pseudo.md).
+//  - While the game page is joining the match, it should show a spinner
+//  - The game page should play no loader while banning, picking or playing
+//    (the match starts right after the lobby's team clash)
+//  - The result screen puts the user's team first, as "Your team" in the primary
+//    color, even when they are on team b
+describe('game page sprint 4 polish', () => {
+	// The page's loader animation, or null when none is playing.
+	const loader = () => document.querySelector('[data-loader]');
+
+	// The default roster with the teams swapped: Ada (u1, the signed-in user) is on team b.
+	const swappedRoster = roster.map((entry) => ({ ...entry, team: entry.team === 'a' ? 'b' : 'a' }));
+
+	it('shows a spinner while joining the match', () => {
+		configureGame();
+		render(<GamePage />);
+
+		expect(screen.queryByTestId('spinner')).not.toBeNull();
+	});
+
+	it('plays no loader while banning', () => {
+		configureConnectedGame({ phase: 'banning', startedAt: null, banSecondsRemaining: 25, problemPool: problemPool.map((entry) => ({ ...entry, topics: ['Array'], bannedBy: null })) });
+		render(<GamePage />);
+
+		expect(loader()).toBeNull();
+	});
+
+	it('plays no loader while picking', () => {
+		configureConnectedGame({ phase: 'picking', startedAt: null, pickSecondsRemaining: 25, problemPool: problemPool.map((entry) => ({ ...entry, topics: ['Array'], pickedBy: { a: null, b: null } })) });
+		render(<GamePage />);
+
+		expect(loader()).toBeNull();
+	});
+
+	it('plays no loader once the match is playing', () => {
+		configureConnectedGame();
+		render(<GamePage />);
+
+		expect(loader()).toBeNull();
+	});
+
+	it('puts the user\'s half first on the result screen when they are on team b', () => {
+		configureGame({ connected: false, game: gameState({ players: swappedRoster }), result: { winner: 'b', reason: 'time' } });
+		render(<GamePage />);
+
+		expect(screen.getAllByRole('region').map((region) => region.getAttribute('aria-label'))).toEqual(['Your team', 'Rival team']);
+	});
+
+	it('colors "Your team" with the primary color when the user is on team b', () => {
+		configureGame({ connected: false, game: gameState({ players: swappedRoster }), result: { winner: 'b', reason: 'time' } });
+		render(<GamePage />);
+
+		expect(within(screen.getByRole('region', { name: 'Your team' })).getByRole('heading', { name: 'Your team' }).className).toContain('text-primary');
+	});
+
+	it('says "Your team wins" when the user\'s team wins', () => {
+		configureGame({ connected: false, game: gameState(), result: { winner: 'a', reason: 'time' } });
+		render(<GamePage />);
+
+		expect(screen.getByRole('heading', { name: 'Your team wins' })).toBeTruthy();
+	});
+
+	it('shows the user\'s own score in their half when they are on team b', () => {
+		reduceMotion();
+		configureGame({ connected: false, game: gameState({ players: swappedRoster, scores: { a: 100, b: 250 } }), result: { winner: 'b', reason: 'time' } });
+		render(<GamePage />);
+
+		expect(within(screen.getByRole('region', { name: 'Your team' })).getByTestId('final-score').textContent).toBe('250');
+	});
+});
+
+// "Reduce motion" on, so the result scores show their final number at once.
+function reduceMotion() {
+	vi.stubGlobal('matchMedia', (query: string) => ({
+		matches: query === '(prefers-reduced-motion: reduce)',
+		media: query,
+		addEventListener: vi.fn(),
+		removeEventListener: vi.fn(),
+	}));
+}
