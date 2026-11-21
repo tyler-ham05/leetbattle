@@ -468,9 +468,10 @@ button:active:not(:disabled) { scale: 0.97; }
 /* Tooltip: the first one waits and enters; later ones (warm) show at once. */
 .lb-tooltip[data-instant="false"] { animation: lb-enter 140ms ease-out both; }
 
+/* Ends past the box so the last letter's overhang (Battle's "e") is not cut. */
 @keyframes lb-wipe {
-  from { clip-path: inset(0 100% 0 0); }
-  to { clip-path: inset(0 0 0 0); }
+  from { clip-path: inset(-10% 100% -10% 0); }
+  to { clip-path: inset(-10% -0.15em -10% 0); }
 }
 @keyframes lb-tip {
   from { transform: translateX(-100%); opacity: 1; }
@@ -899,7 +900,12 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 .lb-result-rise { animation: lb-rise 0.5s ease-out both; animation-delay: var(--d, 0s); }
 .lb-result-crown { display: inline-flex; animation: lb-result-crown 0.45s ease-out both; animation-delay: var(--d, 0s); }
 
+/* Something is in progress (Run, Submit, form buttons, loading text). */
+@keyframes lb-spin { to { transform: rotate(360deg); } }
+.lb-spin { animation: lb-spin 0.7s linear infinite; }
+
 @media (prefers-reduced-motion: reduce) {
+  .lb-spin { animation-duration: 1.6s; }
   .lb-auth-check circle, .lb-auth-check path { stroke-dashoffset: 0; animation: none; }
   .lb-press, .lb-seat-pip, .lb-fold { transition: none; }
   .lb-enter, .lb-shake, .lb-tooltip, [data-step] { animation: none !important; }

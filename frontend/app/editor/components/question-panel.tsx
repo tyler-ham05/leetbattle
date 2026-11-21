@@ -1,4 +1,5 @@
 'use client';
+import Spinner from '../../_shared/spinner';
 import { useEditor } from '../context';
 import QuestionNavigation from './question-navigation';
 
@@ -30,7 +31,8 @@ export default function QuestionPanel() {
 
 	if (!currentQuestion) {
 		return (
-			<div className="p-6 text-sm text-muted">
+			<div role="status" className="flex items-center gap-2.5 p-6 text-sm text-muted">
+				<Spinner />
 				Loading question...
 			</div>
 		);

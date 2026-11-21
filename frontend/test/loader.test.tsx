@@ -12,6 +12,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Activity } from 'react';
 import { act, cleanup, render } from '@testing-library/react';
+import fs from 'node:fs';
+import path from 'node:path';
 import { fakeUser, jsonResponse, stubFetch, threeProblems } from './helpers';
 
 // The signed-in user can be swapped per test (sign in needs a signed-out visitor).
@@ -134,5 +136,27 @@ describe('which loader each page plays', () => {
 		auth.value = { user: null, isLoading: false };
 		render(<LoginPage />);
 		expect(loader()?.getAttribute('data-loader')).toBe('pen');
+	});
+});
+
+// Sprint 4 polish (pseudocode: test/sprint4-polish-test-pseudo.md): the pen-tip
+// wipe used to stop exactly at the wordmark's box, shaving the end off the last
+// "e". jsdom has no layout, so check the stylesheet: the wipe's final clip
+// reaches past the box (negative insets).
+describe('pen-tip wipe', () => {
+	// The four values of the clip the shared lb-wipe keyframes end on.
+	function wipeEnd() {
+		const css = fs.readFileSync(path.resolve(__dirname, '../app/globals.css'), 'utf8');
+		const keyframes = css.slice(css.indexOf('@keyframes lb-wipe'));
+		const end = keyframes.slice(keyframes.indexOf('to'));
+		return (end.match(/inset\(([^)]*)\)/)?.[1] ?? '').trim().split(/\s+/);
+	}
+
+	it('ends past the wordmark\'s right edge', () => {
+		expect(wipeEnd()[1].startsWith('-')).toBe(true);
+	});
+
+	it('ends past the wordmark\'s top and bottom', () => {
+		expect([wipeEnd()[0], wipeEnd()[2]].every((value) => value.startsWith('-'))).toBe(true);
 	});
 });
