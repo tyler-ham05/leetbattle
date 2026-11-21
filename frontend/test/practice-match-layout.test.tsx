@@ -23,8 +23,8 @@
 //  - While banning, the "Team 1 players" list should still be shown
 
 // Score and time sit in the middle of the top bar while playing
-//  - The top bar should show "Team 1"
-//  - The top bar should show "Team 2"
+//  - The top bar should show "Your team" (was "Team 1", sprint 4 polish)
+//  - The top bar should show "Rival team" (was "Team 2", sprint 4 polish)
 //  - With scores of 120 to 80, the top bar should show "120" for Team 1
 //  - With scores of 120 to 80, the top bar should show "80" for Team 2
 //  - With 754 seconds left, the top bar should show "12:34"
@@ -291,14 +291,14 @@ describe('the match fills the page while playing', () => {
 });
 
 describe('score and time in the top bar while playing', () => {
-	it('US5-Task19 shows "Team 1" in the top bar', async () => {
+	it('shows "Your team" in the top bar (was "Team 1")', async () => {
 		await renderPlaying();
-		expect(topBar().getByText('Team 1')).toBeTruthy();
+		expect(topBar().getByText('Your team')).toBeTruthy();
 	});
 
-	it('US5-Task19 shows "Team 2" in the top bar', async () => {
+	it('shows "Rival team" in the top bar (was "Team 2")', async () => {
 		await renderPlaying();
-		expect(topBar().getByText('Team 2')).toBeTruthy();
+		expect(topBar().getByText('Rival team')).toBeTruthy();
 	});
 
 	it('US5-Task19 shows 120 as Team 1\'s score in the top bar', async () => {
@@ -309,6 +309,17 @@ describe('score and time in the top bar while playing', () => {
 	it('US5-Task19 shows 80 as Team 2\'s score in the top bar', async () => {
 		await renderPlaying({ scores: { a: 120, b: 80 } });
 		expect(topBar().getByTestId('score-b').textContent).toBe('80');
+	});
+
+	// Sprint 4 polish: the user's own team always comes first, in the primary color.
+	it('shows a team b user\'s own score first in the top bar', async () => {
+		await renderPlaying({ scores: { a: 120, b: 80 }, players: roster.map((entry) => ({ ...entry, team: entry.team === 'a' ? 'b' : 'a' })) });
+		expect(topBar().getAllByTestId(/^score-/).map((score) => score.textContent)).toEqual(['80', '120']);
+	});
+
+	it('colors a team b user\'s own score with the primary color in the top bar', async () => {
+		await renderPlaying({ scores: { a: 120, b: 80 }, players: roster.map((entry) => ({ ...entry, team: entry.team === 'a' ? 'b' : 'a' })) });
+		expect(topBar().getByTestId('score-b').className).toContain('text-primary');
 	});
 
 	it('US5-Task19 shows 12:34 in the top bar when 754 seconds are left', async () => {
