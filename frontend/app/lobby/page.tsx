@@ -241,18 +241,20 @@ function LobbyContent() {
 							const teamPlayers = players.filter((player) => player.team === team.id);
 							const openSeats = Math.max(teamSize - teamPlayers.length, 0);
 							const isMyTeam = currentPlayer?.team === team.id;
+							// Once seated, the teams are named from the user's side (sprint 4 polish).
+							const name = currentPlayer?.team ? (isMyTeam ? 'Your team' : 'Rival team') : team.name;
 							// An open seat on any team but the user's own is how they join or switch.
-							const seatAction = currentPlayer && !isMyTeam ? `${currentPlayer.team ? 'Switch to' : 'Join'} ${team.name}` : null;
+							const seatAction = currentPlayer && !isMyTeam ? (currentPlayer.team ? 'Switch to rival team' : `Join ${team.name}`) : null;
 
 							return (
 								<Fragment key={team.id}>
 									{team.mirrored && <span aria-hidden="true" className="hidden md:block" />}
 									<section className="flex flex-col gap-1.5">
 										<div className={`flex items-baseline justify-between px-1 pb-2.5 ${team.mirrored ? 'flex-row-reverse' : ''}`}>
-											<h2 className={`text-[22px] font-extrabold tracking-[-0.03em] ${team.nameColor}`}>{team.name}</h2>
+											<h2 className={`text-[22px] font-extrabold tracking-[-0.03em] ${team.nameColor}`}>{name}</h2>
 											<span className="font-mono text-[13px] font-semibold text-muted">{teamPlayers.length}/{teamSize}</span>
 										</div>
-										<ul className="flex flex-col gap-1.5" aria-label={`${team.name} players`}>
+										<ul className="flex flex-col gap-1.5" aria-label={`${name} players`}>
 											{teamPlayers.map((player) => seatRow(player, team))}
 											{Array.from({ length: openSeats }, (_, i) => (
 												<li key={`open-${i}`} className="lb-fade-in">

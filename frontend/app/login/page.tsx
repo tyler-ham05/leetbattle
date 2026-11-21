@@ -135,7 +135,7 @@ export default function LoginPage() {
 						<p className="text-sm text-muted">Enter your email and we will send you a link to choose a new password.</p>
 						<AuthField label="Email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
 						<AuthMessage status={error ? { type: 'error', text: error } : null} />
-						<AuthSubmitButton pending={isSubmitting} pendingLabel="Sending…">Send reset link</AuthSubmitButton>
+						<AuthSubmitButton pending={isSubmitting} pendingLabel="Sending">Send reset link</AuthSubmitButton>
 						<AuthTextButton onClick={backToLogin}>Back to log in</AuthTextButton>
 					</form>
 				</AuthCard>
@@ -201,7 +201,7 @@ export default function LoginPage() {
 
 					<AuthMessage status={error ? { type: 'error', text: error } : null} />
 
-					<AuthSubmitButton pending={isSubmitting} pendingLabel={mode === 'signup' ? 'Signing up…' : 'Logging in…'}>
+					<AuthSubmitButton pending={isSubmitting} pendingLabel={mode === 'signup' ? 'Signing up' : 'Logging in'}>
 						{mode === 'signup' ? 'Sign up' : 'Log in'}
 					</AuthSubmitButton>
 
