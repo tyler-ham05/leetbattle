@@ -174,6 +174,22 @@ async function waitForServerSockets(count: number): Promise<void> {
 	}
 }
 
+// Connects `userId` to `gameIdToJoin` and resolves with the chat:history the
+// server sends them on connect. Listens before connecting, because the
+// history is sent as soon as the player joins, before their first game:state.
+async function joinAndGetHistory(userId: string, gameIdToJoin = gameId): Promise<ChatMessage[]> {
+	const socket = io(socketUrl(), {
+		autoConnect: false,
+		reconnection: false,
+		transports: ['websocket'],
+		auth: { token: await tokenFor(userId), gameId: gameIdToJoin },
+	});
+	clients.push(socket);
+	const history = nextEvent<ChatMessage[]>(socket, 'chat:history');
+	socket.connect();
+	return history;
+}
+
 // A second fresh 3v3 game, running at the same time as the test's game, with
 // every player connected. Its sockets are in roster order like `sockets`.
 async function secondGame(): Promise<{ gameId: string; players: ReadyPlayer[]; sockets: Socket[] }> {
@@ -462,5 +478,117 @@ describe('old team chat cleanup', () => {
 		await endGameByForfeit();
 		const { rows } = await pool.query('SELECT id FROM team_messages WHERE id = $1', [id]);
 		expect(rows).toEqual([{ id }]);
+	});
+});
+
+describe('team chat history', () => {
+	it('US-3-T-3 sends a reconnecting player chat:history with both messages their teammates sent', async () => {
+		// Players 0 and 1 (team a) each send a message; wait until player 2 has both.
+		const first = nextEvent<ChatMessage>(sockets[2], 'chat:message');
+		sockets[0].emit('chat:send', { text: 'first' });
+		await first;
+		const second = nextEvent<ChatMessage>(sockets[2], 'chat:message');
+		sockets[1].emit('chat:send', { text: 'second' });
+		await second;
+
+		// Player 2 drops and reconnects.
+		sockets[2].disconnect();
+		const history = await joinAndGetHistory(players[2].userId);
+
+		// Sorted so this only checks both are there; the next test checks the order.
+		expect(history.map((message) => message.text).sort()).toEqual(['first', 'second']);
+	});
+
+	it('US-3-T-3 sends chat:history oldest first', async () => {
+		// Player 0 sends first, then player 1; wait until player 2 has each one.
+		const first = nextEvent<ChatMessage>(sockets[2], 'chat:message');
+		sockets[0].emit('chat:send', { text: 'first' });
+		await first;
+		const second = nextEvent<ChatMessage>(sockets[2], 'chat:message');
+		sockets[1].emit('chat:send', { text: 'second' });
+		await second;
+
+		sockets[2].disconnect();
+		const history = await joinAndGetHistory(players[2].userId);
+
+		// Top (oldest) to bottom (newest), the order they were sent in.
+		expect(history.map((message) => message.text)).toEqual(['first', 'second']);
+	});
+
+	it('US-3-T-3 sends each chat:history message with the same fields as the chat:message that was sent out', async () => {
+		const live = nextEvent<ChatMessage>(sockets[2], 'chat:message');
+		sockets[0].emit('chat:send', { text: 'hello team' });
+		const sentOut = await live;
+
+		sockets[2].disconnect();
+		const history = await joinAndGetHistory(players[2].userId);
+
+		// Same id, userId, displayName, team, text and sentAt as the live message.
+		expect(history).toEqual([sentOut]);
+	});
+
+	it('US-3-T-3 does not include the other team\'s messages in chat:history', async () => {
+		// Player 0 (team a) and player 3 (team b) each send a message to their own team.
+		const teamA = nextEvent<ChatMessage>(sockets[2], 'chat:message');
+		sockets[0].emit('chat:send', { text: 'team a message' });
+		await teamA;
+		const teamB = nextEvent<ChatMessage>(sockets[4], 'chat:message');
+		sockets[3].emit('chat:send', { text: 'team b message' });
+		await teamB;
+
+		// Player 2 (team a) reconnects.
+		sockets[2].disconnect();
+		const history = await joinAndGetHistory(players[2].userId);
+
+		// Only team a's message; team b's never reaches team a.
+		expect(history.map((message) => message.text)).toEqual(['team a message']);
+	});
+
+	it('US-3-T-3 does not include messages from another game in chat:history', async () => {
+		const other = await secondGame();
+		// Player 0 of each game (both on team a) sends a message in their own game.
+		const ours = nextEvent<ChatMessage>(sockets[2], 'chat:message');
+		sockets[0].emit('chat:send', { text: 'this game' });
+		await ours;
+		const theirs = nextEvent<ChatMessage>(other.sockets[2], 'chat:message');
+		other.sockets[0].emit('chat:send', { text: 'other game' });
+		await theirs;
+
+		// Player 2 of the test's game reconnects.
+		sockets[2].disconnect();
+		const history = await joinAndGetHistory(players[2].userId);
+
+		expect(history.map((message) => message.text)).toEqual(['this game']);
+	});
+
+	it('US-3-T-3 sends an empty chat:history when the team has no messages', async () => {
+		// Nobody has chatted yet; player 2 reconnects.
+		sockets[2].disconnect();
+		const history = await joinAndGetHistory(players[2].userId);
+
+		expect(history).toEqual([]);
+	});
+
+	it('US-3-T-3 does not include a chat:send longer than 500 characters in chat:history', async () => {
+		// The "Message too long" answer means the server is done with this message.
+		await sockets[0].timeout(2_000).emitWithAck('chat:send', { text: 'a'.repeat(501) });
+
+		sockets[2].disconnect();
+		const history = await joinAndGetHistory(players[2].userId);
+
+		expect(history).toEqual([]);
+	});
+
+	it('US-3-T-3 does not include a rate-limited chat:send in chat:history', async () => {
+		// The first message is accepted; the second, sent straight after, is rate limited.
+		const first = nextEvent<ChatMessage>(sockets[2], 'chat:message');
+		sockets[0].emit('chat:send', { text: 'first' });
+		await first;
+		await sockets[0].timeout(2_000).emitWithAck('chat:send', { text: 'too soon' });
+
+		sockets[2].disconnect();
+		const history = await joinAndGetHistory(players[2].userId);
+
+		expect(history.map((message) => message.text)).toEqual(['first']);
 	});
 });

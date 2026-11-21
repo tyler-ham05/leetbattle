@@ -5,7 +5,7 @@ import { authenticateToken } from './auth';
 import type { AuthenticatedUser } from './auth';
 import { pool } from './db';
 import { findGame, forgetGame, GAME_DURATION_MS, gradeSubmission, onGameCreated, serializeGame } from './service';
-import type { GamePlayerState, GameState, Grading, TeamId, Workspace } from './service';
+import type { GamePlayerState, GameState, Grading, TeamChatMessage, TeamId, Workspace } from './service';
 
 // How long a new game waits for its players before the clock starts anyway.
 const DEFAULT_JOIN_WAIT_MS = 5_000;
@@ -378,6 +378,9 @@ export function createGameServer(app: Express, options: ServerOptions = {}) {
 				workspace,
 			})));
 		socket.emit('game:code:snapshot', snapshot);
+		// Hands them their team's chat so far in this game, oldest first, so a
+		// late join, reconnect or refresh doesn't start from an empty chat.
+		socket.emit('chat:history', game.chat[player.team]);
 
 		if (game.phase === 'waiting' && [...game.players.values()].every((entry) => entry.connected)) {
 			beginMatch(game);
@@ -473,14 +476,16 @@ export function createGameServer(app: Express, options: ServerOptions = {}) {
 				console.error('[game-service] failed to save a chat message', err);
 				return;
 			}
-			io.to(`${gameRoom(game)}:${player.team}`).emit('chat:message', {
+			const chatMessage: TeamChatMessage = {
 				id: saved.id,
 				userId: user.id,
 				displayName: player.displayName,
 				team: player.team,
 				text,
 				sentAt: saved.sent_at.toISOString(),
-			});
+			};
+			game.chat[player.team].push(chatMessage);
+			io.to(`${gameRoom(game)}:${player.team}`).emit('chat:message', chatMessage);
 			reply({ ok: true });
 		});
 
