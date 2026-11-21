@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import RequireAuth from '../../login/protected';
 import { useAuth } from '../../login/context';
 import HomeTopBar from '../../_home/components/topbar';
-import PageLoader from '../../_shared/page-loader';
+import Spinner from '../../_shared/spinner';
 import type { TeamId } from '../../lobby/socket-context';
 import { EditorProvider } from '../../editor/context';
 import type { EditorWorkspace } from '../../editor/context';
@@ -188,9 +188,8 @@ function GameContent() {
 	if (playing) {
 		return (
 			<div className="flex h-screen flex-col bg-page font-sans text-ink">
-				<PageLoader variant="pen" />
 				<HomeTopBar
-					center={<ScoreLine scores={game.scores} time={<Clock seconds={game.secondsRemaining} running className="" />} />}
+					center={<ScoreLine scores={game.scores} myTeam={myTeam} time={<Clock seconds={game.secondsRemaining} running className="" />} />}
 					actions={(
 						<>
 							<ConnectedTeammates teammates={teammates.filter((entry) => entry.connected)} />
@@ -227,7 +226,6 @@ function GameContent() {
 
 	return (
 		<div className="flex min-h-screen flex-col bg-page font-sans text-ink">
-			<PageLoader variant="pen" />
 			<HomeTopBar />
 			<main className="flex-1 px-5 pt-12 pb-16">
 				<div className="mx-auto flex max-w-[1040px] flex-col gap-8">
@@ -248,7 +246,7 @@ function GameContent() {
 
 					{errorAlert}
 
-					{!joined && !error && <p role="status" aria-live="polite" className="text-sm text-muted">Joining match…</p>}
+					{!joined && !error && <p role="status" aria-live="polite" className="flex items-center gap-2.5 text-sm text-muted"><Spinner />Joining match…</p>}
 
 					{joined && (
 						<>

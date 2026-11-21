@@ -58,8 +58,14 @@ should also shift with the color scheme (not just light/dark). Reach for
 difficulty colors in `editor/components/question-panel.tsx`, which are
 intentionally fixed hues (green/yellow/red) across every scheme.
 
-**Team colors:** `--lb-primary` is Team 1 and `--lb-secondary` is Team 2
-everywhere (lobby, scoreboard, results, loaders). The newer schemes are calm on
+**Team colors:** players see their own team first as **Your team** in
+`--lb-primary`, and the other as **Rival team** in `--lb-secondary`, whichever
+lobby side they were on: the match top bar (`ScoreLine`), the result screen
+and the lobby's Leet vs Battle clash. In the lobby the sides stay put (team a
+left in `--lb-primary`, team b right in `--lb-secondary`), but once seated the
+headings read Your team / Rival team. Anyone not on a team (an onlooker, or
+before joining) sees Team 1 / Team 2. `app/_shared/teams.ts` (`teamsFor`) gives
+the names, order and colors; use it instead of hard-coding team names. The newer schemes are calm on
 purpose: low-saturation accents, tinted near-black pages (no pure black) and
 off-white text in dark mode, and a Team 2 from the same color family as Team 1,
 set apart mostly by depth. Every text color passes WCAG AA (4.5:1) on the page
@@ -77,3 +83,9 @@ handle in `--lb-muted`, on a tile in `--lb-page`. `app/_shared/theme-favicon.tsx
 redraws it whenever the scheme changes, always from the scheme's dark colors so
 the white blade stays visible. `app/icon.svg` is the Emerald dark version that
 shows before any script runs; a test keeps it in sync with `faviconSvg`.
+
+**No dots.** Don't use dots (`●`, `•`, `◦` or small `rounded-full` circles) as
+decoration: no colored dots before team names, no dot legends, no progress-pip
+rows, no status dots. They make the UI look AI-generated. Show the same thing
+with words in the team's color, a plain count ("2 of 4 bans"), or a thin bar.
+Topics and tags are plain text, not pills.
