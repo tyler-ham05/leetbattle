@@ -199,7 +199,7 @@ describe('not moving a player who scrolled up', () => {
 		const list = placeList(SCROLLED_UP);
 		deliver(fake);
 
-		await user.click(newMessagesButton()!);
+		await user.click(screen.getByRole('button', { name: 'New messages' }));
 
 		expect(isAtNewest(list)).toBe(true);
 	});
@@ -210,7 +210,7 @@ describe('not moving a player who scrolled up', () => {
 		placeList(SCROLLED_UP);
 		deliver(fake);
 
-		await user.click(newMessagesButton()!);
+		await user.click(screen.getByRole('button', { name: 'New messages' }));
 
 		expect(newMessagesButton()).toBeNull();
 	});
@@ -220,8 +220,9 @@ describe('not moving a player who scrolled up', () => {
 		placeList(SCROLLED_UP);
 		deliver(fake);
 
-		// The player scrolls down by hand instead of clicking the button.
-		placeList(BOTTOM);
+		// The player scrolls down by hand (to the bottom of the grown list)
+		// instead of clicking the button.
+		placeList(layout.height - BOX);
 
 		expect(newMessagesButton()).toBeNull();
 	});
