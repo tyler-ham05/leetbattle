@@ -204,7 +204,7 @@ function GameContent() {
 		return (
 			<div className="flex h-screen flex-col bg-page font-sans text-ink">
 				<HomeTopBar
-					center={<ScoreLine scores={game.scores} myTeam={myTeam} time={<Clock seconds={game.secondsRemaining} running warn className="" />} />}
+					center={<ScoreLine scores={game.scores} myTeam={myTeam} solo={game.players.length === 2} time={<Clock seconds={game.secondsRemaining} running warn className="" />} />}
 					actions={(
 						<>
 							<ConnectedTeammates teammates={teammates.filter((entry) => entry.connected)} />

@@ -28,7 +28,8 @@ function useScoreBumps(scores: { a: number; b: number }) {
 	return bumps;
 }
 
-export function ScoreLine({ scores, time, myTeam }: { scores: { a: number; b: number }; time: ReactNode; myTeam?: TeamId }) {
+// solo: a 1v1, where the labels are just "You" and "Rival" (it is one player each).
+export function ScoreLine({ scores, time, myTeam, solo = false }: { scores: { a: number; b: number }; time: ReactNode; myTeam?: TeamId; solo?: boolean }) {
 	const [first, second] = teamsFor(myTeam);
 	const bumps = useScoreBumps(scores);
 	// The numbers count up from the old score to the new one as they bump.
@@ -37,7 +38,7 @@ export function ScoreLine({ scores, time, myTeam }: { scores: { a: number; b: nu
 	// score, the two columns facing each other around the clock.
 	const score = (team: typeof first, side: 'left' | 'right') => (
 		<div className={`flex flex-col leading-none ${side === 'left' ? 'items-end' : 'items-start'}`}>
-			<span className={`text-xs font-semibold ${team.color}`}>{team.name}</span>
+			<span className={`text-xs font-semibold ${team.color}`}>{solo && myTeam ? (team.id === myTeam ? 'You' : 'Rival') : team.name}</span>
 			<span
 				key={bumps[team.id]}
 				data-testid={`score-${team.id}`}
@@ -50,7 +51,7 @@ export function ScoreLine({ scores, time, myTeam }: { scores: { a: number; b: nu
 	return (
 		<div className="flex items-center gap-[22px] text-ink">
 			{score(first, 'left')}
-			<span aria-label="Time left" className="font-mono text-base font-semibold tabular-nums">{time}</span>
+			<span aria-label="Time left" className="text-base font-semibold tabular-nums">{time}</span>
 			{score(second, 'right')}
 		</div>
 	);
