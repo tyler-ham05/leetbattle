@@ -62,4 +62,26 @@ describe('top bar scoreboard', () => {
 		renderLine();
 		expect(column('b').className).toContain('items-start');
 	});
+
+	// A 1v1 is just you against one rival, so the labels drop "team".
+	it('labels your side "You" in a 1v1', () => {
+		render(<ScoreLine scores={{ a: 150, b: 0 }} myTeam="a" solo time="18:18" />);
+		expect(screen.getByTestId('score-a').previousElementSibling?.textContent).toBe('You');
+	});
+
+	it('labels the other side "Rival" in a 1v1', () => {
+		render(<ScoreLine scores={{ a: 150, b: 0 }} myTeam="a" solo time="18:18" />);
+		expect(screen.getByTestId('score-b').previousElementSibling?.textContent).toBe('Rival');
+	});
+
+	// The clock matches the rest of the bar: main font, with same-width digits.
+	it('shows the clock in the main font', () => {
+		renderLine();
+		expect(screen.getByLabelText('Time left').className).not.toContain('font-mono');
+	});
+
+	it('keeps the clock digits the same width so it does not wiggle', () => {
+		renderLine();
+		expect(screen.getByLabelText('Time left').className).toContain('tabular-nums');
+	});
 });

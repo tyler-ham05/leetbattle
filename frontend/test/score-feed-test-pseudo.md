@@ -74,3 +74,6 @@
 - Each team's name should be small, in the main font (not monospace), in normal case and in the team's color
 - Each score should be big and heavy (black weight)
 - Your team's column should line up toward the clock (right-aligned), and the rival's away from it (left-aligned)
+- In a 1v1, the top bar should label the teams "You" and "Rival"
+- In a team match, the top bar should keep "Your team" and "Rival team"
+- The clock should use the main font (not monospace), with same-width digits
