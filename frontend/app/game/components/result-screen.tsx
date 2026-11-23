@@ -5,11 +5,8 @@ import type { CSSProperties } from 'react';
 import type { TeamId } from '../../lobby/socket-context';
 import type { GamePlayer, GameResult } from '../socket-context';
 import { useCountUp } from '../../_shared/use-count-up';
-
-const TEAMS: { id: TeamId; name: string; color: string; fill: string }[] = [
-	{ id: 'a', name: 'Team 1', color: 'text-primary', fill: 'fill-primary' },
-	{ id: 'b', name: 'Team 2', color: 'text-secondary', fill: 'fill-secondary' },
-];
+import { teamsFor } from '../../_shared/teams';
+import type { ShownTeam } from '../../_shared/teams';
 
 // When things come in, in seconds: the word lands and moves up first, then
 // the halves rise, the scores count up, the crowns drop and the buttons follow.
@@ -31,9 +28,9 @@ function Crown({ delay, fill }: { delay: number; fill: string }) {
 	);
 }
 
-// One team's half: its name and score, then its players. Team 1's half reads
-// left to right, Team 2's mirrors it. The winners each get a crown.
-function TeamHalf({ team, score, players, won, side }: { team: (typeof TEAMS)[number]; score: number; players: GamePlayer[]; won: boolean; side: 'left' | 'right' }) {
+// One team's half: its name and score, then its players. The first half (the
+// user's own team) reads left to right, the other mirrors it. The winners each get a crown.
+function TeamHalf({ team, score, players, won, side }: { team: ShownTeam; score: number; players: GamePlayer[]; won: boolean; side: 'left' | 'right' }) {
 	const shown = useCountUp(score, COUNT_FROM_MS, COUNT_FOR_MS);
 	const left = side === 'left';
 	const name = <h2 className={`text-[32px] font-extrabold tracking-[-0.03em] ${team.color}`}>{team.name}</h2>;
@@ -68,7 +65,8 @@ export default function ResultScreen({ result, myTeam, scores, players }: { resu
 	const winner = result.winner;
 	const won = winner !== null && winner === myTeam;
 	const word = winner === null ? 'Draw' : myTeam ? (won ? 'Victory!' : 'Defeat') : null;
-	const winnerTeam = TEAMS.find((team) => team.id === winner);
+	const teams = teamsFor(myTeam);
+	const winnerTeam = teams.find((team) => team.id === winner);
 
 	return (
 		<main className={`flex flex-1 flex-col gap-10 overflow-hidden px-[clamp(24px,8vw,110px)] pt-12 pb-16 ${won ? 'lb-result-jolt' : ''}`}>
@@ -81,7 +79,7 @@ export default function ResultScreen({ result, myTeam, scores, players }: { resu
 
 			{/* The frame comes in with the halves, so the word never slams into an empty box. */}
 			<div className="lb-result-rise flex flex-wrap border-y border-line" style={{ '--d': `${HALVES_AT}s` } as CSSProperties}>
-				{TEAMS.map((team, i) => (
+				{teams.map((team, i) => (
 					<TeamHalf
 						key={team.id}
 						team={team}

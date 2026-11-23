@@ -73,7 +73,7 @@ export function SettingsForm() {
 					/>
 					<AuthMessage status={nameStatus} />
 					<div>
-						<AuthSubmitButton pending={isSavingName} pendingLabel="Saving…">
+						<AuthSubmitButton pending={isSavingName} pendingLabel="Saving">
 						Save name
 						</AuthSubmitButton>
 					</div>
@@ -103,7 +103,7 @@ export function SettingsForm() {
 						/>
 						<AuthMessage status={passwordStatus} />
 						<div>
-							<AuthSubmitButton pending={isSavingPassword} pendingLabel="Saving…">
+							<AuthSubmitButton pending={isSavingPassword} pendingLabel="Saving">
 							Change password
 							</AuthSubmitButton>
 						</div>

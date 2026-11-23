@@ -59,7 +59,7 @@ function ResetForm() {
 					onChange={(e) => setNewPassword(e.target.value)}
 				/>
 				<AuthMessage status={error ? { type: 'error', text: error } : null} />
-				<AuthSubmitButton pending={isSubmitting} pendingLabel="Changing…">Change password</AuthSubmitButton>
+				<AuthSubmitButton pending={isSubmitting} pendingLabel="Changing">Change password</AuthSubmitButton>
 			</form>
 		</AuthCard>
 	);

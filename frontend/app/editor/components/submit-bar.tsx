@@ -1,51 +1,33 @@
 'use client';
+import Spinner from '../../_shared/spinner';
 import { useEditor } from '../context';
 
-function Spinner() {
-	return (
-		<svg
-			className="h-3.5 w-3.5 animate-spin"
-			viewBox="0 0 24 24"
-			fill="none"
-			aria-hidden="true"
-		>
-			<circle
-				className="opacity-25"
-				cx="12"
-				cy="12"
-				r="10"
-				stroke="currentColor"
-				strokeWidth="4"
-			/>
-			<path
-				className="opacity-75"
-				fill="currentColor"
-				d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z"
-			/>
-		</svg>
-	);
-}
-
+// While one is running its label swaps for a spinner (the button keeps its
+// width and full color); the other one greys out.
 export default function SubmitBar() {
 	const { onRun, onSubmit, loadingAction, isLoading } = useEditor();
+	const running = loadingAction === 'run';
+	const submitting = loadingAction === 'submit';
 
 	return (
 		<div className="flex items-center justify-end gap-2 border-b border-line px-4 py-2">
 			<button
 				onClick={onRun}
 				disabled={isLoading}
-				className="flex w-20 items-center justify-center gap-1.5 rounded-md bg-raised px-3 py-1.5 text-sm font-medium text-ink hover:bg-line disabled:cursor-not-allowed disabled:opacity-60"
+				aria-label="Run"
+				aria-busy={running}
+				className="flex h-8 w-20 items-center justify-center rounded-md bg-raised px-3 text-sm font-medium text-ink hover:bg-line disabled:cursor-not-allowed disabled:text-muted aria-busy:text-ink"
 			>
-				{loadingAction === 'run' && <Spinner />}
-				Run
+				{running ? <Spinner /> : 'Run'}
 			</button>
 			<button
 				onClick={onSubmit}
 				disabled={isLoading}
-				className="flex w-20 items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-on-primary hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+				aria-label="Submit"
+				aria-busy={submitting}
+				className="flex h-8 w-20 items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-on-primary hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 aria-busy:opacity-100"
 			>
-				{loadingAction === 'submit' && <Spinner />}
-				Submit
+				{submitting ? <Spinner /> : 'Submit'}
 			</button>
 		</div>
 	);

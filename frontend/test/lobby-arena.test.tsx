@@ -154,6 +154,19 @@ describe('lobby loaders', () => {
 		expect(loaders()).toContain('clash');
 	});
 
+	// Sprint 4 polish: the clash names the sides from the player's point of view.
+	it('labels the left side of the team clash "YOUR TEAM"', () => {
+		configureLobby(fullLobby(), {}, starting);
+		render(<LobbyPage />);
+		expect(document.querySelector('[data-loader="clash"] .lb-c-left')?.textContent).toContain('YOUR TEAM');
+	});
+
+	it('labels the right side of the team clash "RIVAL TEAM"', () => {
+		configureLobby(fullLobby(), {}, starting);
+		render(<LobbyPage />);
+		expect(document.querySelector('[data-loader="clash"] .lb-c-right')?.textContent).toContain('RIVAL TEAM');
+	});
+
 	it('US5-Task20 waits for the team clash before going to the game page', () => {
 		vi.useFakeTimers();
 		configureLobby(fullLobby(), {}, starting);
@@ -263,10 +276,10 @@ describe('lobby team choice through open seats', () => {
 		expect(lobbyMocks.emit).toHaveBeenCalledWith('lobby:join-team', 'a');
 	});
 
-	it('US5-Task20 makes Team 1\'s open seat a "Switch to Team 1" button when the user is on Team 2', () => {
+	it('US5-Task20 makes Team 1\'s open seat a "Switch to rival team" button when the user is on Team 2', () => {
 		configureLobby([{ ...ada, team: 'b' }, grace, alan]);
 		render(<LobbyPage />);
-		expect(screen.getAllByRole('button', { name: 'Switch to Team 1' }).length).toBeGreaterThan(0);
+		expect(screen.getAllByRole('button', { name: 'Switch to rival team' }).length).toBeGreaterThan(0);
 	});
 
 	it('US5-Task20 does not make the user\'s own team\'s open seats buttons', () => {
@@ -332,5 +345,25 @@ describe('lobby top bar', () => {
 	it('US5-Task20 puts "Leave lobby" in the top bar', () => {
 		render(<LobbyPage />);
 		expect(topBar().getByRole('button', { name: 'Leave lobby' })).toBeTruthy();
+	});
+});
+
+// Sprint 4 polish (pseudocode: test/sprint4-polish-test-pseudo.md): once seated,
+// the teams are named from the user's point of view.
+describe('lobby team names', () => {
+	it('names the user\'s own team "Your team"', () => {
+		render(<LobbyPage />);
+		expect(screen.getByRole('heading', { name: 'Your team' })).toBeTruthy();
+	});
+
+	it('names the other team "Rival team"', () => {
+		render(<LobbyPage />);
+		expect(screen.getByRole('heading', { name: 'Rival team' })).toBeTruthy();
+	});
+
+	it('still names the teams "Team 1" and "Team 2" before the user has a team', () => {
+		configureLobby([{ ...ada, team: null }, grace, alan]);
+		render(<LobbyPage />);
+		expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(['Team 1', 'Team 2']);
 	});
 });

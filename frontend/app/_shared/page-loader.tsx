@@ -28,6 +28,8 @@ function Katana() {
 }
 
 // Lobby: the two team panels slam together, VS drops in, then they pull back.
+// Only the match's players see it, so the sides are named from their point of
+// view: their own team on the left in the primary color.
 function Clash() {
 	return (
 		<>
@@ -35,13 +37,13 @@ function Clash() {
 			<div className="lb-c-stage">
 				<div className="lb-c-panel lb-c-left">
 					<div className="absolute left-[10vw] top-1/2 flex -translate-y-1/2 flex-col gap-3">
-						<span className="font-mono text-[15px] font-semibold tracking-[0.2em] text-primary">TEAM 1</span>
+						<span className="font-mono text-[15px] font-semibold tracking-[0.2em] text-primary">YOUR TEAM</span>
 						<span className="lb-c-word text-primary">Leet</span>
 					</div>
 				</div>
 				<div className="lb-c-panel lb-c-right">
 					<div className="absolute right-[10vw] top-1/2 flex -translate-y-1/2 flex-col items-end gap-3">
-						<span className="font-mono text-[15px] font-semibold tracking-[0.2em] text-secondary">TEAM 2</span>
+						<span className="font-mono text-[15px] font-semibold tracking-[0.2em] text-secondary">RIVAL TEAM</span>
 						<span className="lb-c-word text-secondary">Battle</span>
 					</div>
 				</div>

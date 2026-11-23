@@ -262,21 +262,21 @@ describe('lobby team selection', () => {
 		expect(lobbyMocks.emit).toHaveBeenCalledWith('lobby:join-team', 'a');
 	});
 
-	it('offers Switch to Team 1 when the user is on Team 2 and Team 1 has space', () => {
+	it('offers Switch to rival team when the user is on Team 2 and Team 1 has space', () => {
 		// u1 moves to Team 2 and u5/u6 have no team, so each team has two players.
 		configureLobby({ players: withTeams({ u1: 'b', u5: null, u6: null }) });
 		render(<LobbyPage />);
 
-		expect(screen.getByRole('button', { name: 'Switch to Team 1' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Switch to rival team' })).toBeTruthy();
 	});
 
 	// US5-Task19 bug fix: in a 1v1 the user's own team is always full, which
 	// used to flip Team 1's button to "Other team is full" despite its open seat.
-	it('US5-Task19 offers Switch to Team 1 in a 1v1 when the user is on Team 2 and Team 1 is empty', () => {
+	it('US5-Task19 offers Switch to rival team in a 1v1 when the user is on Team 2 and Team 1 is empty', () => {
 		configureLobby({ players: [player('u1', 'Ada', 'b')], lobby: { teamSize: 1 } });
 		render(<LobbyPage />);
 
-		expect(screen.getByRole('button', { name: 'Switch to Team 1' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Switch to rival team' })).toBeTruthy();
 	});
 });
 
@@ -354,16 +354,16 @@ describe('lobby seats and team colours', () => {
 		expect(screen.getAllByText('Open seat')).toHaveLength(1);
 	});
 
-	it('colours the Team 1 heading with the primary colour', () => {
+	it('colours the user\'s own Team 1 heading ("Your team") with the primary colour', () => {
 		render(<LobbyPage />);
 
-		expect(screen.getByRole('heading', { name: 'Team 1' }).className).toContain('text-primary');
+		expect(screen.getByRole('heading', { name: 'Your team' }).className).toContain('text-primary');
 	});
 
-	it('colours the Team 2 heading with the secondary colour', () => {
+	it('colours the other Team 2 heading ("Rival team") with the secondary colour', () => {
 		render(<LobbyPage />);
 
-		expect(screen.getByRole('heading', { name: 'Team 2' }).className).toContain('text-secondary');
+		expect(screen.getByRole('heading', { name: 'Rival team' }).className).toContain('text-secondary');
 	});
 
 	it('does not put a coloured top border on the team boxes', () => {

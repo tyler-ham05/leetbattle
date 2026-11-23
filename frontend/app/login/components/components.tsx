@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
+import Spinner from '../../_shared/spinner';
 
 export type StepDirection = 'forward' | 'back';
 
@@ -94,9 +95,11 @@ export function AuthSubmitButton({ pending, pendingLabel, children }: {
 		<button
 			type="submit"
 			disabled={pending}
-			className="lb-press lb-press-lift h-[46px] w-full rounded-lg bg-primary px-3 text-sm font-semibold text-on-primary disabled:opacity-50"
+			aria-busy={pending}
+			aria-label={pending ? pendingLabel : undefined}
+			className="lb-press lb-press-lift flex h-[46px] w-full items-center justify-center rounded-lg bg-primary px-3 text-sm font-semibold text-on-primary disabled:opacity-50 aria-busy:opacity-100"
 		>
-			{pending ? pendingLabel : children}
+			{pending ? <Spinner className="h-[18px] w-[18px]" /> : children}
 		</button>
 	);
 }
