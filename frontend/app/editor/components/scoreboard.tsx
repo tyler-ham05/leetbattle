@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useMatch } from '../match-context';
 import { teamsFor } from '../../_shared/teams';
+import { useCountTo } from '../../_shared/use-count-up';
 import type { TeamId } from '../../_shared/teams';
 
 function formatTime(totalSeconds: number): string {
@@ -30,6 +31,8 @@ function useScoreBumps(scores: { a: number; b: number }) {
 export function ScoreLine({ scores, time, myTeam }: { scores: { a: number; b: number }; time: ReactNode; myTeam?: TeamId }) {
 	const [first, second] = teamsFor(myTeam);
 	const bumps = useScoreBumps(scores);
+	// The numbers count up from the old score to the new one as they bump.
+	const shown = { a: useCountTo(scores.a, 600), b: useCountTo(scores.b, 600) };
 	const score = (team: typeof first) => (
 		<div className="flex items-baseline gap-2">
 			<span className="text-sm text-muted">{team.name}</span>
@@ -38,7 +41,7 @@ export function ScoreLine({ scores, time, myTeam }: { scores: { a: number; b: nu
 				data-testid={`score-${team.id}`}
 				className={`text-lg font-semibold ${team.color} ${bumps[team.id] > 0 ? 'lb-score-bump' : ''}`}
 			>
-				{scores[team.id]}
+				{shown[team.id]}
 			</span>
 		</div>
 	);

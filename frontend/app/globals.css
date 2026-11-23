@@ -946,6 +946,24 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 .lb-score-bump { display: inline-block; animation: lb-score-bump 0.2s ease-out both; }
 .lb-feed-in { animation: lb-feed-in 0.2s ease-out both; }
 
+/* Solved first: the question slams in (like Victory!), a slash cuts through
+   it, then the whole thing fades. 1.4s in all (MOMENT_MS in score-feed.tsx). */
+@keyframes lb-first-solve {
+  0%   { opacity: 0; transform: scale(1.6); }
+  14%  { opacity: 1; transform: scale(0.97); }
+  22%  { transform: none; }
+  78%  { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-12px); }
+}
+@keyframes lb-first-slash {
+  0%, 20% { opacity: 1; transform: rotate(-8deg) scaleX(0); }
+  38%     { transform: rotate(-8deg) scaleX(1); }
+  100%    { opacity: 1; transform: rotate(-8deg) scaleX(1); }
+}
+.lb-first-solve { animation: lb-first-solve 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.lb-first-slash { transform-origin: left center; animation: lb-first-slash 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
 @media (prefers-reduced-motion: reduce) {
   .lb-score-bump, .lb-feed-in { animation: none; }
+  .lb-first-solve, .lb-first-slash { animation: none; }
 }
