@@ -15,11 +15,11 @@ function Wordmark({ className }: { className: string }) {
 // The katana slice: `word` (given the class each copy needs) shows whole,
 // a blade streaks along a diagonal cut, then the top and bottom halves glide
 // apart as the cover fades. Also played when a team solves a question first
-// (game/components/score-feed.tsx).
-export function KatanaScene({ word }: { word: (_className: string) => ReactNode }) {
+// (game/components/score-feed.tsx), as a pop-up with no cover (`cover={false}`).
+export function KatanaScene({ word, cover = true }: { word: (_className: string) => ReactNode; cover?: boolean }) {
 	return (
 		<>
-			<div className="lb-k-backdrop" />
+			{cover && <div className="lb-k-backdrop" />}
 			<div className="lb-k-line lb-k-seam" />
 			<div className="lb-k-halves">
 				<div className="lb-k-part lb-k-part-top"><div className="lb-k-slip lb-k-slip-top"><div className="lb-k-piece lb-k-top">{word('lb-k-word')}</div></div></div>

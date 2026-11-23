@@ -946,6 +946,19 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 .lb-score-bump { display: inline-block; animation: lb-score-bump 0.2s ease-out both; }
 .lb-feed-in { animation: lb-feed-in 0.2s ease-out both; }
 
+/* Solved first (score-feed.tsx): the home loader's katana slice as a pop-up
+   over the editor. Same timing, but in a box with no cover: the cut is
+   measured on the box (container units) and the halves glide a short way. */
+@keyframes lb-kp-part-top { to { transform: translate(72px, -28px); opacity: 0; } }
+@keyframes lb-kp-part-bottom { to { transform: translate(-72px, 28px); opacity: 0; } }
+.lb-k-pop { position: relative; width: min(560px, 86%); height: 280px; container-type: size; }
+.lb-k-pop .lb-k-piece, .lb-k-pop .lb-k-whole { background: transparent; }
+.lb-k-pop .lb-k-line { width: hypot(100cqw, 40cqh); transform: translateY(-50%) rotate(atan2(-40cqh, 100cqw)); }
+.lb-k-pop .lb-k-seam { height: 6px; }
+.lb-k-pop .lb-k-part-top { animation-name: lb-kp-part-top; }
+.lb-k-pop .lb-k-part-bottom { animation-name: lb-kp-part-bottom; }
+.lb-k-pop .lb-k-word { font-size: min(128px, 26cqw); }
+
 @media (prefers-reduced-motion: reduce) {
   .lb-score-bump, .lb-feed-in { animation: none; }
 }

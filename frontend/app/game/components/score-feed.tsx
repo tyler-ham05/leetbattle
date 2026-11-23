@@ -73,17 +73,20 @@ export default function ScoreFeed({ pool, solved, myTeam }: { pool: PoolProblem[
 					</p>
 				)}
 			</div>
-			{/* Solved first: "Q2 / Solved first" plays the home loader's katana slice. */}
+			{/* Solved first: "Q2 / Solved first" plays the katana slice as a pop-up over the editor. */}
 			{moment && (
-				<div key={moment.id} data-testid="first-solve" aria-hidden="true" className="lb-loader pointer-events-none fixed inset-0 z-50 overflow-hidden text-ink">
-					<KatanaScene
-						word={(className) => (
-							<span className="flex flex-col items-center gap-3">
-								<span className={`${className} text-primary`}>Q{moment.position}</span>
-								<span className="font-mono text-[15px] font-semibold uppercase tracking-[0.2em] text-ink">Solved first</span>
-							</span>
-						)}
-					/>
+				<div key={moment.id} data-testid="first-solve" aria-hidden="true" className="lb-loader pointer-events-none fixed inset-0 z-50 flex items-center justify-center text-ink">
+					<div className="lb-k-pop">
+						<KatanaScene
+							cover={false}
+							word={(className) => (
+								<span className="flex flex-col items-center gap-3">
+									<span className={`${className} text-primary`}>Q{moment.position}</span>
+									<span className="font-mono text-[15px] font-semibold uppercase tracking-[0.2em] text-ink">Solved first</span>
+								</span>
+							)}
+						/>
+					</div>
 				</div>
 			)}
 		</>
