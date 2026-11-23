@@ -54,6 +54,8 @@
 - The moment should say "Solved first"
 - The moment should play the katana slice (a blade and the word cut into top and bottom halves), like the home loader
 - Both halves of the cut should show the question
+- The moment should be a pop-up over the middle of the editor, not a full-screen cover
+- The moment should have no full-screen backdrop
 - The moment should still be showing just before the katana slice ends
 - The moment should be gone once the katana slice ends (2.3 seconds)
 - The moment should be hidden from screen readers (the feed line already announces the solve)

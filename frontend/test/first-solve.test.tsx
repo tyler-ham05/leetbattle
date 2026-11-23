@@ -138,6 +138,26 @@ describe('solved first', () => {
 		expect(moment()?.querySelector('.lb-k-bottom')?.textContent).toContain('Q2');
 	});
 
+	// A pop-up over the editor, not a cover: the slice plays inside a small box...
+	it('plays the slice inside a pop-up box', () => {
+		renderFeed(NONE)({ a: ['valid-parentheses'], b: [] });
+		expect(moment()?.querySelector('.lb-k-pop')).not.toBeNull();
+	});
+
+	// ...with no full-screen backdrop hiding the code.
+	it('has no full-screen backdrop', () => {
+		renderFeed(NONE)({ a: ['valid-parentheses'], b: [] });
+		expect(moment()?.querySelector('.lb-k-backdrop')).toBeNull();
+	});
+
+	// The pop-up's halves glide a short way, not across the whole screen.
+	it('moves the pop-up halves by a fixed distance, not by the screen size', () => {
+		// The pop-up's own CSS, from its first rule to the next section (missing counts as failing).
+		const start = css.indexOf('.lb-k-pop');
+		const pop = start < 0 ? 'missing vw' : css.slice(start, css.indexOf('@media', start));
+		expect(pop.includes('vw')).toBe(false);
+	});
+
 	// It runs as long as the home loader's katana slice...
 	it('is still showing just before the katana slice ends', () => {
 		renderFeed(NONE)({ a: ['valid-parentheses'], b: [] });
