@@ -21,7 +21,7 @@
 
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { fakeUser, jsonResponse, requestsOf, stubFetch, threeProblems } from './helpers';
 
@@ -52,6 +52,13 @@ vi.mock('../app/editor/match-context', async (importOriginal) => ({
 import EditorPage from '../app/editor/page';
 
 const CODE_URL = 'http://127.0.0.1:4001';
+
+// US-5-T-23: the submission result shows each value as a label over a block;
+// this is the block under `label` in the result.
+async function resultBlock(label: string) {
+	const result = await screen.findByRole('region', { name: 'Submission result' });
+	return within(result).getByText(label).nextElementSibling?.textContent;
+}
 
 // Serves the 3 problems on GET /problem; run/submit return canned verdicts.
 function stubCodeService() {
@@ -85,7 +92,7 @@ describe('editor page', () => {
 	it('shows a loading state, then the first problem, once loaded', async () => {
 		stubCodeService();
 		render(<EditorPage />);
-		expect(screen.getByText('Loading question...')).toBeTruthy();
+		expect(screen.getByText('Loading question…')).toBeTruthy();
 		expect(await screen.findByText('Description for problem 1')).toBeTruthy();
 	});
 
@@ -160,7 +167,7 @@ describe('test cases panel', () => {
 		expect(screen.getByRole('button', { name: 'Case 1' })).toBeTruthy();
 		expect(screen.getByRole('button', { name: 'Case 2' })).toBeTruthy();
 		expect(screen.getByText('Input')).toBeTruthy();
-		expect(screen.getByText('Expected Output')).toBeTruthy();
+		expect(screen.getByText('Expected output')).toBeTruthy();
 		expect(screen.getByText('[1]')).toBeTruthy();
 	});
 
@@ -327,7 +334,7 @@ it('US-4-T-2 shows "Accepted" between the editor and the Case tabs after an Acce
 
 // Pseudocode: "After Submit, the page shows how many tests passed out of the total
 // between the monaco editor and the Case 1, Case 2, Case 3 tabs"
-it('US-4-T-2 shows "Passed: 1 / 3" between the editor and the Case tabs after a Submit', async () => {
+it('US-4-T-2 shows the passed count "1 / 3" between the editor and the Case tabs after a Submit', async () => {
 	// Arrange: serve the 3 problems, and make the judge answer for question 1 with
 	// passed: 1 and total: 3. The response has every field CodeService returns.
 	stubFetch((url) => {
@@ -352,7 +359,7 @@ it('US-4-T-2 shows "Passed: 1 / 3" between the editor and the Case tabs after a 
 	// Find the three things we are comparing positions of. `findByText` waits for the
 	// passed count and throws "Unable to find an element with the text" if it never appears,
 	// which is the failure expected until the passed count is displayed.
-	const passed = await screen.findByText('Passed: 1 / 3');
+	const passed = await screen.findByText('1 / 3');
 	const editor = screen.getByTestId('monaco');
 	const firstCaseTab = screen.getByRole('button', { name: 'Case 1' });
 
@@ -365,7 +372,7 @@ it('US-4-T-2 shows "Passed: 1 / 3" between the editor and the Case tabs after a 
 });
 
 // Pseudocode: "After a failed Submit the page shows the test case that failed"
-it('US-4-T-2 shows "Input: [1]" after a failed Submit', async () => {
+it('US-4-T-2 shows Input "[1]" after a failed Submit', async () => {
 	// Arrange: serve the 3 problems, and make the judge answer Wrong Answer for question 1
 	// with the failing test case `case: '[1]'`. The response has every field CodeService returns.
 	stubFetch((url) => {
@@ -387,14 +394,14 @@ it('US-4-T-2 shows "Input: [1]" after a failed Submit', async () => {
 	// Act: click Submit.
 	await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
 
-	// Assert (one expect): the failing test case is shown as "Input: <case>".
+	// Assert (one expect): the failing test case is in the block under the "Input" label.
 	// `findByText` waits for it and throws "Unable to find an element with the text" if it never
 	// appears, which is the failure expected until the failing test case is displayed.
-	expect(await screen.findByText('Input: [1]')).toBeTruthy();
+	expect(await resultBlock('Input')).toBe('[1]');
 });
 
 // Pseudocode: "After a failed Submit the page shows the expected value"
-it('US-4-T-2 shows "Expected: 1" after a failed Submit', async () => {
+it('US-4-T-2 shows Expected "1" after a failed Submit', async () => {
 	// Arrange: serve the 3 problems, and make the judge answer Wrong Answer for question 1
 	// with the expected value `expected: '1'`. The response has every field CodeService returns.
 	stubFetch((url) => {
@@ -416,14 +423,14 @@ it('US-4-T-2 shows "Expected: 1" after a failed Submit', async () => {
 	// Act: click Submit.
 	await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
 
-	// Assert (one expect): the expected value is shown as "Expected: <expected>".
+	// Assert (one expect): the expected value is in the block under the "Expected" label.
 	// `findByText` waits for it and throws "Unable to find an element with the text" if it never
 	// appears, which is the failure expected until the expected value is displayed.
-	expect(await screen.findByText('Expected: 1')).toBeTruthy();
+	expect(await resultBlock('Expected')).toBe('1');
 });
 
 // Pseudocode: "After a failed Submit the page shows the user's output"
-it('US-4-T-2 shows "Your output: 2" after a failed Submit', async () => {
+it('US-4-T-2 shows Your output "2" after a failed Submit', async () => {
 	// Arrange: serve the 3 problems, and make the judge answer Wrong Answer for question 1
 	// with the user's output `response: '2'`. The response has every field CodeService returns.
 	stubFetch((url) => {
@@ -445,10 +452,10 @@ it('US-4-T-2 shows "Your output: 2" after a failed Submit', async () => {
 	// Act: click Submit.
 	await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
 
-	// Assert (one expect): the user's output is shown as "Your output: <response>".
+	// Assert (one expect): the user's output is in the block under the "Your output" label.
 	// `findByText` waits for it and throws "Unable to find an element with the text" if it never
 	// appears, which is the failure expected until the user's output is displayed.
-	expect(await screen.findByText('Your output: 2')).toBeTruthy();
+	expect(await resultBlock('Your output')).toBe('2');
 });
 
 // Pseudocode: "The page shows one verdict for each test case in its respective Case 1, Case 2, Case 3 tabs."

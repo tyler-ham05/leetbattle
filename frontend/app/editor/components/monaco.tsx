@@ -12,8 +12,14 @@ function applyTheme(monaco: MonacoApi) {
 }
 
 export default function Monaco() {
-	const { code, setCode, readOnly } = useEditor();
+	const { code, setCode, readOnly, onRun, onSubmit, isLoading } = useEditor();
 	const monacoRef = useRef<MonacoApi | null>(null);
+	// Monaco keeps the commands it was given at mount, so they read the
+	// latest Run / Submit (and whether they may be used) from here.
+	const shortcuts = useRef({ run: onRun, submit: onSubmit, enabled: !readOnly && !isLoading });
+	useEffect(() => {
+		shortcuts.current = { run: onRun, submit: onSubmit, enabled: !readOnly && !isLoading };
+	});
 
 	// Settings changes data-scheme and data-mode on <html>; restyle the editor when it does.
 	useEffect(() => {
@@ -36,8 +42,18 @@ export default function Monaco() {
 				monacoRef.current = monaco;
 				applyTheme(monaco);
 			}}
+			onMount={(editor, monaco) => {
+				// Monaco swallows Ctrl/Cmd+Enter itself, so the page-wide shortcuts
+				// (see submit-bar.tsx) are registered with the editor too.
+				const trigger = (action: 'run' | 'submit') => {
+					if (shortcuts.current.enabled) shortcuts.current[action]();
+				};
+				editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => trigger('run'));
+				editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter, () => trigger('submit'));
+			}}
 			onChange={(value) => setCode(value ?? '')}
-			options={{ minimap: { enabled: false }, fontSize: 14, readOnly }}
+			// automaticLayout: the editor follows its pane when a divider is dragged.
+			options={{ minimap: { enabled: false }, fontSize: 14, readOnly, automaticLayout: true }}
 		/>
 	);
 }

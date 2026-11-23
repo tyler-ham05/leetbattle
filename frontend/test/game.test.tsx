@@ -1065,7 +1065,9 @@ describe('game page editor after the bans', () => {
 
 		await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
 
-		expect(await screen.findByText('Passed: 3 / 3')).toBeTruthy();
+		// US-5-T-23: Passed is a label over a block in the submission result.
+		const result = await screen.findByRole('region', { name: 'Submission result' });
+		expect(within(result).getByText('Passed').nextElementSibling?.textContent).toBe('3 / 3');
 	});
 
 	it('US-6-T-6 shows a readable message when the game refuses a submission', async () => {

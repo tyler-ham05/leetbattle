@@ -11,6 +11,9 @@ import { useOptionalLobbySocket } from '../lobby/socket-context';
 import { APIService, parseTestCases, Problem, RunResult, SubmitResult, TestCase } from './controller';
 
 export type LoadingAction = 'run' | 'submit' | null;
+// Where the player stands on a question from their own submissions: solved
+// once one came back Accepted, attempted when they submitted but never got it.
+export type QuestionStatus = 'solved' | 'attempted';
 
 export interface EditorTab {
 	id: string;
@@ -84,6 +87,8 @@ export interface EditorContextValue {
 	submitError: string | null;
 	loadingAction: LoadingAction;
 	isLoading: boolean;
+	// By question_id; a question never submitted has no entry.
+	questionStatus: Record<number, QuestionStatus>;
 	// True when this provider is showing someone else's workspace: nothing can
 	// be edited, created, renamed or removed, and nothing is ever sent anywhere.
 	readOnly: boolean;
@@ -138,6 +143,7 @@ export function EditorProvider({ children, questionIds, submit, shareCode, readO
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const shareTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 	const [loadingAction, setLoadingAction] = useState<LoadingAction>(null);
+	const [questionStatus, setQuestionStatus] = useState<Record<number, QuestionStatus>>({});
 	const socketRef = useRef<Socket | null>(null);
 	const allTestCases = currentQuestion ? parseTestCases(currentQuestion.input_output) : [];
 	const testCases = allTestCases.slice(0, VISIBLE_CASES);
@@ -317,8 +323,16 @@ export function EditorProvider({ children, questionIds, submit, shareCode, readO
 		setLoadingAction('submit');
 		setSubmitError(null);
 		const api = new APIService();
-		(submit ?? api.submit.bind(api))(currentQuestion.question_id, code)
-			.then(setSubmitResult)
+		const questionId = currentQuestion.question_id;
+		(submit ?? api.submit.bind(api))(questionId, code)
+			.then((result) => {
+				setSubmitResult(result);
+				// A solved question stays solved, whatever comes after.
+				setQuestionStatus((current) => ({
+					...current,
+					[questionId]: result.verdict === 'Accepted' || current[questionId] === 'solved' ? 'solved' : 'attempted',
+				}));
+			})
 			// A refused match submission is shown with the results; in practice a
 			// failure stays a page error, as before.
 			.catch((err) => (submit ? setSubmitError(err.message) : setError(err.message)))
@@ -350,6 +364,7 @@ export function EditorProvider({ children, questionIds, submit, shareCode, readO
 				submitError,
 				loadingAction,
 				isLoading: loadingAction !== null,
+				questionStatus,
 				readOnly,
 				ownerName,
 			}}

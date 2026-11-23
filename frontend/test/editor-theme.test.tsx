@@ -98,10 +98,12 @@ describe('question tabs', () => {
 		expect(screen.getByRole('button', { name: '2' }).getAttribute('aria-current')).toBe('true');
 	});
 
-	it('colors the number of the open question with the primary color', () => {
+	// US-5-T-23: the primary color now marks a solved question, so the open
+	// question is shown raised instead (like the other selected tabs).
+	it('raises the tab of the open question', () => {
 		editorMocks.useEditor.mockReturnValue({ questions, currentQuestion: questions[1], setCurrentQuestion: vi.fn() });
 		render(<QuestionNavigation />);
 
-		expect(screen.getByRole('button', { name: '2' }).className).toContain('text-primary');
+		expect(screen.getByRole('button', { name: '2' }).className).toContain('bg-raised');
 	});
 });
