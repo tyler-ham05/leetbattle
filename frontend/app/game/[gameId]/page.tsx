@@ -19,6 +19,7 @@ import BanScreen from '../components/ban-screen';
 import PickScreen from '../components/pick-screen';
 import WorkspaceSwitcher from '../components/workspace-switcher';
 import ResultScreen from '../components/result-screen';
+import ScoreFeed from '../components/score-feed';
 import { GameSocketProvider, useGameSocket } from '../socket-context';
 import type { GamePlayer, TeammateCode } from '../socket-context';
 
@@ -193,6 +194,7 @@ function GameContent() {
 						</>
 					)}
 				/>
+				<ScoreFeed pool={game.problemPool} solved={game.solved} myTeam={myTeam} />
 				{errorAlert}
 				{/* Team chat (US-3-T-2) goes over the game socket, so only teammates see it,
 				    and starts with the team's earlier messages (US-3-T-3).
@@ -216,7 +218,7 @@ function GameContent() {
 		return (
 			<div className="flex min-h-screen flex-col bg-page font-sans text-ink">
 				<HomeTopBar />
-				<ResultScreen result={result} myTeam={myTeam} scores={game?.scores ?? { a: 0, b: 0 }} players={game?.players ?? []} />
+				<ResultScreen result={result} myTeam={myTeam} scores={game?.scores ?? { a: 0, b: 0 }} players={game?.players ?? []} pool={game?.problemPool ?? []} solved={game?.solved ?? { a: [], b: [] }} />
 			</div>
 		);
 	}

@@ -341,14 +341,15 @@ describe('game page match view', () => {
 		expect(within(screen.getAllByRole('banner')[0]).getByTestId('score-a').textContent).toBe('120');
 	});
 
-	it('US-6-T-8 updates the shown score when a new game state arrives', () => {
+	it('US-6-T-8 updates the shown score when a new game state arrives', async () => {
 		configureConnectedGame({ scores: { a: 0, b: 0 } });
 		const { rerender } = render(<GamePage />);
 		configureConnectedGame({ scores: { a: 150, b: 0 } });
 
 		rerender(<GamePage />);
 
-		expect(screen.getByText('150')).toBeTruthy();
+		// The score counts up to its new value over 0.6s (US-4-T-6), so wait for it to land.
+		expect(await screen.findByText('150', {}, { timeout: 3000 })).toBeTruthy();
 	});
 });
 
