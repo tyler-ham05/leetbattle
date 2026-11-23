@@ -350,7 +350,10 @@ describe('seats stay put', () => {
 		configureLobby([{ ...ada, team: 'a' }, grace, alan]);
 		rerender(<LobbyPage />);
 		// Now on the left, the row enters from the right (across VS).
-		expect(screen.getByText('Ada').closest('li')?.classList.contains('lb-cross-a')).toBe(true);
+		// Look only in the user's team list: the top bar also shows the
+		// signed-in user's name (US-4-T-10), so "Ada" appears twice on the page.
+		const ownTeam = screen.getByRole('list', { name: 'Your team players' });
+		expect(within(ownTeam).getByText('Ada').closest('li')?.classList.contains('lb-cross-a')).toBe(true);
 	});
 });
 
