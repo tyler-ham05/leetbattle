@@ -103,41 +103,45 @@ export default function ReadySlider({ ready, disabled, onChange }: { ready: bool
 
 	const ease = dragging ? 'none' : '0.35s cubic-bezier(0.2, 0.7, 0.2, 1)';
 	return (
-		<div
-			ref={track}
-			role="slider"
-			tabIndex={disabled ? -1 : 0}
-			aria-label="Slide to ready"
-			aria-disabled={disabled}
-			aria-valuemin={0}
-			aria-valuemax={100}
-			aria-valuenow={Math.round(x * 100)}
-			aria-valuetext={ready ? 'Ready' : 'Not ready'}
-			onPointerDown={down}
-			onPointerMove={move}
-			onPointerUp={up}
-			onPointerCancel={up}
-			onKeyDown={key}
-			className={`lb-slider relative h-14 w-80 touch-none select-none overflow-hidden overscroll-contain rounded-xl border bg-surface outline-offset-[3px] transition-[border-color,opacity] duration-300 ${ready ? 'border-primary' : 'border-line'} ${disabled ? 'cursor-not-allowed opacity-45' : 'cursor-grab'}`}
-		>
-			<span
-				aria-hidden="true"
-				className="absolute inset-0 origin-left bg-primary"
-				style={{ transform: `scaleX(${0.15 + x * 0.85})`, opacity: ready ? 1 : x * 0.35, transition: `transform ${ease}, opacity ${ease}` }}
-			/>
-			<span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pl-10 text-[15px] font-bold text-muted" style={{ opacity: ready ? 0 : 1 - x * 1.4 }}>
-				{disabled ? 'Waiting for players' : 'Slide to ready'}
-			</span>
-			<span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pr-10 text-[15px] font-bold text-on-primary transition-opacity duration-250" style={{ opacity: ready ? 1 : 0 }}>
-				Ready
-			</span>
-			<span
-				aria-hidden="true"
-				className={`absolute left-[3px] top-[3px] flex h-12 w-12 items-center justify-center rounded-[9px] transition-colors duration-300 ${ready ? 'bg-on-primary text-primary' : 'bg-primary text-on-primary'}`}
-				style={{ transform: `translateX(${x * TRAVEL}px) rotate(${ready ? 180 : 0}deg)`, transition: `transform ${ease}, background-color 0.3s, color 0.3s` }}
+		<div className="flex flex-col items-center gap-3">
+			<div
+				ref={track}
+				role="slider"
+				tabIndex={disabled ? -1 : 0}
+				aria-label="Slide to ready"
+				aria-disabled={disabled}
+				aria-valuemin={0}
+				aria-valuemax={100}
+				aria-valuenow={Math.round(x * 100)}
+				aria-valuetext={ready ? 'Ready' : 'Not ready'}
+				onPointerDown={down}
+				onPointerMove={move}
+				onPointerUp={up}
+				onPointerCancel={up}
+				onKeyDown={key}
+				className={`lb-slider relative h-14 w-80 touch-none select-none overflow-hidden overscroll-contain rounded-xl border bg-surface outline-offset-[3px] transition-[border-color,opacity] duration-300 ${ready ? 'border-primary' : 'border-line'} ${disabled ? 'cursor-not-allowed opacity-45' : 'cursor-grab'}`}
 			>
-				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-			</span>
+				<span
+					aria-hidden="true"
+					className="absolute inset-0 origin-left bg-primary"
+					style={{ transform: `scaleX(${0.15 + x * 0.85})`, opacity: ready ? 1 : x * 0.35, transition: `transform ${ease}, opacity ${ease}` }}
+				/>
+				<span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pl-10 text-[15px] font-bold text-muted" style={{ opacity: ready ? 0 : 1 - x * 1.4 }}>
+					{disabled ? 'Waiting for players' : 'Slide to ready'}
+				</span>
+				<span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pr-10 text-[15px] font-bold text-on-primary transition-opacity duration-250" style={{ opacity: ready ? 1 : 0 }}>
+				Ready
+				</span>
+				<span
+					aria-hidden="true"
+					className={`absolute left-[3px] top-[3px] flex h-12 w-12 items-center justify-center rounded-[9px] transition-colors duration-300 ${ready ? 'bg-on-primary text-primary' : 'bg-primary text-on-primary'}`}
+					style={{ transform: `translateX(${x * TRAVEL}px) rotate(${ready ? 180 : 0}deg)`, transition: `transform ${ease}, background-color 0.3s, color 0.3s` }}
+				>
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+				</span>
+			</div>
+			{/* How to use it, in short (the two-finger swipe isn't something players would guess). */}
+			{!disabled && <p className="m-0 text-[13px] text-muted">{ready ? 'Slide back to unready' : 'Drag, or swipe with two fingers'}</p>}
 		</div>
 	);
 }
