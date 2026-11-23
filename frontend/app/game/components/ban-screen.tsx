@@ -5,13 +5,10 @@
 'use client';
 
 import { useAuth } from '../../login/context';
+import { teamsFor } from '../../_shared/teams';
+import type { TeamId } from '../../_shared/teams';
 import type { PoolProblem } from '../socket-context';
-
-const CARD = 'flex min-h-[168px] w-full flex-col justify-between gap-5 rounded-xl p-5 text-left';
-
-const NUMBER_WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
-const inWords = (count: number) => NUMBER_WORDS[count] ?? String(count);
-const capitalise = (word: string) => word.charAt(0).toUpperCase() + word.slice(1);
+import { ChoiceScreen, QuestionCard, capitalise, inWords } from './question-card';
 
 function BanIcon() {
 	return (
@@ -22,109 +19,64 @@ function BanIcon() {
 	);
 }
 
-// The number and topics of a question. A banned question's topics are struck through.
-function QuestionTopics({ position, problem }: { position: number; problem: PoolProblem }) {
-	const chip = problem.bannedBy
-		? 'border border-line font-medium text-muted line-through'
-		: 'bg-raised font-semibold';
-	return (
-		<span className="flex flex-col gap-3.5">
-			<span data-testid="question-label" className="text-sm font-medium text-muted">Question {position}</span>
-			<span className="flex flex-wrap gap-2">
-				{problem.topics.map((topic) => (
-					<span key={topic} data-testid="topic" className={`rounded-full px-3 py-1.5 text-[15px] ${chip}`}>{topic}</span>
-				))}
-			</span>
-		</span>
-	);
-}
-
 interface BanScreenProps {
 	problems: PoolProblem[];
 	// One ban per player, so this is also the number of bans the match takes.
 	playerCount: number;
+	// The viewer's team: its banners' names are in the primary color, the other team's in the secondary.
+	myTeam?: TeamId | null;
 	onBan: (_questionId: number) => void;
 }
 
-export default function BanScreen({ problems, playerCount, onBan }: BanScreenProps) {
+export default function BanScreen({ problems, playerCount, myTeam, onBan }: BanScreenProps) {
 	const { user } = useAuth();
+	const teams = teamsFor(myTeam);
+	const colorOf = (team: TeamId) => teams.find((shown) => shown.id === team)?.color;
 
-	const banners = problems.flatMap((problem) => (problem.bannedBy ? [problem.bannedBy] : []));
-	const hasBanned = banners.some((banner) => banner.userId === user?.id);
-	// One marker per ban: Team 1's bans first, then Team 2's, then the bans still to come.
-	const markers = [
-		...banners.filter((banner) => banner.team === 'a').map(() => 'a'),
-		...banners.filter((banner) => banner.team === 'b').map(() => 'b'),
-		...Array<string>(playerCount).fill('empty'),
-	].slice(0, playerCount);
+	const banCount = problems.filter((problem) => problem.bannedBy).length;
+	const hasBanned = problems.some((problem) => problem.bannedBy?.userId === user?.id);
 	const leftInPlay = Math.max(0, problems.length - playerCount);
 
 	return (
-		<section className="flex flex-col gap-8">
-			<header className="flex flex-col gap-2">
-				<h2 className="text-4xl font-extrabold leading-[1.05] tracking-[-0.035em]">Ban a question</h2>
-				<p className="text-[15px] text-muted">
-					{capitalise(inWords(problems.length))} questions, shown by topic only. Every player bans one, and the match is played on the {inWords(leftInPlay)} that are left.
-				</p>
-			</header>
-
-			<div className="flex flex-wrap items-center justify-between gap-4 border-b-2 border-line pb-5">
-				<div className="flex items-center gap-3">
-					<div aria-hidden="true" className="flex gap-1">
-						{markers.map((marker, i) => <span key={i} data-seat={marker} className="lb-seat-pip" />)}
-					</div>
-					<span className="text-sm font-semibold">{banners.length} of {playerCount} bans made</span>
-				</div>
-				<p role="status" aria-live="polite" className="text-sm text-muted">
-					{hasBanned ? 'Your ban is in. Waiting for the other players.' : 'You have 1 ban left. Choose a question to remove.'}
-				</p>
-			</div>
-
-			<ul aria-label="Questions" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-				{problems.map((problem, i) => {
-					const banner = problem.bannedBy;
-					const topics = <QuestionTopics position={i + 1} problem={problem} />;
-
-					if (banner) {
-						return (
-							<li key={problem.questionId} className={`${CARD} border border-dashed border-line`}>
-								{topics}
+		<ChoiceScreen
+			title="Ban a question"
+			intro={`${capitalise(inWords(problems.length))} questions, shown by topic only. Every player bans one, and the match is played on the ${inWords(leftInPlay)} that are left.`}
+			progress={`${banCount} of ${playerCount} bans made`}
+			status={hasBanned ? 'Your ban is in. Waiting for the other players.' : 'You have 1 ban left. Choose a question to remove.'}
+		>
+			{problems.map((problem, i) => {
+				const banner = problem.bannedBy;
+				if (banner) {
+					return (
+						<QuestionCard
+							key={problem.questionId}
+							position={i + 1}
+							topics={problem.topics}
+							state="taken"
+							strike
+							footer={(
 								<span className="flex items-center gap-2 text-[13px] font-semibold text-muted">
 									<BanIcon />
 									Banned by{' '}
-									<span className={banner.team === 'a' ? 'text-primary' : 'text-secondary'}>
-										{banner.userId === user?.id ? 'you' : banner.displayName}
-									</span>
+									<span className={colorOf(banner.team)}>{banner.userId === user?.id ? 'you' : banner.displayName}</span>
 								</span>
-							</li>
-						);
-					}
-					if (hasBanned) {
-						return (
-							<li key={problem.questionId} className={`${CARD} border border-line bg-surface`}>
-								{topics}
-								<span className="text-[13px] font-medium text-muted">Still in play</span>
-							</li>
-						);
-					}
-					return (
-						<li key={problem.questionId} className="flex">
-							<button onClick={() => onBan(problem.questionId)} className={`lb-press ${CARD} border border-line bg-surface hover:bg-raised`}>
-								{topics}
-								<span className="flex items-center gap-2 text-[13px] font-semibold text-danger">
-									<BanIcon />
-									Ban this question
-								</span>
-							</button>
-						</li>
+							)}
+						/>
 					);
-				})}
-			</ul>
-
-			<p className="flex flex-wrap gap-6 text-[13px] text-muted">
-				<span className="flex items-center gap-2"><span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-primary" />Team 1</span>
-				<span className="flex items-center gap-2"><span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-secondary" />Team 2</span>
-			</p>
-		</section>
+				}
+				return (
+					<QuestionCard
+						key={problem.questionId}
+						position={i + 1}
+						topics={problem.topics}
+						state={hasBanned ? 'open' : 'choose'}
+						onChoose={() => onBan(problem.questionId)}
+						footer={hasBanned
+							? <span className="text-[13px] font-medium text-muted">Still in play</span>
+							: <span className="flex items-center gap-2 text-[13px] font-semibold text-danger"><BanIcon />Ban this question</span>}
+					/>
+				);
+			})}
+		</ChoiceScreen>
 	);
 }

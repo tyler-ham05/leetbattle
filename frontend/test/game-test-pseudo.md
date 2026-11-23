@@ -75,7 +75,7 @@
  //  - Clicking "Ban this question" should send that problem's questionId to the game
  //  - A problem the game state shows banned by another player should display "Banned by <name>"
  //  - With four players and one ban made, "1 of 4 bans made" should be displayed
- //  - With four players, the ban screen should display four ban markers
+ //  - With four players, the ban screen should display four ban markers (now the plain count "0 of 4 bans made", US-5-T-22)
 
  // Game socket context should send bans
  //  - Banning should send a "game:ban" event with the questionId to the server

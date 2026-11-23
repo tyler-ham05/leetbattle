@@ -212,7 +212,7 @@ describe('lobby for players who have not joined', () => {
 		render(<LobbyPage />);
 
 		// All six seats are taken by other players.
-		expect(screen.getByText('This lobby is full.')).toBeTruthy();
+		expect(screen.getByText('This lobby is full')).toBeTruthy();
 	});
 
 	it('disables Join lobby when the lobby is full', () => {
@@ -285,7 +285,7 @@ describe('lobby team selection', () => {
 //  - Clicking "2v2" should send a set-team-size event with 2
 //  - A player who is not the host should not see the team size options
 //  - With a team size of 2 and 2 players ready, the status should display "2/4 players ready"
-//  - With a team size of 1 and 2 players in the lobby, "This lobby is full." should be displayed to a player who has not joined
+//  - With a team size of 1 and 2 players in the lobby, "This lobby is full" should be displayed to a player who has not joined
 describe('lobby team size', () => {
 	it('shows the host a "Players per team" control with 1v1, 2v2 and 3v3', () => {
 		render(<LobbyPage />);
@@ -314,7 +314,7 @@ describe('lobby team size', () => {
 		configureLobby({ userId: 'u7', players: [player('u1', 'Ada', 'a'), player('u4', 'Alan', 'b')], lobby: { teamSize: 1 } });
 		render(<LobbyPage />);
 
-		expect(screen.getByText('This lobby is full.')).toBeTruthy();
+		expect(screen.getByText('This lobby is full')).toBeTruthy();
 	});
 });
 

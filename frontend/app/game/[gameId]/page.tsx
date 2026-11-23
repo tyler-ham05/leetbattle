@@ -7,7 +7,8 @@ import RequireAuth from '../../login/protected';
 import { useAuth } from '../../login/context';
 import HomeTopBar from '../../_home/components/topbar';
 import Spinner from '../../_shared/spinner';
-import type { TeamId } from '../../lobby/socket-context';
+import { teamsFor } from '../../_shared/teams';
+import type { ShownTeam } from '../../_shared/teams';
 import { EditorProvider } from '../../editor/context';
 import type { EditorWorkspace } from '../../editor/context';
 import EditorLayout from '../../editor/components/editor-layout';
@@ -21,12 +22,6 @@ import ResultScreen from '../components/result-screen';
 import { GameSocketProvider, useGameSocket } from '../socket-context';
 import type { GamePlayer, TeammateCode } from '../socket-context';
 
-const TEAMS: { id: TeamId; name: string; nameColor: string }[] = [
-	{ id: 'a', name: 'Team 1', nameColor: 'text-primary' },
-	{ id: 'b', name: 'Team 2', nameColor: 'text-secondary' },
-];
-
-
 const BUTTON = 'lb-press inline-flex min-h-9 items-center justify-center rounded-lg px-4 text-sm font-semibold disabled:cursor-not-allowed';
 
 // 1200 -> "20:00"
@@ -38,7 +33,8 @@ function formatClock(totalSeconds: number): string {
 
 // Counts down locally from the server's last `secondsRemaining`; every new
 // game state resyncs it, so clients never drift far from the server's clock.
-function Clock({ seconds, running, className = 'font-mono text-[28px] font-bold leading-none text-ink' }: { seconds: number; running: boolean; className?: string }) {
+// The match clock (`warn`) turns red with under a minute left.
+function Clock({ seconds, running, warn = false, className = 'font-mono text-[28px] font-bold leading-none text-ink' }: { seconds: number; running: boolean; warn?: boolean; className?: string }) {
 	const [left, setLeft] = useState(seconds);
 
 	useEffect(() => {
@@ -48,13 +44,13 @@ function Clock({ seconds, running, className = 'font-mono text-[28px] font-bold 
 		return () => clearInterval(timer);
 	}, [seconds, running]);
 
-	return <span className={className}>{formatClock(left)}</span>;
+	return <span className={warn && left < 60 ? `${className} text-danger` : className}>{formatClock(left)}</span>;
 }
 
-function Roster({ team, players, userId }: { team: typeof TEAMS[number]; players: GamePlayer[]; userId?: string }) {
+function Roster({ team, players, userId }: { team: ShownTeam; players: GamePlayer[]; userId?: string }) {
 	return (
 		<section className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5">
-			<h2 className={`text-[20px] font-bold tracking-[-0.02em] ${team.nameColor}`}>{team.name}</h2>
+			<h2 className={`text-[20px] font-bold tracking-[-0.02em] ${team.color}`}>{team.name}</h2>
 			<ul className="flex flex-col gap-2" aria-label={`${team.name} players`}>
 				{players.map((player) => (
 					<li key={player.userId} className="flex min-h-12 items-center justify-between gap-3 rounded-lg bg-page px-4 py-2">
@@ -77,9 +73,9 @@ function Roster({ team, players, userId }: { team: typeof TEAMS[number]; players
 function ConnectedTeammates({ teammates }: { teammates: GamePlayer[] }) {
 	if (teammates.length === 0) return null;
 	return (
-		<ul aria-label="Teammates" className="flex items-center gap-1.5">
+		<ul aria-label="Teammates" className="flex items-center gap-3">
 			{teammates.map((teammate) => (
-				<li key={teammate.userId} className="rounded-full border border-line bg-raised px-2.5 py-0.5 text-[13px] font-medium text-muted">
+				<li key={teammate.userId} className="text-[13px] font-medium text-muted">
 					{teammate.displayName}
 				</li>
 			))}
@@ -189,7 +185,7 @@ function GameContent() {
 		return (
 			<div className="flex h-screen flex-col bg-page font-sans text-ink">
 				<HomeTopBar
-					center={<ScoreLine scores={game.scores} myTeam={myTeam} time={<Clock seconds={game.secondsRemaining} running className="" />} />}
+					center={<ScoreLine scores={game.scores} myTeam={myTeam} time={<Clock seconds={game.secondsRemaining} running warn className="" />} />}
 					actions={(
 						<>
 							<ConnectedTeammates teammates={teammates.filter((entry) => entry.connected)} />
@@ -233,14 +229,13 @@ function GameContent() {
 					<div className="flex flex-wrap items-end justify-between gap-4">
 						<div className="flex flex-col gap-2">
 							<h1 className="text-4xl font-extrabold leading-[1.05] tracking-[-0.035em]">Match</h1>
-							<p className="text-[15px] text-muted">Two teams, the same problems, twenty minutes.</p>
+							<p className="text-[15px] text-muted">Two teams, the same problems, twenty minutes</p>
 						</div>
 						{joined && (
 							<div className="flex items-center gap-6">
-								<span className="font-mono text-sm font-semibold"><span className="text-primary">{game.scores.a}</span> – <span className="text-secondary">{game.scores.b}</span></span>
 								{banning && <span className="flex items-baseline gap-2"><span className="text-sm text-muted">Bans close in</span><Clock seconds={game.banSecondsRemaining} running /></span>}
 								{picking && <span className="flex items-baseline gap-2"><span className="text-sm text-muted">Picks close in</span><Clock seconds={game.pickSecondsRemaining} running /></span>}
-								{!banning && !picking && <Clock seconds={game.secondsRemaining} running={game.phase === 'playing'} />}
+								{!banning && !picking && <Clock seconds={game.secondsRemaining} running={game.phase === 'playing'} warn />}
 							</div>
 						)}
 					</div>
@@ -258,12 +253,13 @@ function GameContent() {
 							)}
 
 							<div className="grid gap-5 md:grid-cols-2">
-								{TEAMS.map((team) => (
+								{/* The player's own team first, in the primary color (US-5-T-22). */}
+								{teamsFor(myTeam).map((team) => (
 									<Roster key={team.id} team={team} players={game.players.filter((player) => player.team === team.id)} userId={user?.id} />
 								))}
 							</div>
 
-							{banning && <BanScreen problems={game.problemPool} playerCount={game.players.length} onBan={ban} />}
+							{banning && <BanScreen problems={game.problemPool} playerCount={game.players.length} myTeam={myTeam} onBan={ban} />}
 
 							{picking && myTeam && (
 								<PickScreen

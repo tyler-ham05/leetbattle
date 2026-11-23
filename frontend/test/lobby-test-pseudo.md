@@ -21,7 +21,7 @@
  // Lobby should handle players who have not joined
  //  - When the current user is not in the lobby, a "Join lobby" button should be shown
  //  - Clicking "Join lobby" should send a join event to the server
- //  - When the lobby has 6 players and the user is not in it, "This lobby is full." should be displayed
+ //  - When the lobby has 6 players and the user is not in it, "This lobby is full" should be displayed
  //  - When the lobby is full, the "Join lobby" button should be disabled
 
  // Lobby should show connection state
@@ -40,7 +40,7 @@
  //  - Clicking "2v2" should send a set-team-size event with 2
  //  - A player who is not the host should not see the team size options
  //  - With a team size of 2 and 2 players ready, the status should display "2/4 players ready"
- //  - With a team size of 1 and 2 players in the lobby, "This lobby is full." should be displayed to a player who has not joined
+ //  - With a team size of 1 and 2 players in the lobby, "This lobby is full" should be displayed to a player who has not joined
 
  // Players should be able to change their display name
  //  - Typing a new name and clicking "Save name" should send a set-name event with the trimmed name

@@ -8,14 +8,19 @@ import { useAuth } from '../login/context';
 import HomeTopBar from '../_home/components/topbar';
 import PageLoader, { LOADER_MS } from '../_shared/page-loader';
 import { prefersReducedMotion } from '../_shared/motion';
+import { teamsFor } from '../_shared/teams';
 import { useLobbySocket } from './socket-context';
 import type { LobbyPlayer, TeamId } from './socket-context';
 
-// Team 1 sits on the left and enters from the left; Team 2 is mirrored on the right.
-const TEAMS: { id: TeamId; name: string; nameColor: string; bar: string; tint: string; check: string; mirrored: boolean }[] = [
-	{ id: 'a', name: 'Team 1', nameColor: 'text-primary', bar: 'bg-primary', tint: 'bg-primary/10', check: 'stroke-primary', mirrored: false },
-	{ id: 'b', name: 'Team 2', nameColor: 'text-secondary', bar: 'bg-secondary', tint: 'bg-secondary/10', check: 'stroke-secondary', mirrored: true },
+// The two sides of the arena. The left one enters from the left in the primary
+// color; the right one is mirrored, in the secondary color. Which team sits
+// where comes from teamsFor: the user's own team on the left once seated
+// (US-5-T-22), otherwise Team 1 then Team 2.
+const SIDES = [
+	{ nameColor: 'text-primary', bar: 'bg-primary', tint: 'bg-primary/10', check: 'stroke-primary', mirrored: false },
+	{ nameColor: 'text-secondary', bar: 'bg-secondary', tint: 'bg-secondary/10', check: 'stroke-secondary', mirrored: true },
 ];
+type Side = typeof SIDES[number] & { id: TeamId; name: string };
 
 const TEAM_SIZES = [1, 2, 3];
 
@@ -25,7 +30,7 @@ const FILLED = 'lb-press-lift disabled:opacity-40';
 
 // A team's bar above the arena: it fills in from the outer edge as seats are
 // taken, and drains into VS while the match counts down (US-5-T-20).
-function TeamBar({ team, fill, draining, seconds }: { team: typeof TEAMS[number]; fill: number; draining: boolean; seconds: number | null }) {
+function TeamBar({ team, fill, draining, seconds }: { team: Side; fill: number; draining: boolean; seconds: number | null }) {
 	// The drain lasts as long as the countdown had left when it started.
 	const drainSeconds = useRef<number | null>(null);
 	if (draining && drainSeconds.current === null) drainSeconds.current = seconds ?? 3;
@@ -63,6 +68,7 @@ function LobbyContent() {
 	}, [connect]);
 
 	const currentPlayer = lobby?.players.find((player) => player.userId === user?.id);
+	const teams: Side[] = teamsFor(currentPlayer?.team).map((shown, i) => ({ ...SIDES[i], id: shown.id, name: shown.name }));
 	// Only the match's players move to it; someone watching the lobby stays put.
 	const joiningMatch = Boolean((matchReadiness || gameStarted) && currentPlayer);
 
@@ -113,7 +119,7 @@ function LobbyContent() {
 	if (isLoading) {
 		headline = 'Connecting to lobby…';
 	} else if (!currentPlayer) {
-		headline = full ? 'This lobby is full.' : 'You have not joined this lobby yet.';
+		headline = full ? 'This lobby is full' : 'You have not joined this lobby yet';
 	} else if (joiningMatch) {
 		headline = 'Joining match…';
 	}
@@ -121,7 +127,7 @@ function LobbyContent() {
 	const nameDraft = nameInput || currentPlayer?.displayName || '';
 	const nameInvalid = !connected || nameDraft.trim().length < 1 || nameDraft.trim().length > 24 || nameDraft.trim() === currentPlayer?.displayName;
 
-	function seatRow(player: LobbyPlayer, team: typeof TEAMS[number]) {
+	function seatRow(player: LobbyPlayer, team: Side) {
 		const isMe = player.userId === user?.id;
 		return (
 			<li
@@ -221,7 +227,7 @@ function LobbyContent() {
 					{error && <div role="alert" className="mt-6 w-full rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">{error.message}</div>}
 
 					<div aria-hidden="true" className="mt-7 grid w-full grid-cols-[minmax(0,1fr)_72px_minmax(0,1fr)] items-center">
-						{TEAMS.map((team) => (
+						{teams.map((team) => (
 							<Fragment key={team.id}>
 								{team.mirrored && (
 									<span className={`text-center font-mono text-sm font-bold tracking-[0.2em] transition-colors duration-500 ${allReady ? 'text-ink' : 'text-muted'}`}>VS</span>
@@ -237,12 +243,11 @@ function LobbyContent() {
 					</div>
 
 					<div className="mt-9 grid w-full gap-5 md:grid-cols-[minmax(0,1fr)_72px_minmax(0,1fr)]">
-						{TEAMS.map((team) => {
+						{teams.map((team) => {
 							const teamPlayers = players.filter((player) => player.team === team.id);
 							const openSeats = Math.max(teamSize - teamPlayers.length, 0);
 							const isMyTeam = currentPlayer?.team === team.id;
-							// Once seated, the teams are named from the user's side (sprint 4 polish).
-							const name = currentPlayer?.team ? (isMyTeam ? 'Your team' : 'Rival team') : team.name;
+							const name = team.name;
 							// An open seat on any team but the user's own is how they join or switch.
 							const seatAction = currentPlayer && !isMyTeam ? (currentPlayer.team ? 'Switch to rival team' : `Join ${team.name}`) : null;
 

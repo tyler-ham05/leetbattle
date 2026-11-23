@@ -303,16 +303,18 @@ describe('game page match view', () => {
 		configureConnectedGame({ phase: 'banning', banSecondsRemaining: 25, problemPool: banPool });
 		render(<GamePage />);
 
-		const rosters = [screen.getByRole('list', { name: 'Team 1 players' }), screen.getByRole('list', { name: 'Team 2 players' })];
+		// The user's own team is listed as "Your team", the other as "Rival team" (US-5-T-22).
+		const rosters = [screen.getByRole('list', { name: 'Your team players' }), screen.getByRole('list', { name: 'Rival team players' })];
 		const shown = roster.filter((entry) => rosters.some((list) => within(list).queryByText(entry.displayName) !== null));
 		expect(shown).toHaveLength(6);
 	});
 
-	it('US-6-T-2 lists Team 1\'s three players', () => {
+	it('US-6-T-2 lists the user\'s own team\'s three players', () => {
 		configureConnectedGame({ phase: 'banning', banSecondsRemaining: 25, problemPool: banPool });
 		render(<GamePage />);
 
-		const teamOne = screen.getByRole('list', { name: 'Team 1 players' });
+		// Ada is on team a, shown as "Your team" (US-5-T-22).
+		const teamOne = screen.getByRole('list', { name: 'Your team players' });
 		expect(within(teamOne).getAllByRole('listitem')).toHaveLength(3);
 	});
 
@@ -891,12 +893,12 @@ describe('game page during the ban phase', () => {
 		expect(screen.getByText('1 of 4 bans made')).toBeTruthy();
 	});
 
-	it('shows four ban markers with four players', () => {
+	it('shows "0 of 4 bans made" with four players and no bans yet', () => {
 		configureBanning({ players: fourPlayers });
-		const { container } = render(<GamePage />);
+		render(<GamePage />);
 
-		// One marker per player, filled or not.
-		expect(container.querySelectorAll('[data-seat]')).toHaveLength(4);
+		// The progress is a plain count; the marker pips are gone (US-5-T-22).
+		expect(screen.getByText('0 of 4 bans made')).toBeTruthy();
 	});
 });
 

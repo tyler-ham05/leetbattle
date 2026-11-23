@@ -85,7 +85,7 @@ describe('changing username', () => {
 		await userEvent.type(name, 'Grace');
 		await userEvent.click(screen.getByRole('button', { name: 'Save name' }));
 
-		expect(await screen.findByText('Name updated.')).toBeTruthy();
+		expect(await screen.findByText('Name updated')).toBeTruthy();
 		const [request] = requestsOf(fetchMock);
 		expect(request.url).toMatch(/\/account$/);
 		expect(request.method).toBe('PATCH');
@@ -110,7 +110,7 @@ describe('changing password', () => {
 		await userEvent.type(screen.getByLabelText('New password'), 'new-password-1');
 		await userEvent.click(screen.getByRole('button', { name: 'Change password' }));
 
-		expect(await screen.findByText('Password changed.')).toBeTruthy();
+		expect(await screen.findByText('Password changed')).toBeTruthy();
 		const [request] = requestsOf(fetchMock);
 		expect(request.url).toMatch(/\/password$/);
 		expect(request.body).toEqual({
@@ -128,7 +128,7 @@ describe('changing password', () => {
 		await userEvent.click(screen.getByRole('button', { name: 'Change password' }));
 
 		expect(fetchMock).not.toHaveBeenCalled();
-		expect(screen.queryByText('Password changed.')).toBeNull();
+		expect(screen.queryByText('Password changed')).toBeNull();
 	});
 
 	it('shows an error and keeps the password unchanged when the current password is wrong', async () => {
@@ -139,7 +139,7 @@ describe('changing password', () => {
 		await userEvent.click(screen.getByRole('button', { name: 'Change password' }));
 
 		expect(await screen.findByText('Current password is incorrect')).toBeTruthy();
-		expect(screen.queryByText('Password changed.')).toBeNull();
+		expect(screen.queryByText('Password changed')).toBeNull();
 	});
 });
 

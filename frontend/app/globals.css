@@ -740,15 +740,9 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 .lb-press { transition: scale 150ms ease-out, transform 0.18s cubic-bezier(0.2, 0.7, 0.2, 1), background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, opacity 0.25s ease; }
 .lb-press-lift:hover:not(:disabled) { transform: translateY(-1px); }
 
-/* Lobby: one marker per seat, filled with the colour of the team sitting in it. */
-.lb-seat-pip {
-  width: 22px; height: 8px; border-radius: 2px;
-  background: var(--lb-line);
-  transition: background-color 0.45s ease, transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-.lb-seat-pip[data-seat="a"] { background: var(--lb-primary); transform: scaleY(1.25); }
-.lb-seat-pip[data-seat="b"] { background: var(--lb-secondary); transform: scaleY(1.25); }
-.lb-seat-pip[data-seat="waiting"] { background: var(--lb-muted); }
+/* Ban screen: a line strikes across a question's card as its ban lands. */
+@keyframes lb-ban-strike { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.lb-ban-strike { transform-origin: left; animation: lb-ban-strike 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 
 /* Lobby: a player slides into their seat, the ready check mark draws itself,
    each countdown second drops in and a line drains while the countdown runs. */
@@ -907,7 +901,8 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 @media (prefers-reduced-motion: reduce) {
   .lb-spin { animation-duration: 1.6s; }
   .lb-auth-check circle, .lb-auth-check path { stroke-dashoffset: 0; animation: none; }
-  .lb-press, .lb-seat-pip, .lb-fold { transition: none; }
+  .lb-press, .lb-fold { transition: none; }
+  .lb-ban-strike { animation: none; }
   .lb-enter, .lb-shake, .lb-tooltip, [data-step] { animation: none !important; }
   .lb-seat-in, .lb-fade-in, .lb-second { animation: none; }
   .lb-rise, .lb-in-a, .lb-in-b, .lb-digit { animation: none; }

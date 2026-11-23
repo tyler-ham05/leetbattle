@@ -25,8 +25,8 @@
 
  // The ban screen should show how many bans are in
  //  - When three players have banned, "3 of 6 bans made" should be displayed
- //  - The screen should always display six ban markers
- //  - When two Team 2 players have banned, two ban markers should be marked for Team 2
+ //  - The screen should always display six ban markers (replaced by a plain "0 of 6 bans made" count, US-5-T-22)
+ //  - When two Team 2 players have banned, two ban markers should be marked for Team 2 (dropped with the markers, US-5-T-22)
 
 // ============================================================================
 // DRAFT (Claude, for review): changes to the Issue #69 tests above now that bans are real.
