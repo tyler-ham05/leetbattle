@@ -50,6 +50,8 @@
 //  - Once the cooldown has passed, the team should be able to submit again
 // Game should end once a team solves every problem
 //  - When a team has solved every problem in the pool, that team should win with reason "solved"
+//  - Before "game:ended", the players should get a final game state that counts the last problem's points (US-4-T-7)
+//  - Before "game:ended", the players should get a final game state that shows the last problem as solved (US-4-T-7)
 // Game should decide the winner when time runs out
 //  - When team a has the higher score, team a should win
 //  - When team b has the higher score, team b should win
@@ -760,6 +762,39 @@ describe('winning by solving every problem', () => {
 		const ended = nextEvent<GameResult>(sockets[1], 'game:ended');
 		await submit(sockets[0], pool[pool.length - 1].questionId, 'correct');
 		expect(await ended).toEqual({ winner: 'a', reason: 'solved' });
+	});
+
+	// US-4-T-7 bug: solving the last problem ended the game before the new
+	// state went out, so players kept the score from before that solve and
+	// the result screen was short the last problem's points. Solves all but
+	// the last problem, then returns the last game state the other player had
+	// before the game ended and the score from before the last solve.
+	async function finalStateAfterSolvingEverything() {
+		const { sockets, pool } = await playingGame(1, 1);
+		// Keeps the newest game state the other player has received.
+		let latest: GameStatePayload | null = null;
+		sockets[1].on('game:state', (state: GameStatePayload) => {
+			latest = state;
+		});
+		for (const problem of pool.slice(0, -1)) {
+			await submit(sockets[0], problem.questionId, 'correct');
+			await pause(AFTER_COOLDOWN_MS);
+		}
+		const scoreBefore = (latest as GameStatePayload | null)?.scores.a ?? 0;
+		const ended = nextEvent<GameResult>(sockets[1], 'game:ended');
+		await submit(sockets[0], pool[pool.length - 1].questionId, 'correct');
+		await ended;
+		return { final: latest as unknown as GameStatePayload, scoreBefore, lastTaskId: pool[pool.length - 1].taskId };
+	}
+
+	it('US-4-T-7 sends a final game state with the last problem\'s points before the game ends', async () => {
+		const { final, scoreBefore } = await finalStateAfterSolvingEverything();
+		expect(final.scores.a).toBeGreaterThan(scoreBefore);
+	});
+
+	it('US-4-T-7 sends a final game state that shows the last problem as solved before the game ends', async () => {
+		const { final, lastTaskId } = await finalStateAfterSolvingEverything();
+		expect(final.solved.a).toContain(lastTaskId);
 	});
 });
 

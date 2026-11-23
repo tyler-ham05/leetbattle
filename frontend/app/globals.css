@@ -740,15 +740,9 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 .lb-press { transition: scale 150ms ease-out, transform 0.18s cubic-bezier(0.2, 0.7, 0.2, 1), background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, opacity 0.25s ease; }
 .lb-press-lift:hover:not(:disabled) { transform: translateY(-1px); }
 
-/* Lobby: one marker per seat, filled with the colour of the team sitting in it. */
-.lb-seat-pip {
-  width: 22px; height: 8px; border-radius: 2px;
-  background: var(--lb-line);
-  transition: background-color 0.45s ease, transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-.lb-seat-pip[data-seat="a"] { background: var(--lb-primary); transform: scaleY(1.25); }
-.lb-seat-pip[data-seat="b"] { background: var(--lb-secondary); transform: scaleY(1.25); }
-.lb-seat-pip[data-seat="waiting"] { background: var(--lb-muted); }
+/* Ban screen: a line strikes across a question's card as its ban lands. */
+@keyframes lb-ban-strike { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.lb-ban-strike { transform-origin: left; animation: lb-ban-strike 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 
 /* Lobby: a player slides into their seat, the ready check mark draws itself,
    each countdown second drops in and a line drains while the countdown runs. */
@@ -907,7 +901,8 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 @media (prefers-reduced-motion: reduce) {
   .lb-spin { animation-duration: 1.6s; }
   .lb-auth-check circle, .lb-auth-check path { stroke-dashoffset: 0; animation: none; }
-  .lb-press, .lb-seat-pip, .lb-fold { transition: none; }
+  .lb-press, .lb-fold { transition: none; }
+  .lb-ban-strike { animation: none; }
   .lb-enter, .lb-shake, .lb-tooltip, [data-step] { animation: none !important; }
   .lb-seat-in, .lb-fade-in, .lb-second { animation: none; }
   .lb-rise, .lb-in-a, .lb-in-b, .lb-digit { animation: none; }
@@ -927,4 +922,38 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
   .lb-demo-loop { animation: none !important; }
   .lb-demo-line { width: auto; }
   .lb-result-slam, .lb-result-sink, .lb-result-jolt, .lb-result-rise, .lb-result-crown { animation: none; }
+}
+
+/* =========================================================
+   LIVE SCORE (US-4-T-6)
+   ========================================================= */
+
+/* A score that just went up bumps once. */
+@keyframes lb-score-bump {
+  from { transform: scale(0.97); }
+  to   { transform: none; }
+}
+/* The "<Team> solved Q2" line slides down from under the top bar. */
+@keyframes lb-feed-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+.lb-score-bump { display: inline-block; animation: lb-score-bump 0.2s ease-out both; }
+.lb-feed-in { animation: lb-feed-in 0.2s ease-out both; }
+
+/* Solved first (score-feed.tsx): the home loader's katana slice as a pop-up
+   over the editor. Same timing, but in a box with no cover: the cut is
+   measured on the box (container units) and the halves glide a short way. */
+@keyframes lb-kp-part-top { to { transform: translate(72px, -28px); opacity: 0; } }
+@keyframes lb-kp-part-bottom { to { transform: translate(-72px, 28px); opacity: 0; } }
+.lb-k-pop { position: relative; width: min(560px, 86%); height: 280px; container-type: size; }
+.lb-k-pop .lb-k-piece, .lb-k-pop .lb-k-whole { background: transparent; }
+.lb-k-pop .lb-k-line { width: hypot(100cqw, 40cqh); transform: translateY(-50%) rotate(atan2(-40cqh, 100cqw)); }
+.lb-k-pop .lb-k-seam { height: 6px; }
+.lb-k-pop .lb-k-part-top { animation-name: lb-kp-part-top; }
+.lb-k-pop .lb-k-part-bottom { animation-name: lb-kp-part-bottom; }
+.lb-k-pop .lb-k-word { font-size: min(128px, 26cqw); }
+
+@media (prefers-reduced-motion: reduce) {
+  .lb-score-bump, .lb-feed-in { animation: none; }
 }

@@ -43,7 +43,7 @@
 
 // The pick screen should show how many picks are in, like the ban screen's ban count
 //  - It should display "X of teamSize picks made" for the player's own team
-//  - It should display one pick marker per teammate
+//  - It should display one pick marker per teammate (replaced by a plain "0 of 2 picks made" count, US-5-T-22)
 
 // The pick screen should show a timer like the ban screen
 //  - The time left to pick should be displayed

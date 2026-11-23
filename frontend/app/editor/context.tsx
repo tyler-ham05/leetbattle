@@ -10,7 +10,17 @@ import { getToken } from '../login/controller';
 import { useOptionalLobbySocket } from '../lobby/socket-context';
 import { APIService, parseTestCases, Problem, RunResult, SubmitResult, TestCase } from './controller';
 
-export type LoadingAction = 'run' | 'submit' | null;
+export // One question's latest Run result, Submit result and refused-submit message.
+interface QuestionResults {
+	run?: RunResult | null;
+	submit?: SubmitResult | null;
+	submitError?: string | null;
+}
+
+type LoadingAction = 'run' | 'submit' | null;
+// Where the player stands on a question from their own submissions: solved
+// once one came back Accepted, attempted when they submitted but never got it.
+export type QuestionStatus = 'solved' | 'attempted';
 
 export interface EditorTab {
 	id: string;
@@ -84,6 +94,8 @@ export interface EditorContextValue {
 	submitError: string | null;
 	loadingAction: LoadingAction;
 	isLoading: boolean;
+	// By question_id; a question never submitted has no entry.
+	questionStatus: Record<number, QuestionStatus>;
 	// True when this provider is showing someone else's workspace: nothing can
 	// be edited, created, renamed or removed, and nothing is ever sent anywhere.
 	readOnly: boolean;
@@ -133,11 +145,12 @@ export function EditorProvider({ children, questionIds, submit, shareCode, readO
 	// teammate's tabs never touches their activeTabId, only this provider's own view of it.
 	const [localActiveTabId, setLocalActiveTabId] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
-	const [runResult, setRunResult] = useState<RunResult | null>(null);
-	const [submitResult, setSubmitResult] = useState<SubmitResult | null>(null);
-	const [submitError, setSubmitError] = useState<string | null>(null);
+	// Run and Submit results by question, so each question shows only its own
+	// (they used to be shared, so one question's result showed on the others).
+	const [results, setResults] = useState<Record<number, QuestionResults>>({});
 	const shareTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 	const [loadingAction, setLoadingAction] = useState<LoadingAction>(null);
+	const [questionStatus, setQuestionStatus] = useState<Record<number, QuestionStatus>>({});
 	const socketRef = useRef<Socket | null>(null);
 	const allTestCases = currentQuestion ? parseTestCases(currentQuestion.input_output) : [];
 	const testCases = allTestCases.slice(0, VISIBLE_CASES);
@@ -149,6 +162,11 @@ export function EditorProvider({ children, questionIds, submit, shareCode, readO
 	const activeTabId = (readOnly && localActiveTabId) || workspace.activeTabId;
 	const activeTab = workspace.tabs.find((tab) => tab.id === activeTabId) ?? workspace.tabs[0];
 	const code = activeTab?.code ?? '';
+	const shownResults = currentQuestion ? results[currentQuestion.question_id] : undefined;
+	// Saves one kind of result for one question, leaving its others alone.
+	const saveResult = (questionId: number, update: QuestionResults) => {
+		setResults((current) => ({ ...current, [questionId]: { ...current[questionId], ...update } }));
+	};
 
 	const applyRemoteWorkspace = useCallback((payload: unknown) => {
 		if (!payload || typeof payload !== 'object') return;
@@ -303,9 +321,10 @@ export function EditorProvider({ children, questionIds, submit, shareCode, readO
 		}
 		setLoadingAction('run');
 		const api = new APIService();
+		const questionId = currentQuestion.question_id;
 		api
-			.run(code, testCases, currentQuestion.question_id)
-			.then(setRunResult)
+			.run(code, testCases, questionId)
+			.then((run) => saveResult(questionId, { run }))
 			.catch((err) => setError(err.message))
 			.finally(() => setLoadingAction(null));
 	};
@@ -315,13 +334,21 @@ export function EditorProvider({ children, questionIds, submit, shareCode, readO
 			return;
 		}
 		setLoadingAction('submit');
-		setSubmitError(null);
 		const api = new APIService();
-		(submit ?? api.submit.bind(api))(currentQuestion.question_id, code)
-			.then(setSubmitResult)
+		const questionId = currentQuestion.question_id;
+		saveResult(questionId, { submitError: null });
+		(submit ?? api.submit.bind(api))(questionId, code)
+			.then((result) => {
+				saveResult(questionId, { submit: result });
+				// A solved question stays solved, whatever comes after.
+				setQuestionStatus((current) => ({
+					...current,
+					[questionId]: result.verdict === 'Accepted' || current[questionId] === 'solved' ? 'solved' : 'attempted',
+				}));
+			})
 			// A refused match submission is shown with the results; in practice a
 			// failure stays a page error, as before.
-			.catch((err) => (submit ? setSubmitError(err.message) : setError(err.message)))
+			.catch((err) => (submit ? saveResult(questionId, { submitError: err.message }) : setError(err.message)))
 			.finally(() => setLoadingAction(null));
 	};
 
@@ -345,11 +372,12 @@ export function EditorProvider({ children, questionIds, submit, shareCode, readO
 				error,
 				onRun,
 				onSubmit,
-				runResult,
-				submitResult,
-				submitError,
+				runResult: shownResults?.run ?? null,
+				submitResult: shownResults?.submit ?? null,
+				submitError: shownResults?.submitError ?? null,
 				loadingAction,
 				isLoading: loadingAction !== null,
+				questionStatus,
 				readOnly,
 				ownerName,
 			}}

@@ -163,11 +163,12 @@ describe('picked questions', () => {
 		expect(screen.getByText('Grace').className).toContain('text-primary');
 	});
 
-	it('uses the secondary colour for a Team 2 picker\'s name', () => {
-		// Viewed from Team 2: Alan's pick is on team b's slot.
+	it('uses the primary colour for a Team 2 picker\'s name when viewed from Team 2', () => {
+		// Viewed from Team 2: Alan's pick is on team b's slot. The viewer's own
+		// team is always the primary colour (US-5-T-22).
 		renderPick(withPicks({ 'maximum-depth-of-binary-tree': ALAN }), 3, 'b');
 
-		expect(screen.getByText('Alan').className).toContain('text-secondary');
+		expect(screen.getByText('Alan').className).toContain('text-primary');
 	});
 
 	it('ignores a pick made by the other team on the same problem', () => {
@@ -208,16 +209,11 @@ describe('pick count', () => {
 		expect(screen.getByText('1 of 3 picks made')).toBeTruthy();
 	});
 
-	it('shows one pick marker per teammate', () => {
-		// A 2v2's team of two.
-		const { container } = renderPick(remaining.slice(0, 2), 2);
+	it('shows "0 of 2 picks made" for a team of two before anyone has picked', () => {
+		// A 2v2's team of two. The count is plain text now; the marker pips
+		// were removed (US-5-T-22).
+		renderPick(remaining.slice(0, 2), 2);
 
-		expect(container.querySelectorAll('[data-seat]')).toHaveLength(2);
-	});
-
-	it('marks one pick marker as filled once a teammate has picked', () => {
-		const { container } = renderPick(withPicks({ 'search-insert-position': ADA }), 3);
-
-		expect(container.querySelectorAll('[data-seat="a"]')).toHaveLength(1);
+		expect(screen.getByText('0 of 2 picks made')).toBeTruthy();
 	});
 });

@@ -305,16 +305,18 @@ describe('game page match view', () => {
 		configureConnectedGame({ phase: 'banning', banSecondsRemaining: 25, problemPool: banPool });
 		render(<GamePage />);
 
-		const rosters = [screen.getByRole('list', { name: 'Team 1 players' }), screen.getByRole('list', { name: 'Team 2 players' })];
+		// The user's own team is listed as "Your team", the other as "Rival team" (US-5-T-22).
+		const rosters = [screen.getByRole('list', { name: 'Your team players' }), screen.getByRole('list', { name: 'Rival team players' })];
 		const shown = roster.filter((entry) => rosters.some((list) => within(list).queryByText(entry.displayName) !== null));
 		expect(shown).toHaveLength(6);
 	});
 
-	it('US-6-T-2 lists Team 1\'s three players', () => {
+	it('US-6-T-2 lists the user\'s own team\'s three players', () => {
 		configureConnectedGame({ phase: 'banning', banSecondsRemaining: 25, problemPool: banPool });
 		render(<GamePage />);
 
-		const teamOne = screen.getByRole('list', { name: 'Team 1 players' });
+		// Ada is on team a, shown as "Your team" (US-5-T-22).
+		const teamOne = screen.getByRole('list', { name: 'Your team players' });
 		expect(within(teamOne).getAllByRole('listitem')).toHaveLength(3);
 	});
 
@@ -341,14 +343,15 @@ describe('game page match view', () => {
 		expect(within(screen.getAllByRole('banner')[0]).getByTestId('score-a').textContent).toBe('120');
 	});
 
-	it('US-6-T-8 updates the shown score when a new game state arrives', () => {
+	it('US-6-T-8 updates the shown score when a new game state arrives', async () => {
 		configureConnectedGame({ scores: { a: 0, b: 0 } });
 		const { rerender } = render(<GamePage />);
 		configureConnectedGame({ scores: { a: 150, b: 0 } });
 
 		rerender(<GamePage />);
 
-		expect(screen.getByText('150')).toBeTruthy();
+		// The score counts up to its new value over 0.6s (US-4-T-6), so wait for it to land.
+		expect(await screen.findByText('150', {}, { timeout: 3000 })).toBeTruthy();
 	});
 });
 
@@ -893,12 +896,12 @@ describe('game page during the ban phase', () => {
 		expect(screen.getByText('1 of 4 bans made')).toBeTruthy();
 	});
 
-	it('shows four ban markers with four players', () => {
+	it('shows "0 of 4 bans made" with four players and no bans yet', () => {
 		configureBanning({ players: fourPlayers });
-		const { container } = render(<GamePage />);
+		render(<GamePage />);
 
-		// One marker per player, filled or not.
-		expect(container.querySelectorAll('[data-seat]')).toHaveLength(4);
+		// The progress is a plain count; the marker pips are gone (US-5-T-22).
+		expect(screen.getByText('0 of 4 bans made')).toBeTruthy();
 	});
 });
 
@@ -1070,7 +1073,9 @@ describe('game page editor after the bans', () => {
 
 		await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
 
-		expect(await screen.findByText('Passed: 3 / 3')).toBeTruthy();
+		// US-5-T-23: Passed is a label over a block in the submission result.
+		const result = await screen.findByRole('region', { name: 'Submission result' });
+		expect(within(result).getByText('Passed').nextElementSibling?.textContent).toBe('3 / 3');
 	});
 
 	it('US-6-T-6 shows a readable message when the game refuses a submission', async () => {

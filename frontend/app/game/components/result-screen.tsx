@@ -3,18 +3,22 @@
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
 import type { TeamId } from '../../lobby/socket-context';
-import type { GamePlayer, GameResult } from '../socket-context';
+import type { GamePlayer, GameResult, PoolProblem } from '../socket-context';
 import { useCountUp } from '../../_shared/use-count-up';
 import { teamsFor } from '../../_shared/teams';
 import type { ShownTeam } from '../../_shared/teams';
+import { titleFromTaskId } from '../../editor/components/question-panel';
 
 // When things come in, in seconds: the word lands and moves up first, then
 // the halves rise, the scores count up, the crowns drop and the buttons follow.
 const HALVES_AT = 1.55;
-const COUNT_FROM_MS = 1500;
-const COUNT_FOR_MS = 700;
-const CROWNS_AT = 1.85;
-const BUTTONS_AT = 2.2;
+// The halves are fully in at 2.05s, so the count starts just before that and
+// runs long enough to be seen; the crowns drop as it lands.
+const COUNT_FROM_MS = 1900;
+const COUNT_FOR_MS = 1100;
+const CROWNS_AT = 2.95;
+const BREAKDOWN_AT = 3.05;
+const BUTTONS_AT = 3.25;
 
 const BUTTON = 'lb-press inline-flex min-h-11 items-center rounded-lg px-5 text-sm font-semibold';
 
@@ -35,7 +39,7 @@ function TeamHalf({ team, score, players, won, side }: { team: ShownTeam; score:
 	const left = side === 'left';
 	const name = <h2 className={`text-[32px] font-extrabold tracking-[-0.03em] ${team.color}`}>{team.name}</h2>;
 	const number = (
-		<span data-testid="final-score" className={`text-8xl font-black leading-[0.8] tracking-[-0.05em] tabular-nums ${won ? team.color : 'text-muted'}`}>{shown}</span>
+		<span data-testid="final-score" className={`text-8xl font-black leading-[0.8] tracking-[-0.05em] ${won ? team.color : 'text-muted'}`}>{shown}</span>
 	);
 
 	return (
@@ -58,10 +62,44 @@ function TeamHalf({ team, score, players, won, side }: { team: ShownTeam; score:
 	);
 }
 
+// Under the halves (US-4-T-6): each question in the pool, by position and
+// title, and whether each team solved it.
+function Breakdown({ teams, pool, solved }: { teams: ShownTeam[]; pool: PoolProblem[]; solved: Record<TeamId, string[]> }) {
+	return (
+		<table aria-label="Questions" className="lb-result-rise mx-auto w-full max-w-2xl text-left text-[15px]" style={{ '--d': `${BREAKDOWN_AT}s` } as CSSProperties}>
+			<thead>
+				<tr className="border-b border-line text-sm text-muted">
+					<th className="py-2 font-medium">Question</th>
+					{teams.map((team) => <th key={team.id} className="w-32 py-2 font-medium">{team.name}</th>)}
+				</tr>
+			</thead>
+			<tbody>
+				{pool.map((problem, i) => (
+					<tr key={problem.taskId} className="border-b border-line">
+						<th scope="row" className="py-2.5 font-medium text-ink">
+							<span className="font-mono text-muted">Q{i + 1}</span> {titleFromTaskId(problem.taskId)}
+						</th>
+						{teams.map((team) => (solved[team.id].includes(problem.taskId)
+							? <td key={team.id} className={`py-2.5 font-semibold ${team.color}`}>Solved</td>
+							: <td key={team.id} className="py-2.5 text-muted">–</td>))}
+					</tr>
+				))}
+			</tbody>
+		</table>
+	);
+}
+
 // The end of the match. myTeam is the viewer's team (undefined when they
 // aren't one of the players), so a draw or an onlooker gets neither Victory!
 // nor Defeat, just who won.
-export default function ResultScreen({ result, myTeam, scores, players }: { result: GameResult; myTeam?: TeamId; scores: Record<TeamId, number>; players: GamePlayer[] }) {
+export default function ResultScreen({ result, myTeam, scores, players, pool, solved }: {
+	result: GameResult;
+	myTeam?: TeamId;
+	scores: Record<TeamId, number>;
+	players: GamePlayer[];
+	pool: PoolProblem[];
+	solved: Record<TeamId, string[]>;
+}) {
 	const winner = result.winner;
 	const won = winner !== null && winner === myTeam;
 	const word = winner === null ? 'Draw' : myTeam ? (won ? 'Victory!' : 'Defeat') : null;
@@ -90,6 +128,8 @@ export default function ResultScreen({ result, myTeam, scores, players }: { resu
 					/>
 				))}
 			</div>
+
+			<Breakdown teams={teams} pool={pool} solved={solved} />
 
 			<div className="lb-result-rise flex flex-wrap justify-center gap-3" style={{ '--d': `${BUTTONS_AT}s` } as CSSProperties}>
 				<Link href="/lobby" className={`${BUTTON} bg-primary text-on-primary`}>Play again</Link>
