@@ -105,6 +105,9 @@ interface GameSocketContextValue {
 	shareCode: (_questionId: number, _workspace: EditorWorkspace) => void;
 	// Teammates' saved workspaces, by userId then questionId, read only.
 	teammateCode: TeammateCode;
+	// US-6-T-13: the questionId of each teammate's most recent shared edit, by
+	// userId; a teammate who hasn't edited anything has no entry.
+	teammateQuestion: Record<string, number>;
 	clearError: () => void;
 }
 
@@ -148,6 +151,7 @@ export function GameSocketProvider({ children }: { children: ReactNode }) {
 	const [result, setResult] = useState<GameResult | null>(null);
 	const [error, setError] = useState<GameError | null>(null);
 	const [teammateCode, setTeammateCode] = useState<TeammateCode>({});
+	const [teammateQuestion, setTeammateQuestion] = useState<Record<string, number>>({});
 	const socketRef = useRef<{ gameId: string; socket: Socket } | null>(null);
 
 	// Saves one teammate's workspace for one question, replacing (not merging
@@ -157,6 +161,8 @@ export function GameSocketProvider({ children }: { children: ReactNode }) {
 			...current,
 			[userId]: { ...current[userId], [questionId]: workspace },
 		}));
+		// The latest edit wins, so a snapshot's last entry per teammate is kept.
+		setTeammateQuestion((current) => ({ ...current, [userId]: questionId }));
 	}, []);
 
 	// Opens the socket for one match. GameService checks the login token and
@@ -206,6 +212,7 @@ export function GameSocketProvider({ children }: { children: ReactNode }) {
 		setGame(null);
 		setResult(null);
 		setTeammateCode({});
+		setTeammateQuestion({});
 		nextSocket.connect();
 		return nextSocket;
 	}, [saveTeammateCode, user]);
@@ -242,7 +249,7 @@ export function GameSocketProvider({ children }: { children: ReactNode }) {
 
 	const clearError = useCallback(() => setError(null), []);
 	return (
-		<GameSocketContext.Provider value={{ socket, connected, game, result, error, connect, forfeit, ban, pick, submit, shareCode, teammateCode, clearError }}>
+		<GameSocketContext.Provider value={{ socket, connected, game, result, error, connect, forfeit, ban, pick, submit, shareCode, teammateCode, teammateQuestion, clearError }}>
 			{children}
 		</GameSocketContext.Provider>
 	);

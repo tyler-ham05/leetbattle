@@ -158,6 +158,8 @@ function configureGame(overrides: Record<string, unknown> = {}, teammateCode: Re
 		submit: vi.fn(),
 		shareCode: vi.fn(),
 		teammateCode,
+		// No teammate has edited anything yet (US-6-T-13).
+		teammateQuestion: {},
 	});
 }
 

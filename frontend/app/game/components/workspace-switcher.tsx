@@ -7,6 +7,10 @@ interface WorkspaceSwitcherProps {
 	// null means the viewer's own, editable workspace.
 	viewedUserId: string | null;
 	onSelect: (_userId: string | null) => void;
+	// US-6-T-13: the match's questions in pool order, and the questionId each
+	// teammate last edited, so their tab can say "Q2" for the second question.
+	questionIds?: number[];
+	teammateQuestion?: Record<string, number>;
 }
 
 const TAB = 'flex h-8 max-w-48 items-center gap-1.5 truncate rounded-md px-3 text-xs font-medium';
@@ -28,7 +32,13 @@ function DisconnectedIcon() {
 	);
 }
 
-export default function WorkspaceSwitcher({ teammates, viewedUserId, onSelect }: WorkspaceSwitcherProps) {
+// "Q2" for the second question in the pool; nothing before the teammate has edited anything.
+function questionLabel(questionIds: number[], questionId: number | undefined): string | null {
+	const index = questionId === undefined ? -1 : questionIds.indexOf(questionId);
+	return index === -1 ? null : `Q${index + 1}`;
+}
+
+export default function WorkspaceSwitcher({ teammates, viewedUserId, onSelect, questionIds = [], teammateQuestion = {} }: WorkspaceSwitcherProps) {
 	return (
 		<div role="tablist" aria-label="Workspace" className="flex h-10 shrink-0 items-center gap-1 border-b border-line bg-page px-2">
 			<button
@@ -40,21 +50,25 @@ export default function WorkspaceSwitcher({ teammates, viewedUserId, onSelect }:
 			>
 				You
 			</button>
-			{teammates.map((teammate) => (
-				<button
-					key={teammate.userId}
-					type="button"
-					role="tab"
-					aria-selected={viewedUserId === teammate.userId}
-					// Disconnected teammates stay viewable, just faded and marked.
-					aria-label={teammate.connected ? undefined : `${teammate.displayName}, disconnected`}
-					onClick={() => onSelect(teammate.userId)}
-					className={`${TAB} ${viewedUserId === teammate.userId ? SELECTED : UNSELECTED} ${teammate.connected ? '' : 'opacity-50'}`}
-				>
-					{!teammate.connected && <DisconnectedIcon />}
-					{teammate.displayName}
-				</button>
-			))}
+			{teammates.map((teammate) => {
+				const question = questionLabel(questionIds, teammateQuestion[teammate.userId]);
+				return (
+					<button
+						key={teammate.userId}
+						type="button"
+						role="tab"
+						aria-selected={viewedUserId === teammate.userId}
+						// Disconnected teammates stay viewable, just faded and marked.
+						aria-label={teammate.connected ? undefined : `${teammate.displayName}, disconnected`}
+						onClick={() => onSelect(teammate.userId)}
+						className={`${TAB} ${viewedUserId === teammate.userId ? SELECTED : UNSELECTED} ${teammate.connected ? '' : 'opacity-50'}`}
+					>
+						{!teammate.connected && <DisconnectedIcon />}
+						{teammate.displayName}
+						{question && <span className="text-muted">{question}</span>}
+					</button>
+				);
+			})}
 		</div>
 	);
 }
