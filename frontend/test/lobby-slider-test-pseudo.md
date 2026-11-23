@@ -44,3 +44,8 @@
 - Once seated, the other team's open seat should always show "Switch here"
 - Once seated, the user's own team's open seat should show "Open seat" and no "Switch here"
 - After switching teams, the user's row should enter from the other side
+
+## A short hint under the slider says how to use it
+- Before the player is ready, the hint should say "Drag, or swipe with two fingers"
+- Once the player is ready, the hint should say "Slide back to unready"
+- While waiting for players, there should be no hint (the slider already says "Waiting for players")

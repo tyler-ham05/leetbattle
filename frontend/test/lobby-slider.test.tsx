@@ -353,3 +353,25 @@ describe('seats stay put', () => {
 		expect(screen.getByText('Ada').closest('li')?.classList.contains('lb-cross-a')).toBe(true);
 	});
 });
+
+// A short line under the slider tells players how to use it, including the
+// two-finger swipe, which they might not guess.
+describe('hint under the slider', () => {
+	it('says how to ready up before the player is ready', () => {
+		configureLobby();
+		render(<LobbyPage />);
+		expect(screen.queryByText('Drag, or swipe with two fingers')).not.toBeNull();
+	});
+
+	it('says how to unready once the player is ready', () => {
+		configureLobby([player('u1', 'Ada', 'a', true), grace, katherine, alan, edsger, margaret]);
+		render(<LobbyPage />);
+		expect(screen.queryByText('Slide back to unready')).not.toBeNull();
+	});
+
+	it('shows no hint while waiting for players', () => {
+		configureLobby([ada, alan]);
+		render(<LobbyPage />);
+		expect(screen.queryByText('Drag, or swipe with two fingers')).toBeNull();
+	});
+});
