@@ -40,3 +40,23 @@
 - Once the halves have fully risen in, the score should still be counting (well below the final score)
 - Once the count is done, the score should show the final score
 - A winner's crown should only drop once the count has landed
+
+## Top bar score counts up
+- When the page first shows a score, it should show the score straight away
+- Just after a team's score goes up, the top bar should still be counting (below the new score)
+- Just after a team's score goes up, the top bar should already be above the old score
+- Once the count is done (0.6s), the top bar should show the new score
+- With reduced motion, a new score should show straight away
+
+## Solved first
+- When your team solves a question the rival team hasn't solved, a "solved first" moment should show
+- The moment should show the question as "Q<n>"
+- The moment should say "Solved first"
+- The moment should be gone after 1.4 seconds
+- The moment should be hidden from screen readers (the feed line already announces the solve)
+- When your team solves a question the rival team already solved, no moment should show
+- When the rival team solves a question first, no moment should show
+- Questions solved before the page loaded should show no moment
+- With reduced motion, no moment should show
+- The moment's animations should only change transform and opacity
+- The moment's animations should be turned off for reduced motion
