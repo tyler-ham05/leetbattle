@@ -116,8 +116,10 @@ describe('score bump', () => {
 
 describe('score feed', () => {
 	// Renders the feed for a viewer on myTeam with what was solved at page
-	// load, and returns a function that sends a newer game state's solved lists.
-	function renderFeed(solved: { a: string[]; b: string[] }, myTeam: 'a' | 'b' | undefined = 'a') {
+	// load, and returns a function that sends a newer game state's solved
+	// lists. null stands for someone who is not a player (no team).
+	function renderFeed(solved: { a: string[]; b: string[] }, team: 'a' | 'b' | null = 'a') {
+		const myTeam = team ?? undefined;
 		const view = render(<ScoreFeed pool={pool} solved={solved} myTeam={myTeam} />);
 		return (next: { a: string[]; b: string[] }) => view.rerender(<ScoreFeed pool={pool} solved={next} myTeam={myTeam} />);
 	}
@@ -185,7 +187,7 @@ describe('score feed', () => {
 	});
 
 	it('US-4-T-6 shows "Team 2 solved Q3" to someone who is not a player', () => {
-		const update = renderFeed(NONE, undefined);
+		const update = renderFeed(NONE, null);
 		update({ a: [], b: ['best-time-to-buy-and-sell-stock'] });
 		expect(screen.getByText('Team 2 solved Q3')).toBeTruthy();
 	});

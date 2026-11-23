@@ -61,6 +61,7 @@ export interface GameState {
 	problemPool: PoolProblem[];
 	players: GamePlayer[];
 	forfeitVotes: Record<TeamId, number>;
+	solved: Record<TeamId, string[]>; // task ids each team has solved (US-4-T-6)
 }
 
 // What GameService sends once on `game:ended`. winner is null for a draw.

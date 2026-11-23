@@ -928,3 +928,24 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
   .lb-demo-line { width: auto; }
   .lb-result-slam, .lb-result-sink, .lb-result-jolt, .lb-result-rise, .lb-result-crown { animation: none; }
 }
+
+/* =========================================================
+   LIVE SCORE (US-4-T-6)
+   ========================================================= */
+
+/* A score that just went up bumps once. */
+@keyframes lb-score-bump {
+  from { transform: scale(0.97); }
+  to   { transform: none; }
+}
+/* The "<Team> solved Q2" line slides down from under the top bar. */
+@keyframes lb-feed-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+.lb-score-bump { display: inline-block; animation: lb-score-bump 0.2s ease-out both; }
+.lb-feed-in { animation: lb-feed-in 0.2s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lb-score-bump, .lb-feed-in { animation: none; }
+}
