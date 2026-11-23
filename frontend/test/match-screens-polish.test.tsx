@@ -477,10 +477,11 @@ describe('copy', () => {
 		expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Pick a seat to join');
 	});
 
-	it('shows the match subtitle with no period', () => {
+	// The match page has no subtitle under "Match" (the user found it read as filler).
+	it('shows no subtitle under the match heading', () => {
 		configureGame();
 		render(<GamePage />);
-		expect(screen.getByText(/Two teams, the same problems/).textContent).toBe('Two teams, the same problems, twenty minutes');
+		expect(screen.queryByText(/Two teams, the same problems/)).toBeNull();
 	});
 
 	it('says "Name updated" with no period', async () => {

@@ -328,6 +328,13 @@ describe('game page match view', () => {
 		expect(screen.getAllByText('Reconnecting…')).toHaveLength(1);
 	});
 
+	// US-4-T-10: in a 1v1 the top bar says You / Rival instead of Your team / Rival team.
+	it('US-4-T-10 labels the top bar You in a 1v1', () => {
+		configureConnectedGame({ players: [player('u1', 'Ada', 'a'), player('u4', 'Alan', 'b')] });
+		render(<GamePage />);
+		expect(within(screen.getAllByRole('banner')[0]).getByTestId('score-a').previousElementSibling?.textContent).toBe('You');
+	});
+
 	it('US-6-T-2 shows the time remaining as minutes and seconds', () => {
 		configureConnectedGame({ secondsRemaining: 20 * 60 });
 		render(<GamePage />);

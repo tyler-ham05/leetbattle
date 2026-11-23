@@ -19,7 +19,7 @@ const LOG_OUT = MENU.length;
 // a big LeetBattle title and a stacked menu, over the falling code.
 // Hover, Tab or the arrow keys pick a row; Enter opens it.
 export default function HomeActions() {
-	const { user, logout } = useAuth();
+	const { logout } = useAuth();
 	const router = useRouter();
 	const [selected, setSelected] = useState(0);
 	const selectedRef = useRef(0);
@@ -63,10 +63,7 @@ export default function HomeActions() {
 			<CodeRain />
 			<div aria-hidden="true" className="lb-title-fade pointer-events-none absolute inset-0" />
 			<div className="relative flex flex-1 flex-col justify-center px-[clamp(24px,8vw,110px)] py-16">
-				<p className="lb-rise-in m-0 font-mono text-[13px] font-semibold uppercase tracking-[0.2em] text-primary" style={{ '--d': '0.05s' } as CSSProperties}>
-					{user?.name ?? user?.email}
-				</p>
-				<h1 className="lb-rise-in mt-3.5 mb-0 text-[clamp(56px,8vw,96px)] font-black leading-[0.9] tracking-[-0.055em]" style={{ '--d': '0.1s' } as CSSProperties}>
+				<h1 className="lb-rise-in m-0 text-[clamp(56px,8vw,96px)] font-black leading-[0.9] tracking-[-0.055em]" style={{ '--d': '0.1s' } as CSSProperties}>
 					Leet<span className="text-primary">Battle</span>
 				</h1>
 				<ul aria-label="Menu" className="mt-14 mb-0 flex list-none flex-col gap-0.5 p-0">

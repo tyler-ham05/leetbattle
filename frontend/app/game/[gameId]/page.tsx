@@ -204,7 +204,7 @@ function GameContent() {
 		return (
 			<div className="flex h-screen flex-col bg-page font-sans text-ink">
 				<HomeTopBar
-					center={<ScoreLine scores={game.scores} myTeam={myTeam} time={<Clock seconds={game.secondsRemaining} running warn className="" />} />}
+					center={<ScoreLine scores={game.scores} myTeam={myTeam} solo={game.players.length === 2} time={<Clock seconds={game.secondsRemaining} running warn className="" />} />}
 					actions={(
 						<>
 							<ConnectedTeammates teammates={teammates.filter((entry) => entry.connected)} />
@@ -250,7 +250,6 @@ function GameContent() {
 					<div className="flex flex-wrap items-end justify-between gap-4">
 						<div className="flex flex-col gap-2">
 							<h1 className="text-4xl font-extrabold leading-[1.05] tracking-[-0.035em]">Match</h1>
-							<p className="text-[15px] text-muted">Two teams, the same problems, twenty minutes</p>
 						</div>
 						{joined && (
 							<div className="flex items-center gap-6">

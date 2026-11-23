@@ -77,11 +77,19 @@ describe('top bar score counts up', () => {
 		expect(yourScore()).toBeGreaterThan(50);
 	});
 
-	// After 0.6s the count lands on the new score.
-	it('lands on the new score once the count is done', () => {
+	// The count is slow enough to watch: at 0.7s it is still climbing...
+	it('is still climbing 0.7s after the score goes up', () => {
 		const update = renderLine({ a: 0, b: 0 });
 		update({ a: 150, b: 0 });
 		after(700);
+		expect(yourScore()).toBeLessThan(150);
+	});
+
+	// ...and after 1.2s it lands on the new score.
+	it('lands on the new score once the count is done', () => {
+		const update = renderLine({ a: 0, b: 0 });
+		update({ a: 150, b: 0 });
+		after(1300);
 		expect(yourScore()).toBe(150);
 	});
 

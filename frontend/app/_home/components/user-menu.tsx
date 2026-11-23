@@ -48,26 +48,22 @@ export default function UserMenu() {
 
 	return (
 		<div ref={ref} className="relative">
+			{/* The player's name in the team color, with a small down arrow: it opens the menu. */}
 			<button
 				type="button"
 				onClick={() => setOpen((v) => !v)}
 				aria-label="Account menu"
 				aria-expanded={open}
-				className="flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-raised hover:text-ink"
+				className="flex h-9 max-w-48 items-center gap-1.5 rounded-lg px-2.5 text-[15px] font-semibold text-primary hover:bg-raised"
 			>
-				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-					<line x1="4" y1="7" x2="20" y2="7" />
-					<line x1="4" y1="12" x2="20" y2="12" />
-					<line x1="4" y1="17" x2="20" y2="17" />
+				<span className="truncate">{user.name ?? user.email}</span>
+				<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
+					<path d="M6 9l6 6 6-6" />
 				</svg>
 			</button>
 
 			{open && (
 				<div className="lb-enter absolute right-0 top-full z-10 mt-2 w-48 origin-top-right rounded-lg border border-line bg-surface py-1 shadow-lg">
-					<div className="truncate px-3 py-2 text-sm font-medium text-ink">
-						{user.name ?? user.email}
-					</div>
-					<div className="mx-auto my-1 w-[90%] border-t border-line" />
 					<nav aria-label="Site">
 						{PAGES.map((page) => (
 							<Link

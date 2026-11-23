@@ -57,7 +57,7 @@
 ## Copy
 - Someone looking at a full lobby they have not joined should see "This lobby is full" with no period
 - Someone who has not joined a lobby with room should see "You have not joined this lobby yet" with no period
-- The game page subtitle should read "Two teams, the same problems, twenty minutes" with no period
+- The game page should show no subtitle under the "Match" heading
 - Saving a new name should show "Name updated" with no period
 - Changing the password should show "Password changed" with no period
 - A lowercase server error on saving the name should be shown starting with a capital letter
