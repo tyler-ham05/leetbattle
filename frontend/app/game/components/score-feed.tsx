@@ -5,10 +5,11 @@ import type { TeamId } from '../../_shared/teams';
 import { teamsFor } from '../../_shared/teams';
 import type { PoolProblem } from '../socket-context';
 import { prefersReducedMotion } from '../../_shared/motion';
+import { KatanaScene, LOADER_MS } from '../../_shared/page-loader';
 
 const SHOWN_FOR_MS = 4_000;
-// How long the solved first moment stays (matches lb-first-solve in globals.css).
-const MOMENT_MS = 1_400;
+// The solved first moment is the home loader's katana slice, so it lasts as long.
+const MOMENT_MS = LOADER_MS.katana;
 
 interface Line {
 	id: number;
@@ -72,14 +73,17 @@ export default function ScoreFeed({ pool, solved, myTeam }: { pool: PoolProblem[
 					</p>
 				)}
 			</div>
-			{/* Solved first: "Q2" slams in over the middle, a slash cuts through it, then it all fades. */}
+			{/* Solved first: "Q2 / Solved first" plays the home loader's katana slice. */}
 			{moment && (
-				<div key={moment.id} data-testid="first-solve" aria-hidden="true" className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center">
-					<div className="lb-first-solve relative flex flex-col items-center gap-3">
-						<span className="text-[clamp(96px,14vw,168px)] font-black leading-[0.85] tracking-[-0.055em] text-primary">Q{moment.position}</span>
-						<span className="font-mono text-[15px] font-semibold uppercase tracking-[0.2em] text-ink">Solved first</span>
-						<span className="lb-first-slash absolute left-[-12%] top-[38%] h-[3px] w-[124%] bg-ink" />
-					</div>
+				<div key={moment.id} data-testid="first-solve" aria-hidden="true" className="lb-loader pointer-events-none fixed inset-0 z-50 overflow-hidden text-ink">
+					<KatanaScene
+						word={(className) => (
+							<span className="flex flex-col items-center gap-3">
+								<span className={`${className} text-primary`}>Q{moment.position}</span>
+								<span className="font-mono text-[15px] font-semibold uppercase tracking-[0.2em] text-ink">Solved first</span>
+							</span>
+						)}
+					/>
 				</div>
 			)}
 		</>

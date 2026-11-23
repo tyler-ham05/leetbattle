@@ -1,5 +1,6 @@
 'use client';
 import { useLayoutEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { prefersReducedMotion } from './motion';
 
 // How long each loader runs before it removes itself (matches the CSS in globals.css).
@@ -11,20 +12,28 @@ function Wordmark({ className }: { className: string }) {
 	return <span className={className}>Leet<span className="text-primary">Battle</span></span>;
 }
 
-// Home: the wordmark is sliced diagonally and the halves glide apart.
-function Katana() {
+// The katana slice: `word` (given the class each copy needs) shows whole,
+// a blade streaks along a diagonal cut, then the top and bottom halves glide
+// apart as the cover fades. Also played when a team solves a question first
+// (game/components/score-feed.tsx).
+export function KatanaScene({ word }: { word: (_className: string) => ReactNode }) {
 	return (
 		<>
 			<div className="lb-k-backdrop" />
 			<div className="lb-k-line lb-k-seam" />
 			<div className="lb-k-halves">
-				<div className="lb-k-part lb-k-part-top"><div className="lb-k-slip lb-k-slip-top"><div className="lb-k-piece lb-k-top"><Wordmark className="lb-k-word" /></div></div></div>
-				<div className="lb-k-part lb-k-part-bottom"><div className="lb-k-slip lb-k-slip-bottom"><div className="lb-k-piece lb-k-bottom"><Wordmark className="lb-k-word" /></div></div></div>
+				<div className="lb-k-part lb-k-part-top"><div className="lb-k-slip lb-k-slip-top"><div className="lb-k-piece lb-k-top">{word('lb-k-word')}</div></div></div>
+				<div className="lb-k-part lb-k-part-bottom"><div className="lb-k-slip lb-k-slip-bottom"><div className="lb-k-piece lb-k-bottom">{word('lb-k-word')}</div></div></div>
 			</div>
-			<div className="lb-k-whole"><Wordmark className="lb-k-word lb-k-word-in" /></div>
+			<div className="lb-k-whole">{word('lb-k-word lb-k-word-in')}</div>
 			<div className="lb-k-line lb-k-track"><div className="lb-k-blade" /></div>
 		</>
 	);
+}
+
+// Home: the wordmark is sliced diagonally and the halves glide apart.
+function Katana() {
+	return <KatanaScene word={(className) => <Wordmark className={className} />} />;
 }
 
 // Lobby: the two team panels slam together, VS drops in, then they pull back.
