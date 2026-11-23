@@ -12,11 +12,13 @@ import { titleFromTaskId } from '../../editor/components/question-panel';
 // When things come in, in seconds: the word lands and moves up first, then
 // the halves rise, the scores count up, the crowns drop and the buttons follow.
 const HALVES_AT = 1.55;
-const COUNT_FROM_MS = 1500;
-const COUNT_FOR_MS = 700;
-const CROWNS_AT = 1.85;
-const BREAKDOWN_AT = 1.9;
-const BUTTONS_AT = 2.2;
+// The halves are fully in at 2.05s, so the count starts just before that and
+// runs long enough to be seen; the crowns drop as it lands.
+const COUNT_FROM_MS = 1900;
+const COUNT_FOR_MS = 1100;
+const CROWNS_AT = 2.95;
+const BREAKDOWN_AT = 3.05;
+const BUTTONS_AT = 3.25;
 
 const BUTTON = 'lb-press inline-flex min-h-11 items-center rounded-lg px-5 text-sm font-semibold';
 
@@ -37,7 +39,7 @@ function TeamHalf({ team, score, players, won, side }: { team: ShownTeam; score:
 	const left = side === 'left';
 	const name = <h2 className={`text-[32px] font-extrabold tracking-[-0.03em] ${team.color}`}>{team.name}</h2>;
 	const number = (
-		<span data-testid="final-score" className={`text-8xl font-black leading-[0.8] tracking-[-0.05em] tabular-nums ${won ? team.color : 'text-muted'}`}>{shown}</span>
+		<span data-testid="final-score" className={`text-8xl font-black leading-[0.8] tracking-[-0.05em] ${won ? team.color : 'text-muted'}`}>{shown}</span>
 	);
 
 	return (
