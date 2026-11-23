@@ -1,7 +1,7 @@
 // US-4-T-6: scoring feels like a moment. The top bar's score counts up from
 // the old score to the new one, and when the player's team solves a question
-// before the rival team, a short "Q2 / Solved first" moment slams in over the
-// middle of the screen with a slash through it, then fades.
+// before the rival team, "Q2 / Solved first" plays the home loader's katana
+// slice: the blade streaks across, the word is cut in two, the halves part.
 //
 // Pure rendering with fake timers: no sockets, no backend.
 import fs from 'node:fs';
@@ -10,12 +10,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { ScoreLine } from '../app/editor/components/scoreboard';
 import ScoreFeed from '../app/game/components/score-feed';
+import { LOADER_MS } from '../app/_shared/page-loader';
 
 const css = fs.readFileSync(path.resolve(__dirname, '../app/globals.css'), 'utf8');
 // The prefers-reduced-motion block(s) in globals.css, joined.
 const reduced = css.split('@media (prefers-reduced-motion: reduce)').slice(1).join('\n');
-// The body of one @keyframes block, by name.
-const keyframes = (name: string) => css.match(new RegExp(`@keyframes ${name}\\s*\\{((?:[^{}]*\\{[^}]*\\})*)[^}]*\\}`))?.[1] ?? '';
 
 // The match pool after the bans: Q1, Q2, Q3 in order.
 const pool = [
@@ -122,10 +121,34 @@ describe('solved first', () => {
 		expect(moment()?.textContent).toContain('Solved first');
 	});
 
-	// It is short: gone after 1.4 seconds.
-	it('is gone after 1.4 seconds', () => {
+	// It is the katana slice: a blade streaks along the cut...
+	it('plays the katana slice with a blade', () => {
 		renderFeed(NONE)({ a: ['valid-parentheses'], b: [] });
-		after(1400);
+		expect(moment()?.querySelector('.lb-k-blade')).not.toBeNull();
+	});
+
+	// ...and the question is cut into a top and a bottom half.
+	it('cuts the question into a top half', () => {
+		renderFeed(NONE)({ a: ['valid-parentheses'], b: [] });
+		expect(moment()?.querySelector('.lb-k-top')?.textContent).toContain('Q2');
+	});
+
+	it('cuts the question into a bottom half', () => {
+		renderFeed(NONE)({ a: ['valid-parentheses'], b: [] });
+		expect(moment()?.querySelector('.lb-k-bottom')?.textContent).toContain('Q2');
+	});
+
+	// It runs as long as the home loader's katana slice...
+	it('is still showing just before the katana slice ends', () => {
+		renderFeed(NONE)({ a: ['valid-parentheses'], b: [] });
+		after(LOADER_MS.katana - 100);
+		expect(moment()).not.toBeNull();
+	});
+
+	// ...and is gone once it ends.
+	it('is gone once the katana slice ends', () => {
+		renderFeed(NONE)({ a: ['valid-parentheses'], b: [] });
+		after(LOADER_MS.katana);
 		expect(moment()).toBeNull();
 	});
 
@@ -160,14 +183,14 @@ describe('solved first', () => {
 		expect(moment()).toBeNull();
 	});
 
-	// Smooth on any machine: only transform and opacity move.
-	it('only animates transform and opacity', () => {
-		const props = ['lb-first-solve', 'lb-first-slash'].flatMap((name) => keyframes(name).match(/[a-z-]+(?=\s*:)/g) ?? []);
-		expect(props.length > 0 && props.every((prop) => prop === 'transform' || prop === 'opacity')).toBe(true);
+	// It sits in the loader layer (.lb-loader), which reduced motion hides in the CSS too.
+	it('uses the loader layer that reduced motion hides', () => {
+		renderFeed(NONE)({ a: ['valid-parentheses'], b: [] });
+		expect(moment()?.className).toContain('lb-loader');
 	});
 
-	// And it is switched off for reduced motion in the CSS too.
-	it('turns the animations off for reduced motion', () => {
-		expect(reduced).toContain('.lb-first-solve');
+	// The CSS hides that layer for reduced motion.
+	it('is hidden by the reduced motion CSS', () => {
+		expect(reduced).toMatch(/\.lb-loader[^{]*\{\s*display:\s*none/);
 	});
 });

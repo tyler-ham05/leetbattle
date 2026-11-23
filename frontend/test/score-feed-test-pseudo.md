@@ -52,11 +52,13 @@
 - When your team solves a question the rival team hasn't solved, a "solved first" moment should show
 - The moment should show the question as "Q<n>"
 - The moment should say "Solved first"
-- The moment should be gone after 1.4 seconds
+- The moment should play the katana slice (a blade and the word cut into top and bottom halves), like the home loader
+- Both halves of the cut should show the question
+- The moment should still be showing just before the katana slice ends
+- The moment should be gone once the katana slice ends (2.3 seconds)
 - The moment should be hidden from screen readers (the feed line already announces the solve)
 - When your team solves a question the rival team already solved, no moment should show
 - When the rival team solves a question first, no moment should show
 - Questions solved before the page loaded should show no moment
 - With reduced motion, no moment should show
-- The moment's animations should only change transform and opacity
-- The moment's animations should be turned off for reduced motion
+- The moment should use the loader layer that reduced motion hides
