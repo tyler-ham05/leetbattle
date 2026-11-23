@@ -138,15 +138,16 @@ describe('posting a team comment', () => {
 		expect(screen.getByText('Question 1 is done')).toBeTruthy();
 	});
 
-	it('US-3-T-1 shows the signed-in player\'s name on a comment they post', async () => {
+	it('US-3-T-1 attributes a comment the player posts to the signed-in player', async () => {
 		const user = userEvent.setup();
 		renderChat([]);
 
 		await user.type(messageBox(), 'Question 1 is done');
 		await user.click(sendButton());
 
-		// The signed-in player is Ada, so the only comment is attributed to her.
-		expect(screen.getByRole('listitem').textContent).toContain('Ada');
+		// The signed-in player is Ada, so the only comment is hers. Since US-3-T-5
+		// the player's own comments are labeled "You" instead of their name.
+		expect(screen.getByRole('listitem').textContent).toContain('You');
 	});
 
 	it('US-3-T-1 posts the comment when the player presses Enter', async () => {
