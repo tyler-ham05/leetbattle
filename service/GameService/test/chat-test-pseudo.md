@@ -47,3 +47,24 @@
 // Team chat messages should be cleaned up when a game ends
 //  - When a game ends, messages older than 10 days should be deleted  
 //  - When a game ends, messages newer than 10 days should be kept
+
+
+// User story: US-3 Communication
+// Task: US-3-T-3
+// GameService should send a player their team's chat history when they connect
+//  - After two teammates each send a message, a teammate who reconnects should be sent "chat:history" with both messages
+//  - The messages in "chat:history" should be oldest first so they read properly going from top(oldest) to bottom (newest)
+//  - Each message in "chat:history" should have the same id, userId, displayName, team, text and sentAt as the "chat:message" that was sent out
+
+// GameService should keep chat history to the player's own team
+//  - After a player on the other team sends a message, a reconnecting player should not see it in "chat:history"
+
+// GameService should keep chat history to the player's own game
+//  - When two games are running, a message sent in one game should not be in "chat:history" for a player reconnecting to the other game
+
+// GameService should send an empty history when the team has no messages
+//  - A player who connects before anyone on their team has chatted should be sent an empty chat history
+
+// GameService should leave rejected messages out of chat history
+//  - A "chat:send" longer than 500 characters should not be in chat history
+//  - A rate-limited "chat:send" should not be in chat history.
