@@ -61,3 +61,10 @@
 - Medium should use the secondary color
 - Hard should use the danger color
 - The difficulty should not use hardcoded green, yellow or red
+
+## Shortcut hints on Run and Submit
+- On a Mac, hovering Run should show a tooltip saying "⌘ Enter"
+- On a Mac, hovering Submit should show a tooltip saying "⌘ Shift Enter"
+- On Windows or Linux, hovering Run should show a tooltip saying "Ctrl Enter"
+- On Windows or Linux, hovering Submit should show a tooltip saying "Ctrl Shift Enter"
+- With a tooltip around it, the Run button should still be named "Run" for screen readers
