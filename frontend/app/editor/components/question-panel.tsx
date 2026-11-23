@@ -3,11 +3,11 @@ import Spinner from '../../_shared/spinner';
 import { useEditor } from '../context';
 import QuestionNavigation from './question-navigation';
 
-// Shared with the game page's problem list.
+// Theme colors, so the difficulty moves with the scheme and mode.
 export const DIFFICULTY_STYLES: Record<string, string> = {
-	Easy: 'text-green-600 dark:text-green-400',
-	Medium: 'text-yellow-600 dark:text-yellow-400',
-	Hard: 'text-red-600 dark:text-red-400',
+	Easy: 'text-primary',
+	Medium: 'text-secondary',
+	Hard: 'text-danger',
 };
 
 // "two-sum" -> "Two Sum". Shared with the game page's problem list.
@@ -33,7 +33,7 @@ export default function QuestionPanel() {
 		return (
 			<div role="status" className="flex items-center gap-2.5 p-6 text-sm text-muted">
 				<Spinner />
-				Loading question...
+				Loading question…
 			</div>
 		);
 	}
@@ -51,16 +51,6 @@ export default function QuestionPanel() {
 				>
 					{currentQuestion.difficulty}
 				</span>
-				
-				{/* Should tags be visible?
-					{currentQuestion.tags.map((tag) => (
-					<span
-						key={tag}
-						className="rounded-full bg-raised px-2 py-0.5 text-xs text-muted"
-					>
-						{tag}
-					</span>
-				))} */}
 			</div>
 
 			<p className="mt-4 whitespace-pre-line leading-6 text-muted">
