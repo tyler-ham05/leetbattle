@@ -32,24 +32,26 @@ export function ScoreLine({ scores, time, myTeam }: { scores: { a: number; b: nu
 	const [first, second] = teamsFor(myTeam);
 	const bumps = useScoreBumps(scores);
 	// The numbers count up from the old score to the new one as they bump.
-	const shown = { a: useCountTo(scores.a, 600), b: useCountTo(scores.b, 600) };
-	const score = (team: typeof first) => (
-		<div className="flex items-baseline gap-2">
-			<span className="text-sm text-muted">{team.name}</span>
+	const shown = { a: useCountTo(scores.a, 1200), b: useCountTo(scores.b, 1200) };
+	// Like a scoreboard: each team's name small and uppercase above its big
+	// score, the two columns facing each other around the clock.
+	const score = (team: typeof first, side: 'left' | 'right') => (
+		<div className={`flex flex-col leading-none ${side === 'left' ? 'items-end' : 'items-start'}`}>
+			<span className={`text-xs font-semibold ${team.color}`}>{team.name}</span>
 			<span
 				key={bumps[team.id]}
 				data-testid={`score-${team.id}`}
-				className={`text-lg font-semibold ${team.color} ${bumps[team.id] > 0 ? 'lb-score-bump' : ''}`}
+				className={`text-[26px] font-black tracking-[-0.03em] ${team.color} ${bumps[team.id] > 0 ? 'lb-score-bump' : ''}`}
 			>
 				{shown[team.id]}
 			</span>
 		</div>
 	);
 	return (
-		<div className="flex items-center gap-6 text-ink">
-			{score(first)}
-			<span aria-label="Time left" className="font-mono text-lg tabular-nums">{time}</span>
-			{score(second)}
+		<div className="flex items-center gap-[22px] text-ink">
+			{score(first, 'left')}
+			<span aria-label="Time left" className="font-mono text-base font-semibold tabular-nums">{time}</span>
+			{score(second, 'right')}
 		</div>
 	);
 }

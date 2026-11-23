@@ -250,7 +250,6 @@ function GameContent() {
 					<div className="flex flex-wrap items-end justify-between gap-4">
 						<div className="flex flex-col gap-2">
 							<h1 className="text-4xl font-extrabold leading-[1.05] tracking-[-0.035em]">Match</h1>
-							<p className="text-[15px] text-muted">Two teams, the same problems, twenty minutes</p>
 						</div>
 						{joined && (
 							<div className="flex items-center gap-6">
