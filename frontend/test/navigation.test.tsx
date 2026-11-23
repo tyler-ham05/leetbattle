@@ -86,10 +86,10 @@ describe('the home link for keyboard and screen reader users', () => {
 describe('the top bar menu', () => {
 	const menuButton = () => screen.getByRole('button', { name: 'Account menu' });
 
-	it('shows three lines on the menu button', () => {
+	// The three-line icon became the player's name with a down arrow (one path).
+	it('shows a down arrow on the menu button instead of three lines', () => {
 		render(<HomeTopBar />);
-		// The icon is drawn as three horizontal lines.
-		expect(menuButton().querySelectorAll('svg line').length).toBe(3);
+		expect(menuButton().querySelectorAll('svg path').length).toBe(1);
 	});
 
 	it('links to Home, Practice, Lobby and Settings', async () => {

@@ -64,3 +64,13 @@
 - Questions solved before the page loaded should show no moment
 - With reduced motion, no moment should show
 - The moment should use the loader layer that reduced motion hides
+
+## Top bar count is slow enough to watch
+- 0.7 seconds after a team's score goes up, the top bar should still be climbing
+- Once the count is done (1.2s), the top bar should show the new score
+
+## Top bar scoreboard (big scores, small team names above)
+- Each team's name should sit above its score, in one stacked column
+- Each team's name should be small, in the main font (not monospace), in normal case and in the team's color
+- Each score should be big and heavy (black weight)
+- Your team's column should line up toward the clock (right-aligned), and the rival's away from it (left-aligned)

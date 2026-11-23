@@ -257,7 +257,9 @@ describe('lobby seats', () => {
 
 	it('US5-Task20 shows "You" in the user\'s own row', () => {
 		render(<LobbyPage />);
-		expect(screen.getByText('Ada').closest('[data-ready]')?.textContent).toContain('You');
+		// The name also shows in the top bar's account button, so pick the one in a seat row.
+		const seat = screen.getAllByText('Ada').map((el) => el.closest('[data-ready]')).find(Boolean);
+		expect(seat?.textContent).toContain('You');
 	});
 });
 

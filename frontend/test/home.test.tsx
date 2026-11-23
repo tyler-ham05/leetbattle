@@ -7,7 +7,7 @@
 //  - Falls back to showing the email when user.name is null
 // Home screen should look like a game title screen, over the falling code
 //  - LeetBattle should be the page heading
-//  - The signed-in player's name should show above the title
+//  - The signed-in player's name is in the top bar now, not above the title
 //  - The menu should list Practice, Lobby and Settings, each with a one-line description
 //  - Practice should link to the editor page, Lobby to the lobby page, Settings to the settings page
 //  - Practice should be selected when the page opens
@@ -22,7 +22,6 @@
 //  - The background should be hidden from screen readers
 //  - The background should not animate when the user has reduced motion turned on
 // Sprint 4: the name above the title is just the name
-//  - The signed-in player's name should be shown on its own
 //  - There should be no "Player" label in front of it
 // Sprint 4: the light/dark button lives in the top bar on every page
 //  - The top bar should have a "Switch to light mode" button while in dark mode
@@ -162,9 +161,10 @@ describe('home title screen', () => {
 		expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('LeetBattle');
 	});
 
-	it('shows the name of the signed-in player', () => {
+	// The name moved to the top bar's account button (see account-name.test.tsx).
+	it('does not show the signed-in player\'s name above the title', () => {
 		render(<HomeActions />);
-		expect(screen.getByText(new RegExp(fakeUser.name as string))).toBeTruthy();
+		expect(screen.queryByText(new RegExp(fakeUser.name as string))).toBeNull();
 	});
 
 	it('shows Practice, Lobby and Settings, in that order, each with a one-line description', () => {
@@ -265,11 +265,6 @@ describe('home screen falling code background', () => {
 });
 
 describe('home screen name label', () => {
-	it('shows the signed-in player\'s name on its own', () => {
-		render(<HomeActions />);
-		expect(screen.getByText(fakeUser.name as string)).toBeTruthy();
-	});
-
 	it('has no Player label in front of the name', () => {
 		render(<HomeActions />);
 		expect(screen.queryByText(/Player/)).toBeNull();
