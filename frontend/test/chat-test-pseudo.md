@@ -46,3 +46,21 @@
 //  - HTML / scripts in a message should be shown as text  
 //  - HTML / scripts in a message should not run  
 //  - A message containing SQL should be shown as plain text 
+
+
+
+// User story: US-3 Communication
+// Task: US-3-T-3 (all tests use a mocked socket, no backend)
+
+// The chat panel should show the team's earlier messages
+//  - When the game socket receives "chat:history" with two messages, the chat panel on the match page should show both
+//  - The messages from "chat:history" should be shown oldest first at the top
+//  - A "chat:message" that arrives after "chat:history" should be shown after the history
+//  - When "chat:history" is empty, the chat panel should show "No messages yet"
+
+// The chat panel should not show a message twice 
+//  - When a message is in "chat:history" and then also arrives as a "chat:message", it should be shown once
+
+// The chat panel should restore history after reconnecting 
+//  - After the socket reconnects and receives a new "chat:history", the panel should show the team's earlier messages
+//  - Messages the panel already showed before reconnecting should not be shown twice
