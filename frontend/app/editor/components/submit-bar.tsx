@@ -1,7 +1,13 @@
 'use client';
 import { useEffect } from 'react';
 import Spinner from '../../_shared/spinner';
+import Tooltip from '../../_shared/tooltip';
 import { useEditor } from '../context';
+
+// The shortcut's modifier as the player's keyboard labels it.
+function modifierKey() {
+	return typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘' : 'Ctrl';
+}
 
 // While one is running its label swaps for a spinner (the button keeps its
 // width and full color); the other one greys out.
@@ -24,26 +30,32 @@ export default function SubmitBar() {
 		return () => window.removeEventListener('keydown', handleKeyDown);
 	}, [isLoading, onRun, onSubmit, readOnly]);
 
+	const mod = modifierKey();
+
 	return (
 		<div className="flex items-center justify-end gap-2 border-b border-line px-4 py-2">
-			<button
-				onClick={onRun}
-				disabled={isLoading}
-				aria-label="Run"
-				aria-busy={running}
-				className="flex h-8 w-20 items-center justify-center rounded-md bg-raised px-3 text-sm font-medium text-ink hover:bg-line disabled:cursor-not-allowed disabled:text-muted aria-busy:text-ink"
-			>
-				{running ? <Spinner /> : 'Run'}
-			</button>
-			<button
-				onClick={onSubmit}
-				disabled={isLoading}
-				aria-label="Submit"
-				aria-busy={submitting}
-				className="flex h-8 w-20 items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-on-primary hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 aria-busy:opacity-100"
-			>
-				{submitting ? <Spinner /> : 'Submit'}
-			</button>
+			<Tooltip label={`${mod} Enter`}>
+				<button
+					onClick={onRun}
+					disabled={isLoading}
+					aria-label="Run"
+					aria-busy={running}
+					className="flex h-8 w-20 items-center justify-center rounded-md bg-raised px-3 text-sm font-medium text-ink hover:bg-line disabled:cursor-not-allowed disabled:text-muted aria-busy:text-ink"
+				>
+					{running ? <Spinner /> : 'Run'}
+				</button>
+			</Tooltip>
+			<Tooltip label={`${mod} Shift Enter`}>
+				<button
+					onClick={onSubmit}
+					disabled={isLoading}
+					aria-label="Submit"
+					aria-busy={submitting}
+					className="flex h-8 w-20 items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-on-primary hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 aria-busy:opacity-100"
+				>
+					{submitting ? <Spinner /> : 'Submit'}
+				</button>
+			</Tooltip>
 		</div>
 	);
 }
