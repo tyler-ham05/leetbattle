@@ -116,39 +116,39 @@ describe('lobby ready status', () => {
 		configureLobby({ players: withReady('u1') });
 		render(<LobbyPage />);
 
-		// Only u1 is ready, so exactly one row shows the "Ready" label.
-		expect(screen.getAllByText('Ready')).toHaveLength(1);
+		// Only u1 is ready, so exactly one row shows the "Ready" label (the
+		// slider's own "Ready" label sits outside the team lists, US-4-T-9).
+		expect(screen.getAllByRole('listitem').filter((row) => row.textContent?.endsWith('Ready') && !row.textContent.endsWith('Not ready'))).toHaveLength(1);
 	});
 });
 
 describe('lobby ready toggle', () => {
-	it('US-1-T-1 sends a ready event when the player clicks Ready up', async () => {
-		const user = userEvent.setup();
+	// US-4-T-9: Ready up became a slider; the keyboard is the simplest way to drive it here.
+	it('US-1-T-1 sends a ready event when the player readies on the slider', () => {
 		render(<LobbyPage />);
 
-		await user.click(screen.getByRole('button', { name: 'Ready up' }));
+		fireEvent.keyDown(screen.getByRole('slider', { name: 'Slide to ready' }), { key: 'ArrowRight' });
 
 		// The page asks the server to mark the player ready.
 		expect(lobbyMocks.emit).toHaveBeenCalledWith('lobby:set-ready', true);
 	});
 
-	it('US-1-T-1 sends a not-ready event when the player clicks Unready', async () => {
-		const user = userEvent.setup();
+	it('US-1-T-1 sends a not-ready event when the player unreadies on the slider', () => {
 		configureLobby({ players: withReady('u1') });
 		render(<LobbyPage />);
 
-		await user.click(screen.getByRole('button', { name: 'Unready' }));
+		fireEvent.keyDown(screen.getByRole('slider', { name: 'Slide to ready' }), { key: 'ArrowLeft' });
 
 		// The page asks the server to mark the player not ready.
 		expect(lobbyMocks.emit).toHaveBeenCalledWith('lobby:set-ready', false);
 	});
 
-	it('US-1-T-1 disables Ready up while the lobby is not eligible', () => {
+	it('US-1-T-1 disables the ready slider while the lobby is not eligible', () => {
 		configureLobby({ lobby: { canReady: false } });
 		render(<LobbyPage />);
 
-		// The server reports that readying up is not allowed yet, so the button is disabled.
-		expect((screen.getByRole('button', { name: 'Ready up' }) as HTMLButtonElement).disabled).toBe(true);
+		// The server reports that readying up is not allowed yet, so the slider is disabled.
+		expect(screen.getByRole('slider', { name: 'Slide to ready' }).getAttribute('aria-disabled')).toBe('true');
 	});
 });
 
@@ -188,20 +188,21 @@ describe('lobby for players who have not joined', () => {
 	// Five players in the lobby, and the signed-in user (u7) is not one of them.
 	const openLobby = { userId: 'u7', players: fullTeams.slice(0, 5) };
 
-	it('shows a Join lobby button when the user is not in the lobby', () => {
+	// US-4-T-9: "Join lobby" became "Quick join".
+	it('shows a Quick join button when the user is not in the lobby', () => {
 		configureLobby(openLobby);
 		render(<LobbyPage />);
 
 		// The user is not in the roster, so they are offered a way to join.
-		expect(screen.getByRole('button', { name: 'Join lobby' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Quick join' })).toBeTruthy();
 	});
 
-	it('sends a join event when the user clicks Join lobby', async () => {
+	it('sends a join event when the user clicks Quick join', async () => {
 		const user = userEvent.setup();
 		configureLobby(openLobby);
 		render(<LobbyPage />);
 
-		await user.click(screen.getByRole('button', { name: 'Join lobby' }));
+		await user.click(screen.getByRole('button', { name: 'Quick join' }));
 
 		// The page asks the server for a seat (the join event has no payload).
 		expect(lobbyMocks.emit).toHaveBeenCalledWith('lobby:join', undefined);
@@ -215,12 +216,12 @@ describe('lobby for players who have not joined', () => {
 		expect(screen.getByText('This lobby is full')).toBeTruthy();
 	});
 
-	it('disables Join lobby when the lobby is full', () => {
+	it('disables Quick join when the lobby is full', () => {
 		configureLobby({ userId: 'u7' });
 		render(<LobbyPage />);
 
 		// A seventh player cannot try to join.
-		expect((screen.getByRole('button', { name: 'Join lobby' }) as HTMLButtonElement).disabled).toBe(true);
+		expect((screen.getByRole('button', { name: 'Quick join' }) as HTMLButtonElement).disabled).toBe(true);
 	});
 });
 
@@ -350,8 +351,9 @@ describe('lobby seats and team colours', () => {
 		configureLobby({ players: withTeams({ u1: null }) });
 		render(<LobbyPage />);
 
-		// Team 1 has two of its three seats taken; Team 2 is full.
-		expect(screen.getAllByText('Open seat')).toHaveLength(1);
+		// Team 1 has two of its three seats taken; Team 2 is full. The user has no
+		// team, so the one open seat is a "Join Team 1" button (US-4-T-9).
+		expect(screen.getAllByRole('button', { name: 'Join Team 1' })).toHaveLength(1);
 	});
 
 	it('colours the user\'s own Team 1 heading ("Your team") with the primary colour', () => {
