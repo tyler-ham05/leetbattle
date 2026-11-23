@@ -287,13 +287,12 @@ describe('lobby team choice through open seats', () => {
 		expect(screen.queryByRole('button', { name: /Team 1/ })).toBeNull();
 	});
 
-	it('US5-Task20 stacks "Open seat" and "Join here" in the same spot on a seat the user can take', () => {
+	// US-4-T-9: the hint is always shown now instead of swapping in on hover.
+	it('shows "Join here" on a seat the user can take', () => {
 		configureLobby([{ ...ada, team: null }, grace, alan]);
 		render(<LobbyPage />);
 		const seat = screen.getAllByRole('button', { name: 'Join Team 1' })[0];
-		// Both labels sit in one stacked cell (lb-seat-swap), so the hover swap crossfades in place.
-		const cell = within(seat).getByText('Open seat').parentElement;
-		expect(cell?.classList.contains('lb-seat-swap') && cell.contains(within(seat).getByText('Join here'))).toBe(true);
+		expect(seat.textContent).toBe('Join here');
 	});
 
 	it('outlines an open seat the user can take in the muted color', () => {

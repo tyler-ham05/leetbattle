@@ -9,18 +9,26 @@ import HomeTopBar from '../_home/components/topbar';
 import PageLoader, { LOADER_MS } from '../_shared/page-loader';
 import { prefersReducedMotion } from '../_shared/motion';
 import { teamsFor } from '../_shared/teams';
+import ReadySlider from './ready-slider';
 import { useLobbySocket } from './socket-context';
 import type { LobbyPlayer, TeamId } from './socket-context';
 
-// The two sides of the arena. The left one enters from the left in the primary
-// color; the right one is mirrored, in the secondary color. Which team sits
-// where comes from teamsFor: the user's own team on the left once seated
-// (US-5-T-22), otherwise Team 1 then Team 2.
-const SIDES = [
-	{ nameColor: 'text-primary', bar: 'bg-primary', tint: 'bg-primary/10', check: 'stroke-primary', mirrored: false },
-	{ nameColor: 'text-secondary', bar: 'bg-secondary', tint: 'bg-secondary/10', check: 'stroke-secondary', mirrored: true },
-];
-type Side = typeof SIDES[number] & { id: TeamId; name: string };
+// The two sides of the arena: Team 1 always on the left, Team 2 always on the
+// right, mirrored (US-4-T-9). Names and colors come from teamsFor: a seated
+// user's own team is "Your team" in the primary color on whichever side it is.
+const COLORS = {
+	'text-primary': { nameColor: 'text-primary', bar: 'bg-primary', tint: 'bg-primary/10', check: 'stroke-primary' },
+	'text-secondary': { nameColor: 'text-secondary', bar: 'bg-secondary', tint: 'bg-secondary/10', check: 'stroke-secondary' },
+};
+type Side = typeof COLORS['text-primary'] & { id: TeamId; name: string; mirrored: boolean };
+
+function sidesFor(myTeam?: TeamId | null): Side[] {
+	const shown = teamsFor(myTeam);
+	return (['a', 'b'] as TeamId[]).map((id) => {
+		const team = shown[0].id === id ? shown[0] : shown[1];
+		return { ...COLORS[team.color as keyof typeof COLORS], id, name: team.name, mirrored: id === 'b' };
+	});
+}
 
 const TEAM_SIZES = [1, 2, 3];
 
@@ -68,7 +76,18 @@ function LobbyContent() {
 	}, [connect]);
 
 	const currentPlayer = lobby?.players.find((player) => player.userId === user?.id);
-	const teams: Side[] = teamsFor(currentPlayer?.team).map((shown, i) => ({ ...SIDES[i], id: shown.id, name: shown.name }));
+	const teams = sidesFor(currentPlayer?.team);
+	// The seat to take once a join lands (one-step join).
+	const [pendingTeam, setPendingTeam] = useState<TeamId | null>(null);
+	// The team the user's row was last on, so a switch slides it across VS.
+	const lastTeam = useRef<TeamId | null>(null);
+	const [crossed, setCrossed] = useState(false);
+	const myTeam = currentPlayer?.team ?? null;
+	if (myTeam !== lastTeam.current) {
+		if (myTeam && lastTeam.current) setCrossed(true);
+		else if (crossed) setCrossed(false);
+		lastTeam.current = myTeam;
+	}
 	// Only the match's players move to it; someone watching the lobby stays put.
 	const joiningMatch = Boolean((matchReadiness || gameStarted) && currentPlayer);
 
@@ -92,6 +111,30 @@ function LobbyContent() {
 		clearError();
 		socket.emit(event, payload);
 	}
+
+	// Joining is async on the server, so the seat is taken once the user shows up.
+	const joinedUnseated = Boolean(currentPlayer && !currentPlayer.team);
+	useEffect(() => {
+		if (!pendingTeam || !joinedUnseated || !socket?.connected) return;
+		socket.emit('lobby:join-team', pendingTeam);
+		setPendingTeam(null);
+	}, [pendingTeam, joinedUnseated, socket]);
+
+	function joinSeat(team: TeamId) {
+		if (!socket?.connected) return;
+		setPendingTeam(team);
+		send('lobby:join');
+	}
+
+	// The lobby never swipes back a page.
+	useEffect(() => {
+		const root = document.documentElement;
+		const before = root.style.overscrollBehaviorX;
+		root.style.overscrollBehaviorX = 'none';
+		return () => {
+			root.style.overscrollBehaviorX = before;
+		};
+	}, []);
 
 	function saveName(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
@@ -119,7 +162,7 @@ function LobbyContent() {
 	if (isLoading) {
 		headline = 'Connecting to lobby…';
 	} else if (!currentPlayer) {
-		headline = full ? 'This lobby is full' : 'You have not joined this lobby yet';
+		headline = full ? 'This lobby is full' : 'Pick a seat to join';
 	} else if (joiningMatch) {
 		headline = 'Joining match…';
 	}
@@ -129,11 +172,12 @@ function LobbyContent() {
 
 	function seatRow(player: LobbyPlayer, team: Side) {
 		const isMe = player.userId === user?.id;
+		const enter = isMe && crossed ? (team.mirrored ? 'lb-cross-b' : 'lb-cross-a') : team.mirrored ? 'lb-in-b' : 'lb-in-a';
 		return (
 			<li
 				key={player.userId}
 				data-ready={String(player.ready)}
-				className={`${team.mirrored ? 'lb-in-b flex-row-reverse' : 'lb-in-a'} relative flex min-h-[54px] items-center justify-between gap-3 overflow-hidden rounded-[10px] px-4 py-2 ${isMe ? 'bg-raised' : 'bg-surface'}`}
+				className={`${enter} ${team.mirrored ? 'flex-row-reverse' : ''} relative flex min-h-[54px] items-center justify-between gap-3 overflow-hidden rounded-[10px] px-4 py-2 ${isMe ? 'bg-raised' : 'bg-surface'}`}
 			>
 				<span
 					aria-hidden="true"
@@ -249,7 +293,7 @@ function LobbyContent() {
 							const isMyTeam = currentPlayer?.team === team.id;
 							const name = team.name;
 							// An open seat on any team but the user's own is how they join or switch.
-							const seatAction = currentPlayer && !isMyTeam ? (currentPlayer.team ? 'Switch to rival team' : `Join ${team.name}`) : null;
+							const seatAction = !isMyTeam ? (currentPlayer?.team ? 'Switch to rival team' : `Join ${team.name}`) : null;
 
 							return (
 								<Fragment key={team.id}>
@@ -267,15 +311,11 @@ function LobbyContent() {
 														<button
 															type="button"
 															aria-label={seatAction}
-															onClick={() => send('lobby:join-team', team.id)}
-															disabled={!connected}
-															className={`lb-seat-open ${BUTTON} min-h-[54px] w-full rounded-[10px] border border-dashed border-muted/40 px-4 text-sm text-muted hover:bg-surface`}
+															onClick={() => (currentPlayer ? send('lobby:join-team', team.id) : joinSeat(team.id))}
+															disabled={!connected || (!currentPlayer && full)}
+															className={`${BUTTON} min-h-[54px] w-full rounded-[10px] border border-dashed border-muted/40 px-4 text-sm font-semibold hover:bg-surface ${team.nameColor}`}
 														>
-															{/* One cell: on hover "Open seat" fades up and out as the hint fades in. */}
-															<span className="lb-seat-swap">
-																<span className="lb-seat-label">Open seat</span>
-																<span className={`lb-seat-hint font-semibold ${team.nameColor}`}>{currentPlayer?.team ? 'Switch here' : 'Join here'}</span>
-															</span>
+															{currentPlayer?.team ? 'Switch here' : 'Join here'}
 														</button>
 													) : (
 														<div className="flex min-h-[54px] items-center justify-center rounded-[10px] border border-dashed border-muted/40 px-4 text-sm text-muted">Open seat</div>
@@ -292,16 +332,20 @@ function LobbyContent() {
 					<div className="mt-10 flex min-h-[54px] items-center">
 						{currentPlayer ? (
 							!joiningMatch && (
-								<button
-									onClick={() => send('lobby:set-ready', !currentPlayer.ready)}
+								<ReadySlider
+									ready={currentPlayer.ready}
 									disabled={!connected || !lobby?.canReady}
-									className={`${BUTTON} h-[54px] w-60 rounded-xl text-base font-bold ${currentPlayer.ready ? QUIET : `${FILLED} bg-primary text-on-primary`}`}
-								>
-									{currentPlayer.ready ? 'Unready' : 'Ready up'}
-								</button>
+									onChange={(ready) => send('lobby:set-ready', ready)}
+								/>
 							)
 						) : (
-							<button onClick={() => send('lobby:join')} disabled={!connected || full} className={`${BUTTON} ${FILLED} h-[54px] w-60 rounded-xl bg-primary text-base font-bold text-on-primary`}>Join lobby</button>
+							<button
+								onClick={() => joinSeat(players.filter((entry) => entry.team === 'a').length <= players.filter((entry) => entry.team === 'b').length ? 'a' : 'b')}
+								disabled={!connected || full}
+								className={`${BUTTON} ${FILLED} h-[54px] w-60 rounded-xl bg-primary text-base font-bold text-on-primary`}
+							>
+								Quick join
+							</button>
 						)}
 					</div>
 				</div>

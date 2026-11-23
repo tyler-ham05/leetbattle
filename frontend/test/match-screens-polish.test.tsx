@@ -217,11 +217,11 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe('lobby: your team on the left, in the primary color', () => {
-	it('shows "Your team" as the first heading to a player on team b', () => {
+	// US-4-T-9: sides stay put, so team b stays on the right even for its own players.
+	it('shows "Your team" as the second heading to a player on team b', () => {
 		configureLobby(adaOnB);
 		render(<LobbyPage />);
-		// Ada sits on team b, but her own team still comes first.
-		expect(teamHeadings()[0].textContent).toBe('Your team');
+		expect(teamHeadings()[1].textContent).toBe('Your team');
 	});
 
 	it('colors "Your team" with the primary color for a player on team b', () => {
@@ -230,10 +230,10 @@ describe('lobby: your team on the left, in the primary color', () => {
 		expect(screen.getByRole('heading', { name: 'Your team' }).className).toContain('text-primary');
 	});
 
-	it('shows "Rival team" as the second heading to a player on team b', () => {
+	it('shows "Rival team" as the first heading to a player on team b', () => {
 		configureLobby(adaOnB);
 		render(<LobbyPage />);
-		expect(teamHeadings()[1].textContent).toBe('Rival team');
+		expect(teamHeadings()[0].textContent).toBe('Rival team');
 	});
 
 	it('colors "Rival team" with the secondary color for a player on team b', () => {
@@ -242,17 +242,17 @@ describe('lobby: your team on the left, in the primary color', () => {
 		expect(screen.getByRole('heading', { name: 'Rival team' }).className).toContain('text-secondary');
 	});
 
-	it('puts the team b player\'s own bar first', () => {
+	it('keeps Team 1\'s bar first for a team b player', () => {
 		configureLobby(adaOnB);
 		render(<LobbyPage />);
-		// The first bar above the arena is the user's own team's.
-		expect(document.querySelector('[data-team-bar]')?.getAttribute('data-team-bar')).toBe('b');
+		// US-4-T-9: the first bar above the arena is always Team 1's.
+		expect(document.querySelector('[data-team-bar]')?.getAttribute('data-team-bar')).toBe('a');
 	});
 
 	it('lists the team b player in the first team\'s list', () => {
 		configureLobby(adaOnB);
 		render(<LobbyPage />);
-		// The left column's list is "Your team players", and Ada is in it.
+		// Ada's own list is "Your team players", now on the right (US-4-T-9).
 		expect(within(screen.getByRole('list', { name: 'Your team players' })).queryByText('Ada')).not.toBeNull();
 	});
 
@@ -470,10 +470,11 @@ describe('copy', () => {
 		expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('This lobby is full');
 	});
 
-	it('says "You have not joined this lobby yet" with no period', () => {
+	// US-4-T-9: the headline before joining became "Pick a seat to join".
+	it('says "Pick a seat to join" with no period', () => {
 		configureLobby(fullWithoutAda.slice(1));
 		render(<LobbyPage />);
-		expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('You have not joined this lobby yet');
+		expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Pick a seat to join');
 	});
 
 	it('shows the match subtitle with no period', () => {
