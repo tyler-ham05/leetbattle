@@ -393,3 +393,74 @@ describe('unsafe text in chat messages', () => {
 		expect(screen.getByTestId('chat-text').textContent).toBe('\'); DROP TABLE team_messages; --');
 	});
 });
+
+// US-3-T-3: chat history in the chat panel (all tests use a mocked socket, no backend)
+
+// Renders the chat panel connected to a fake game socket, starting from the
+// team's chat `history` as the match page passes it in.
+function renderChatWithHistory(history: ChatMessage[]) {
+	const fake = fakeSocket();
+	const view = render(
+		<ChatProvider socket={fake.socket as unknown as Socket} history={history}>
+			<TeamChat />
+		</ChatProvider>,
+	);
+	return { ...fake, view };
+}
+
+describe('chat history in the chat panel', () => {
+	it('US-3-T-3 shows a message that is in chat:history and also arrives as a chat:message once', () => {
+		const fake = renderChatWithHistory([fromGrace]);
+
+		// The same message (same id) arrives live too.
+		act(() => fake.fire('chat:message', fromGrace));
+
+		expect(screen.queryAllByText('Try a hash map')).toHaveLength(1);
+	});
+
+	it('US-3-T-3 shows a chat:message that arrives after chat:history below the history', () => {
+		const fake = renderChatWithHistory([fromGrace]);
+
+		act(() => fake.fire('chat:message', { ...fromGrace, id: 'm10', text: 'Question 1 is done' }));
+
+		expect(screen.getAllByTestId('chat-text').map((text) => text.textContent)).toEqual(['Try a hash map', 'Question 1 is done']);
+	});
+
+	it('US-3-T-3 shows "No messages yet" when chat:history is empty', () => {
+		renderChatWithHistory([]);
+
+		expect(screen.getByText('No messages yet')).toBeTruthy();
+	});
+
+	it('US-3-T-3 shows the team\'s earlier messages from the new chat:history after reconnecting', () => {
+		const fake = renderChatWithHistory([]);
+
+		// The socket reconnects and GameService sends the history again, now
+		// with messages sent while this player was away.
+		const missed = [fromGrace, { ...fromGrace, id: 'm10', text: 'Question 1 is done' }];
+		fake.view.rerender(
+			<ChatProvider socket={fake.socket as unknown as Socket} history={missed}>
+				<TeamChat />
+			</ChatProvider>,
+		);
+
+		expect(screen.getAllByTestId('chat-text').map((text) => text.textContent)).toEqual(['Try a hash map', 'Question 1 is done']);
+	});
+
+	it('US-3-T-3 does not show messages from before reconnecting twice', () => {
+		// Before the drop: one message from the history and one that arrived live.
+		const fake = renderChatWithHistory([fromGrace]);
+		const live = { ...fromGrace, id: 'm10', text: 'Question 1 is done' };
+		act(() => fake.fire('chat:message', live));
+
+		// After reconnecting, the new history has both again, plus one sent while away.
+		const missed = { ...fromGrace, id: 'm11', text: 'Moving on to question 3' };
+		fake.view.rerender(
+			<ChatProvider socket={fake.socket as unknown as Socket} history={[fromGrace, live, missed]}>
+				<TeamChat />
+			</ChatProvider>,
+		);
+
+		expect(screen.getAllByTestId('chat-text').map((text) => text.textContent)).toEqual(['Try a hash map', 'Question 1 is done', 'Moving on to question 3']);
+	});
+});
