@@ -472,3 +472,44 @@ describe('question panel difficulty', () => {
 		expect(screen.getByText('Easy').className).not.toMatch(/green|yellow|red/);
 	});
 });
+
+// The Run and Submit results belong to the question they were for. Before,
+// one result was shared by every question, so question 2 showed question 1's
+// "Accepted 76 / 76" (and its case colors) after switching.
+describe('results belong to their question', () => {
+	// Opens question n from the 1 / 2 / 3 navigation and waits for it to load.
+	async function openQuestion(n: number) {
+		await userEvent.click(screen.getByRole('button', { name: String(n) }));
+		await screen.findByRole('heading', { name: new RegExp(`${n}\\. Problem Number ${n}`) });
+	}
+
+	it('shows no submission result on a question that was not submitted', async () => {
+		await renderEditor({ submits: [ACCEPTED] });
+		await submitCode('Accepted');
+		await openQuestion(2);
+		expect(screen.queryByRole('region', { name: 'Submission result' })).toBeNull();
+	});
+
+	it('shows a question\'s own submission result again after coming back to it', async () => {
+		await renderEditor({ submits: [ACCEPTED] });
+		await submitCode('Accepted');
+		await openQuestion(2);
+		await openQuestion(1);
+		expect(screen.queryByRole('region', { name: 'Submission result' })).not.toBeNull();
+	});
+
+	it('shows no run output on a question that was not run', async () => {
+		await renderEditor();
+		await runCode();
+		await openQuestion(2);
+		expect(screen.queryByText('Your output')).toBeNull();
+	});
+
+	it('shows a question\'s own run output again after coming back to it', async () => {
+		await renderEditor();
+		await runCode();
+		await openQuestion(2);
+		await openQuestion(1);
+		expect(screen.queryByText('Your output')).not.toBeNull();
+	});
+});

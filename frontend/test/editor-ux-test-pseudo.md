@@ -68,3 +68,9 @@
 - On Windows or Linux, hovering Run should show a tooltip saying "Ctrl Enter"
 - On Windows or Linux, hovering Submit should show a tooltip saying "Ctrl Shift Enter"
 - With a tooltip around it, the Run button should still be named "Run" for screen readers
+
+## Results belong to their question
+- After submitting question 1, opening question 2 should show no submission result
+- After submitting question 1, opening question 2 and going back to question 1 should show question 1's result again
+- After running question 1, opening question 2 should show no "Your output"
+- After running question 1, opening question 2 and going back to question 1 should show question 1's output again
