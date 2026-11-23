@@ -61,6 +61,8 @@
 // US-3-T-2: The match page should show team chat while the game is being played
 //  - While playing, the match page should display a "Team chat" panel
 //  - Sending a comment on the match page should emit "chat:send" on the game socket
+// US-3-T-3: The match page should show the team's earlier chat
+//  - The chat panel on the match page should show the messages in chatHistory, oldest first
 //  (CodeService's fetch and Monaco are mocked; no test touches a backend service)
 // US-6-T-8: Game page should show the live team score
 //  - The team score shown in the header should match the game state's scores
@@ -224,6 +226,7 @@ function configureGame(context: Record<string, unknown> = {}) {
 		submit: gameMocks.submit,
 		shareCode: gameMocks.shareCode,
 		teammateCode: {},
+		chatHistory: [],
 		...context,
 	});
 }
@@ -1288,6 +1291,22 @@ describe('game page team chat', () => {
 		// The editor also sends game:code on this socket, so only chat:send is checked.
 		const chatSends = socket.emit.mock.calls.filter(([event]) => event === 'chat:send');
 		expect(chatSends.map((call) => call.slice(0, 2))).toEqual([['chat:send', { text: 'Question 1 is done' }]]);
+	});
+
+	it('US-3-T-3 shows the team\'s earlier messages from chatHistory in the chat panel, oldest first', async () => {
+		configureGame({
+			socket: { connected: true, emit: vi.fn(), on: vi.fn(), off: vi.fn() },
+			connected: true,
+			game: gameState(),
+			chatHistory: [
+				{ id: 'm1', userId: 'u2', displayName: 'Grace', team: 'a', text: 'I will take question 2', sentAt: '2026-11-17T12:00:00.000Z' },
+				{ id: 'm2', userId: 'u3', displayName: 'Katherine', team: 'a', text: 'Try a hash map', sentAt: '2026-11-17T12:00:05.000Z' },
+			],
+		});
+		render(<GamePage />);
+
+		const panel = await screen.findByRole('region', { name: 'Team chat' });
+		expect(within(panel).getAllByTestId('chat-text').map((text) => text.textContent)).toEqual(['I will take question 2', 'Try a hash map']);
 	});
 });
 

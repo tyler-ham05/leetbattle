@@ -9,6 +9,7 @@ import { useAuth } from '../login/context';
 import type { TeamId } from '../lobby/socket-context';
 import type { SubmitResult } from '../editor/controller';
 import type { EditorWorkspace } from '../editor/context';
+import type { ChatMessage } from '../editor/chat-context';
 
 export interface GamePlayer {
 	userId: string;
@@ -105,6 +106,9 @@ interface GameSocketContextValue {
 	shareCode: (_questionId: number, _workspace: EditorWorkspace) => void;
 	// Teammates' saved workspaces, by userId then questionId, read only.
 	teammateCode: TeammateCode;
+	// The team's chat so far in this match, oldest first, as GameService sends
+	// it on "chat:history" each time the socket connects or reconnects.
+	chatHistory: ChatMessage[];
 	clearError: () => void;
 }
 
@@ -148,6 +152,7 @@ export function GameSocketProvider({ children }: { children: ReactNode }) {
 	const [result, setResult] = useState<GameResult | null>(null);
 	const [error, setError] = useState<GameError | null>(null);
 	const [teammateCode, setTeammateCode] = useState<TeammateCode>({});
+	const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
 	const socketRef = useRef<{ gameId: string; socket: Socket } | null>(null);
 
 	// Saves one teammate's workspace for one question, replacing (not merging
@@ -182,6 +187,7 @@ export function GameSocketProvider({ children }: { children: ReactNode }) {
 		nextSocket.on('game:code:snapshot', (entries: CodeEntry[]) => {
 			for (const entry of entries) saveTeammateCode(entry);
 		});
+		nextSocket.on('chat:history', (messages: ChatMessage[]) => setChatHistory(messages));
 		nextSocket.on('connect_error', (reason: Error) => {
 			// GameService forgets a match once it ends, so rejoining one that ended
 			// in the meantime is refused as not-in-game.
@@ -206,6 +212,7 @@ export function GameSocketProvider({ children }: { children: ReactNode }) {
 		setGame(null);
 		setResult(null);
 		setTeammateCode({});
+		setChatHistory([]);
 		nextSocket.connect();
 		return nextSocket;
 	}, [saveTeammateCode, user]);
@@ -242,7 +249,7 @@ export function GameSocketProvider({ children }: { children: ReactNode }) {
 
 	const clearError = useCallback(() => setError(null), []);
 	return (
-		<GameSocketContext.Provider value={{ socket, connected, game, result, error, connect, forfeit, ban, pick, submit, shareCode, teammateCode, clearError }}>
+		<GameSocketContext.Provider value={{ socket, connected, game, result, error, connect, forfeit, ban, pick, submit, shareCode, teammateCode, chatHistory, clearError }}>
 			{children}
 		</GameSocketContext.Provider>
 	);
