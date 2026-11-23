@@ -8,12 +8,16 @@ const VARIABLES = ['surface', 'raised', 'line', 'ink', 'muted', 'primary', 'seco
 
 export type ThemeColors = Record<(typeof VARIABLES)[number], string>;
 
+// "#fff" -> "#ffffff". The CSS build shortens colors like #ffffff, but Monaco
+// only takes six-digit colors (and the alpha suffixes below need six digits too).
+const fullHex = (color: string) => (/^#[0-9a-f]{3}$/i.test(color) ? `#${[...color.slice(1)].map((digit) => digit + digit).join('')}` : color);
+
 // Reads the current values of the theme variables from the page.
 export function readThemeColors(root: HTMLElement): ThemeColors {
 	const style = getComputedStyle(root);
 	const colors = {} as ThemeColors;
 	for (const name of VARIABLES) {
-		colors[name] = style.getPropertyValue(`--lb-${name}`).trim();
+		colors[name] = fullHex(style.getPropertyValue(`--lb-${name}`).trim());
 	}
 	return colors;
 }

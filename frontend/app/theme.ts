@@ -2,10 +2,17 @@
 // The actual colors live in globals.css as CSS variables.
 
 export const SCHEMES = [
-	{ id: 'emerald', label: 'Emerald', swatch: '#34d399' },
-	{ id: 'volt', label: 'Volt', swatch: '#b8f53d' },
-	{ id: 'midnight', label: 'Midnight', swatch: '#28b0f3' },
-	{ id: 'ultraviolet', label: 'Ultraviolet', swatch: '#a57bff' },
+	{ id: 'emerald', label: 'Emerald' },
+	{ id: 'midnight', label: 'Midnight' },
+	{ id: 'nocturne', label: 'Nocturne' },
+	{ id: 'shoreline', label: 'Shoreline' },
+	{ id: 'merlot', label: 'Merlot' },
+	{ id: 'coffee', label: 'Coffee' },
+	{ id: 'performative', label: 'Performative' },
+	{ id: 'lilac', label: 'Lilac' },
+	{ id: 'tidepool', label: 'Tidepool' },
+	{ id: 'sugarplum', label: 'Sugarplum' },
+	{ id: 'vim', label: 'Vim' },
 ] as const;
 
 export const MODES = ['dark', 'light'] as const;

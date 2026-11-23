@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import HomeNav from '../_shared/home-nav';
 import Wordmark from '../_shared/wordmark';
+import ThemeToggle from '../_shared/theme-toggle';
 import MatchDemo from './match-demo';
-import ScrollSections from './scroll-sections';
+import YourMove from './your-move';
 
 export default function LandingPage() {
 	return (
@@ -16,6 +17,7 @@ export default function LandingPage() {
 						<Wordmark />
 					</Link>
 					<div className="flex flex-wrap items-center gap-6 text-[15px] text-muted">
+						<ThemeToggle />
 						<HomeNav />
 					</div>
 				</nav>
@@ -27,10 +29,11 @@ export default function LandingPage() {
 						<span className="lb-hero-word block">Leet<span className="text-primary">Battle</span></span>
 						<span data-testid="pen-tip" aria-hidden="true" className="lb-hero-tip" />
 					</h1>
-					<p className="lb-reveal m-0 text-xl text-muted" style={{ '--d': '0.6s' } as React.CSSProperties}>
-						Team coding battles, live in your browser
+					{/* Types itself out after the pen has drawn the wordmark (lb-typed). */}
+					<p className="m-0 font-mono text-lg text-muted">
+						<span data-testid="tagline" className="lb-typed" style={{ '--n': 36, '--w': '36ch' } as React.CSSProperties}>two teams. same problems. one winner</span>
 					</p>
-					<Link href="/login" className="lb-reveal inline-flex h-[54px] items-center gap-2.5 rounded-[14px] bg-primary px-8 text-base font-bold text-on-primary hover:opacity-90" style={{ '--d': '0.75s' } as React.CSSProperties}>
+					<Link href="/login" className="lb-reveal inline-flex h-[54px] items-center gap-2.5 rounded-[14px] bg-primary px-8 text-base font-bold text-on-primary hover:opacity-90" style={{ '--d': '2.6s' } as React.CSSProperties}>
 						Play
 						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
 							<path d="M5 12h14M13 6l6 6-6 6" />
@@ -42,7 +45,7 @@ export default function LandingPage() {
 					<MatchDemo />
 				</div>
 
-				<ScrollSections />
+				<YourMove />
 
 				<footer className="flex flex-wrap justify-between gap-4 border-t border-line pt-7 pb-10 text-sm text-muted">
 					<span><Wordmark /></span>

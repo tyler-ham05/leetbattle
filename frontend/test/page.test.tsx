@@ -1,5 +1,8 @@
 // root page should display the landing page with no credentials
 // root page should siplay the home page with credentials
+// Sprint 4: the light/dark button should be on these pages too
+//  - The signed-in home page should have the "Switch to light mode" button
+//  - The landing page should have the "Switch to light mode" button
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { fakeUser } from './helpers';
@@ -43,5 +46,18 @@ describe('root page', () => {
 		auth.value = { ...auth.value, isLoading: true };
 		const { container } = render(<Home />);
 		expect(container.innerHTML).toBe('');
+	});
+});
+
+describe('root page light/dark button', () => {
+	it('is on the signed-in home page', () => {
+		auth.value = { ...auth.value, user: fakeUser };
+		render(<Home />);
+		expect(screen.getByRole('button', { name: 'Switch to light mode' })).toBeTruthy();
+	});
+
+	it('is on the landing page', () => {
+		render(<Home />);
+		expect(screen.getByRole('button', { name: 'Switch to light mode' })).toBeTruthy();
 	});
 });

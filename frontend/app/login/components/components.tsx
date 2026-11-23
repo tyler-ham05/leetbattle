@@ -1,12 +1,18 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
 
-export function AuthCard({ title, children }: { title: string; children: ReactNode }) {
+export type StepDirection = 'forward' | 'back';
+
+// `step` names the step being shown and the way the user went to reach it; a
+// new step slides in from that side instead of fading in.
+export function AuthCard({ title, step, children }: { title: string; step?: { id: string; direction: StepDirection }; children: ReactNode }) {
 	return (
 		<div className="flex flex-1 items-center justify-center bg-page px-4 font-sans">
-			<div className="flex w-full max-w-[400px] flex-col gap-4 rounded-xl border border-line bg-surface p-8">
-				<h1 className="text-2xl font-bold text-ink">{title}</h1>
-				{children}
+			<div className="w-full max-w-[400px] overflow-hidden rounded-xl border border-line bg-surface p-8">
+				<div key={step?.id} data-step={step?.direction} className="flex flex-col gap-4">
+					<h1 key={title} className={`${step ? '' : 'lb-rise '}text-2xl font-bold text-ink`}>{title}</h1>
+					{children}
+				</div>
 			</div>
 		</div>
 	);
@@ -24,23 +30,44 @@ function EyeIcon({ shown }: { shown: boolean }) {
 	);
 }
 
+// Replays the shake every time `count` goes up (one per failed attempt).
+function useShake(count: number) {
+	const ref = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		const el = ref.current;
+		if (!el || count === 0) return;
+		el.classList.remove('lb-shake');
+		void el.offsetWidth; // restart the animation
+		el.classList.add('lb-shake');
+	}, [count]);
+	return ref;
+}
+
+// `invalid` turns the field red; bumping `shake` shakes it (wrong password).
 export function AuthField({
 	label,
 	type,
+	invalid = false,
+	shake = 0,
 	...inputProps
-}: { label: string } & InputHTMLAttributes<HTMLInputElement>) {
+}: { label: string; invalid?: boolean; shake?: number } & InputHTMLAttributes<HTMLInputElement>) {
 	const id = useId();
 	const [shown, setShown] = useState(false);
+	const shakeRef = useShake(shake);
 	const isPassword = type === 'password';
+	const tone = invalid
+		? 'border-danger focus:border-danger focus:ring-danger/15'
+		: 'border-line hover:border-muted/50 focus:border-primary focus:ring-primary/15';
 	return (
 		<div className="flex flex-col gap-1.5">
 			<label htmlFor={id} className="text-sm font-medium text-ink">{label}</label>
-			<div className="relative">
+			<div ref={shakeRef} className="relative">
 				<input
 					{...inputProps}
 					id={id}
 					type={isPassword && shown ? 'text' : type}
-					className={`h-[46px] w-full rounded-lg border border-line bg-page px-3 text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary/40 ${isPassword ? 'pr-11' : ''}`}
+					aria-invalid={invalid || undefined}
+					className={`h-[46px] w-full rounded-lg border bg-page px-3 text-ink outline-none transition-[border-color,box-shadow] duration-300 ease-[cubic-bezier(0.2,0.7,0.2,1)] focus:ring-4 ${tone} ${isPassword ? 'pr-11' : ''}`}
 				/>
 				{isPassword && (
 					<button
@@ -67,7 +94,7 @@ export function AuthSubmitButton({ pending, pendingLabel, children }: {
 		<button
 			type="submit"
 			disabled={pending}
-			className="h-[46px] w-full rounded-lg bg-primary px-3 text-sm font-semibold text-on-primary disabled:opacity-50"
+			className="lb-press lb-press-lift h-[46px] w-full rounded-lg bg-primary px-3 text-sm font-semibold text-on-primary disabled:opacity-50"
 		>
 			{pending ? pendingLabel : children}
 		</button>
@@ -106,4 +133,59 @@ export function AuthMessage({ status }: { status?: AuthStatus | null }) {
 	}
 	const color = status.type === 'error' ? 'text-danger' : 'text-green-600 dark:text-green-400';
 	return <p className={`text-sm ${color}`}>{status.text}</p>;
+}
+
+// Log in / Sign up, with one highlight that slides between them.
+export function AuthTabs({ signup, onChange }: { signup: boolean; onChange: (_signup: boolean) => void }) {
+	return (
+		<div role="tablist" aria-label="Account" className="relative grid grid-cols-2 rounded-[10px] border border-line p-1">
+			<span
+				aria-hidden="true"
+				className={`absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-md bg-raised transition-transform duration-[400ms] ease-[cubic-bezier(0.2,0.7,0.2,1)] ${signup ? 'translate-x-full' : ''}`}
+			/>
+			{(['Log in', 'Sign up'] as const).map((label) => {
+				const selected = (label === 'Sign up') === signup;
+				return (
+					<button
+						key={label}
+						type="button"
+						role="tab"
+						aria-selected={selected}
+						onClick={() => onChange(label === 'Sign up')}
+						className={`relative h-9 text-sm font-semibold [transition:color_300ms_ease,scale_150ms_ease-out] ${selected ? 'text-ink' : 'text-muted hover:text-ink'}`}
+					>
+						{label}
+					</button>
+				);
+			})}
+		</div>
+	);
+}
+
+// 0-4: long enough, mixed case, a digit, a symbol (or very long).
+export function passwordScore(password: string): number {
+	let score = 0;
+	if (password.length >= 8) score++;
+	if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+	if (/\d/.test(password)) score++;
+	if (/[^A-Za-z0-9]/.test(password) || password.length >= 14) score++;
+	return score;
+}
+
+const STRENGTH = ['Weak', 'Weak', 'Okay', 'Good', 'Strong'];
+const STRENGTH_COLOR = ['bg-danger', 'bg-danger', 'bg-secondary', 'bg-primary/60', 'bg-primary'];
+
+// Four bars that fill as the password gets stronger (sign up only).
+export function PasswordStrength({ password }: { password: string }) {
+	const score = passwordScore(password);
+	return (
+		<div className="flex items-center gap-2.5">
+			<div aria-hidden="true" className="grid flex-1 grid-cols-4 gap-1">
+				{[0, 1, 2, 3].map((i) => (
+					<span key={i} className={`h-1 rounded-full transition-colors duration-300 ${password && i < Math.max(score, 1) ? STRENGTH_COLOR[score] : 'bg-line'}`} />
+				))}
+			</div>
+			<span data-testid="password-strength" aria-live="polite" className="w-12 text-right text-xs text-muted">{password ? STRENGTH[score] : ''}</span>
+		</div>
+	);
 }

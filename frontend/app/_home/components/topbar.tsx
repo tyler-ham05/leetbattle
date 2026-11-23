@@ -3,8 +3,10 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import Wordmark from '../../_shared/wordmark';
 import UserMenu from './user-menu';
+import ThemeToggle from '../../_shared/theme-toggle';
 
-// `actions` sits just left of the account menu, e.g. the game page's Forfeit button.
+// The light/dark button sits just left of the account menu.
+// `actions` sits left of those, e.g. the game page's Forfeit button.
 // `center` sits in the true middle of the bar, e.g. the match score and clock.
 export default function HomeTopBar({ actions, center }: { actions?: ReactNode; center?: ReactNode }) {
 	return (
@@ -19,6 +21,7 @@ export default function HomeTopBar({ actions, center }: { actions?: ReactNode; c
 			<div>{center}</div>
 			<div className="flex items-center justify-self-end gap-2">
 				{actions}
+				<ThemeToggle />
 				<UserMenu />
 			</div>
 		</header>

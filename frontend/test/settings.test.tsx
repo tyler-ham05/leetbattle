@@ -3,6 +3,7 @@
 // - user should not be able to change their password if they do not remember their password
 // - clicking the Back link navigates back
 // - clicking the light/dark mode button toggles the theme
+// - Sprint 4: the light/dark button is only in the top bar, not repeated in the Theme section
 // - clicking each color scheme button marks it as the pressed/selected one
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
@@ -58,7 +59,7 @@ describe('theme controls', () => {
 		expect(await screen.findByRole('button', { name: 'Switch to light mode' })).toBeTruthy();
 	});
 
-	it.each(['Emerald', 'Volt', 'Midnight', 'Ultraviolet'])('marks %s as pressed when its swatch is clicked', async (label) => {
+	it.each(['Emerald', 'Midnight', 'Nocturne', 'Shoreline', 'Merlot', 'Coffee', 'Performative', 'Lilac', 'Tidepool', 'Sugarplum', 'Vim'])('marks %s as pressed when it is clicked', async (label) => {
 		render(<SettingsPage />);
 		await userEvent.click(screen.getByRole('button', { name: `${label} color scheme` }));
 		// The attribute change is picked up asynchronously via MutationObserver,
@@ -174,5 +175,44 @@ describe('settings sections', () => {
 	it('separates the "Theme" section from the password section with a divider', () => {
 		render(<SettingsPage />);
 		expect(screen.getByRole('region', { name: 'Theme' }).className).toContain('border-t');
+	});
+
+	// Layout A: the account forms stay a narrow column and Theme gets its own,
+	// wider column, so the page stops leaving empty space at the sides.
+	it('puts the "Theme" section in its own column, outside the account column', () => {
+		render(<SettingsPage />);
+		const accountColumn = screen.getByRole('region', { name: 'Change password' }).parentElement;
+		expect(accountColumn?.contains(screen.getByRole('region', { name: 'Theme' }))).toBe(false);
+	});
+
+	// Bug: the two columns were capped at 1040px and centered, leaving empty
+	// space on both sides of wide screens. They should span the full width.
+	it('lets the two columns span the full width on wide screens', () => {
+		render(<SettingsPage />);
+		expect(screen.getByRole('region', { name: 'Theme' }).parentElement?.className).toContain('lg:max-w-none');
+	});
+
+	// Full width still needs breathing room: the same side margins as the home screen.
+	it('keeps the home screen side margins', () => {
+		render(<SettingsPage />);
+		expect(screen.getByRole('main').className).toContain('px-[clamp(24px,8vw,110px)]');
+	});
+
+	// ...and start at the top under the top bar instead of floating mid-page.
+	it('starts the settings at the top of the page', () => {
+		render(<SettingsPage />);
+		expect(screen.getByRole('main').className).toContain('items-start');
+	});
+
+	it('lays the account and theme columns side by side on wide screens', () => {
+		render(<SettingsPage />);
+		expect(screen.getByRole('region', { name: 'Theme' }).parentElement?.className).toContain('lg:grid-cols-');
+	});
+});
+
+describe('light/dark button placement', () => {
+	it('shows the button once, in the top bar', () => {
+		render(<SettingsPage />);
+		expect(screen.getAllByRole('button', { name: 'Switch to light mode' })).toHaveLength(1);
 	});
 });

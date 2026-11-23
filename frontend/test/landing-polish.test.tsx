@@ -82,14 +82,4 @@ describe('mobile and layout', () => {
 		const panels = screen.getByRole('region', { name: 'Team 1' }).parentElement as HTMLElement;
 		expect(panels.className.split(' ')).toContain('flex-wrap');
 	});
-
-	it('US5-Task18 aligns "Two teams" to the left', () => {
-		render(<LandingPage />);
-		expect(sectionOf(screen.getByRole('heading', { name: 'Two teams' })).className.split(' ')).toContain('items-start');
-	});
-
-	it('US5-Task18 aligns "Same problems" to the right', () => {
-		render(<LandingPage />);
-		expect(sectionOf(screen.getByRole('heading', { name: 'Same problems' })).className.split(' ')).toContain('items-end');
-	});
 });

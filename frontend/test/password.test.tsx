@@ -90,7 +90,7 @@ describe('show password on the sign-in page', () => {
 		const user = userEvent.setup();
 		render(<LoginPage />);
 
-		await user.click(screen.getByRole('button', { name: 'Need an account?' }));
+		await user.click(screen.getByRole('tab', { name: 'Sign up' }));
 
 		expect(screen.getByRole('button', { name: 'Show password' })).toBeTruthy();
 	});
@@ -154,7 +154,7 @@ describe('asking for a reset link', () => {
 		const user = userEvent.setup();
 		render(<LoginPage />);
 
-		await user.click(screen.getByRole('button', { name: 'Need an account?' }));
+		await user.click(screen.getByRole('tab', { name: 'Sign up' }));
 
 		// Someone creating an account has no password to forget yet.
 		expect(screen.queryByRole('button', { name: 'Forgot password?' })).toBeNull();

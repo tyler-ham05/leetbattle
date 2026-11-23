@@ -33,7 +33,7 @@ function TeamBar({ team, fill, draining, seconds }: { team: typeof TEAMS[number]
 
 	const edge = team.mirrored ? 'right' : 'left';
 	return (
-		<div className="relative h-[3px] overflow-hidden rounded-full bg-raised">
+		<div className="relative h-[3px] overflow-hidden rounded-full bg-line">
 			<div
 				data-team-bar={team.id}
 				data-draining={String(draining)}
@@ -185,7 +185,7 @@ function LobbyContent() {
 				<>
 					{isHost ? (
 						<div role="group" aria-label="Players per team" className={`relative flex gap-0.5 rounded-[9px] border border-line p-[3px] transition-opacity duration-300 ${counting ? 'opacity-40' : ''}`}>
-							<span aria-hidden="true" className="absolute top-[3px] h-7 w-11 rounded-md bg-raised transition-[left] duration-300 ease-[cubic-bezier(0.2,0.7,0.2,1)]" style={{ left: `${3 + (teamSize - 1) * 46}px` }} />
+							<span aria-hidden="true" className="absolute left-[3px] top-[3px] h-7 w-11 rounded-md bg-raised transition-transform duration-300 ease-[cubic-bezier(0.2,0.7,0.2,1)]" style={{ transform: `translateX(${(teamSize - 1) * 46}px)` }} />
 							{TEAM_SIZES.map((size) => (
 								<button
 									key={size}
@@ -262,7 +262,7 @@ function LobbyContent() {
 															aria-label={seatAction}
 															onClick={() => send('lobby:join-team', team.id)}
 															disabled={!connected}
-															className={`lb-seat-open ${BUTTON} min-h-[54px] w-full rounded-[10px] border border-dashed border-line px-4 text-sm text-muted hover:bg-surface`}
+															className={`lb-seat-open ${BUTTON} min-h-[54px] w-full rounded-[10px] border border-dashed border-muted/40 px-4 text-sm text-muted hover:bg-surface`}
 														>
 															{/* One cell: on hover "Open seat" fades up and out as the hint fades in. */}
 															<span className="lb-seat-swap">
@@ -271,7 +271,7 @@ function LobbyContent() {
 															</span>
 														</button>
 													) : (
-														<div className="flex min-h-[54px] items-center justify-center rounded-[10px] border border-dashed border-line px-4 text-sm text-muted">Open seat</div>
+														<div className="flex min-h-[54px] items-center justify-center rounded-[10px] border border-dashed border-muted/40 px-4 text-sm text-muted">Open seat</div>
 													)}
 												</li>
 											))}
