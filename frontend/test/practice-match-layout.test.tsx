@@ -18,9 +18,9 @@
 
 // The match fills the page while playing
 //  - While playing, the "Match" heading should not be shown
-//  - While playing, the "Team 1 players" list should not be shown
-//  - While playing, the "Team 2 players" list should not be shown
-//  - While banning, the "Team 1 players" list should still be shown
+//  - While playing, the "Your team players" list should not be shown
+//  - While playing, the "Rival team players" list should not be shown
+//  - While banning, the "Your team players" list should still be shown (was "Team 1 players", US-5-T-22)
 
 // Score and time sit in the middle of the top bar while playing
 //  - The top bar should show "Your team" (was "Team 1", sprint 4 polish)
@@ -273,20 +273,20 @@ describe('the match fills the page while playing', () => {
 		expect(screen.queryByRole('heading', { name: 'Match' })).toBeNull();
 	});
 
-	it('US5-Task19 does not show the "Team 1 players" list while playing', async () => {
+	it('US5-Task19 does not show the "Your team players" list while playing', async () => {
 		await renderPlaying();
-		expect(screen.queryByRole('list', { name: 'Team 1 players' })).toBeNull();
+		expect(screen.queryByRole('list', { name: 'Your team players' })).toBeNull();
 	});
 
-	it('US5-Task19 does not show the "Team 2 players" list while playing', async () => {
+	it('US5-Task19 does not show the "Rival team players" list while playing', async () => {
 		await renderPlaying();
-		expect(screen.queryByRole('list', { name: 'Team 2 players' })).toBeNull();
+		expect(screen.queryByRole('list', { name: 'Rival team players' })).toBeNull();
 	});
 
-	it('US5-Task19 still shows the "Team 1 players" list while banning', () => {
+	it('US5-Task19 still shows the "Your team players" list while banning', () => {
 		configureGame({ phase: 'banning' });
 		render(<GamePage />);
-		expect(screen.getByRole('list', { name: 'Team 1 players' })).toBeTruthy();
+		expect(screen.getByRole('list', { name: 'Your team players' })).toBeTruthy();
 	});
 });
 

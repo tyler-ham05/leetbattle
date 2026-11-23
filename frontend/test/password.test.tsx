@@ -288,7 +288,7 @@ describe('changing the password in Settings', () => {
 		await user.type(field('Current password'), 'old-password');
 		await user.type(field('New password'), 'a-brand-new-password');
 		await user.click(screen.getByRole('button', { name: 'Change password' }));
-		await screen.findByText('Password changed.');
+		await screen.findByText('Password changed');
 
 		// The controller keeps the session token under "authToken" (app/login/controller.tsx).
 		expect(localStorage.getItem('authToken')).toBe('fresh-token');

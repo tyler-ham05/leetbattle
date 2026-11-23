@@ -5,6 +5,11 @@ import BackLink from '../../_shared/back-link';
 import ThemeControls from '../../_shared/theme-controls';
 import { SubmitEvent, useState } from 'react';
 
+// AuthService sends its errors in lowercase; shown here they start with a capital letter.
+function errorText(err: unknown, fallback: string): string {
+	const text = err instanceof Error ? err.message : fallback;
+	return text.charAt(0).toUpperCase() + text.slice(1);
+}
 
 export function SettingsForm() {
 	const { user, refresh } = useAuth();
@@ -26,9 +31,9 @@ export function SettingsForm() {
 			const api = new AuthAPIService();
 			await api.updateAccount(name);
 			await refresh();
-			setNameStatus({ type: 'success', text: 'Name updated.' });
+			setNameStatus({ type: 'success', text: 'Name updated' });
 		} catch (err) {
-			setNameStatus({ type: 'error', text: err instanceof Error ? err.message : 'failed to update name' });
+			setNameStatus({ type: 'error', text: errorText(err, 'Failed to update name') });
 		} finally {
 			setIsSavingName(false);
 		}
@@ -43,10 +48,10 @@ export function SettingsForm() {
 			await api.changePassword(currentPassword, newPassword);
 			setCurrentPassword('');
 			setNewPassword('');
-			setPasswordStatus({ type: 'success', text: 'Password changed.' });
+			setPasswordStatus({ type: 'success', text: 'Password changed' });
 		} catch (err) {
 			setFailedPasswordChanges((count) => count + 1);
-			setPasswordStatus({ type: 'error', text: err instanceof Error ? err.message : 'failed to change password' });
+			setPasswordStatus({ type: 'error', text: errorText(err, 'Failed to change password') });
 		} finally {
 			setIsSavingPassword(false);
 		}

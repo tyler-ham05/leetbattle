@@ -209,19 +209,12 @@ describe('ban count', () => {
 		expect(screen.getByText('3 of 6 bans made')).toBeTruthy();
 	});
 
-	it('shows one ban marker per player in the match', () => {
-		// A 1v1: two players, so two bans and two markers.
-		const { container } = renderBan(openProblems, 2);
+	it('shows "0 of 2 bans made" in a 1v1 before anyone has banned', () => {
+		// A 1v1: two players, so two bans. The count is plain text now; the
+		// marker pips were removed (US-5-T-22).
+		renderBan(openProblems, 2);
 
-		// One marker per player, filled or not.
-		expect(container.querySelectorAll('[data-seat]')).toHaveLength(2);
-	});
-
-	it('#69 marks two ban markers for Team 2 when two Team 2 players have banned', () => {
-		const { container } = renderBan(threeBans);
-
-		// Alan and Edsger are the Team 2 players who banned.
-		expect(container.querySelectorAll('[data-seat="b"]')).toHaveLength(2);
+		expect(screen.getByText('0 of 2 bans made')).toBeTruthy();
 	});
 });
 
