@@ -166,10 +166,15 @@ export function createGameServer(app: Express, options: ServerOptions = {}) {
 		game.timers.leave.clear();
 	};
 
-	// Decides the game: persists the end and final scores, tells every player
-	// the result, then closes their sockets and forgets the game.
+	// Decides the game: sends everyone the final state, persists the end and
+	// final scores, tells every player the result, then closes their sockets
+	// and forgets the game.
 	const endGame = async (game: GameState, result: GameResult) => {
 		if (game.phase === 'ended') return;
+		// The final scores and solved lists go out first, while the phase is
+		// still one clients know, so the result screen counts the last solve
+		// (US-4-T-7: it used to show the score from before it).
+		broadcastState(game);
 		game.phase = 'ended';
 		clearTimers(game);
 		liveGames.delete(game);
