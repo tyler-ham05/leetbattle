@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import RequireAuth from '../../login/protected';
 import { useAuth } from '../../login/context';
 import HomeTopBar from '../../_home/components/topbar';
 import Spinner from '../../_shared/spinner';
 import { teamsFor } from '../../_shared/teams';
 import type { ShownTeam } from '../../_shared/teams';
-import { EditorProvider } from '../../editor/context';
+import { EditorProvider, useEditor } from '../../editor/context';
 import type { EditorWorkspace } from '../../editor/context';
 import EditorLayout from '../../editor/components/editor-layout';
 import TeamChat from '../../editor/components/team-chat';
@@ -126,7 +126,22 @@ function ForfeitControl({ onForfeit }: { onForfeit: () => void }) {
 // exact same editor UI (EditorLayout, with its QuestionPanel / CodeTabs /
 // Monaco), just driven by a second, read-only EditorProvider fed their shared
 // code instead of this player's own.
-function MatchEditor({ questionIds, defaultQuestionId, submit, shareCode, teammates, teammateCode }: {
+// US-6-T-13: inside a teammate's read-only workspace, switches it once to the
+// question they last edited, as soon as the match's questions have loaded.
+// After that their own question switcher is free to move around.
+function OpenOnQuestion({ questionId }: { questionId?: number }) {
+	const { questions, setCurrentQuestion } = useEditor();
+	const opened = useRef(false);
+	useEffect(() => {
+		const question = questions.find((entry) => entry.question_id === questionId);
+		if (opened.current || !question) return;
+		opened.current = true;
+		setCurrentQuestion(question);
+	}, [questions, questionId, setCurrentQuestion]);
+	return null;
+}
+
+function MatchEditor({ questionIds, defaultQuestionId, submit, shareCode, teammates, teammateCode, teammateQuestion }: {
 	questionIds: number[];
 	// The question the player picked on the pick screen, if any (US-6-T-10).
 	defaultQuestionId?: number;
@@ -134,6 +149,8 @@ function MatchEditor({ questionIds, defaultQuestionId, submit, shareCode, teamma
 	shareCode: (_questionId: number, _workspace: EditorWorkspace) => void;
 	teammates: GamePlayer[];
 	teammateCode: TeammateCode;
+	// The questionId each teammate last edited (US-6-T-13).
+	teammateQuestion: Record<string, number>;
 }) {
 	const [viewedUserId, setViewedUserId] = useState<string | null>(null);
 	const viewedTeammate = teammates.find((teammate) => teammate.userId === viewedUserId) ?? null;
@@ -143,10 +160,11 @@ function MatchEditor({ questionIds, defaultQuestionId, submit, shareCode, teamma
 	// and back (see context.tsx -- EditorProvider owns that state, not EditorLayout).
 	return (
 		<EditorProvider questionIds={questionIds} defaultQuestionId={defaultQuestionId} submit={submit} shareCode={shareCode}>
-			<WorkspaceSwitcher teammates={teammates} viewedUserId={viewedUserId} onSelect={setViewedUserId} />
+			<WorkspaceSwitcher teammates={teammates} viewedUserId={viewedUserId} onSelect={setViewedUserId} questionIds={questionIds} teammateQuestion={teammateQuestion} />
 			{viewedTeammate ? (
 				// The code tab bar says whose code this is (US-5-T-19).
-				<EditorProvider key={viewedTeammate.userId} questionIds={questionIds} readOnly ownerName={viewedTeammate.displayName} externalWorkspaces={teammateCode[viewedTeammate.userId] ?? {}}>
+				<EditorProvider key={viewedTeammate.userId} questionIds={questionIds} readOnly ownerName={viewedTeammate.displayName} externalWorkspaces={teammateCode[viewedTeammate.userId] ?? {}} defaultQuestionId={teammateQuestion[viewedTeammate.userId]}>
+					<OpenOnQuestion questionId={teammateQuestion[viewedTeammate.userId]} />
 					<EditorLayout belowQuestion={<TeamChat />} />
 				</EditorProvider>
 			) : (
@@ -159,7 +177,7 @@ function MatchEditor({ questionIds, defaultQuestionId, submit, shareCode, teamma
 function GameContent() {
 	const { gameId } = useParams<{ gameId: string }>();
 	const { user } = useAuth();
-	const { socket, connected, game, result, error, connect, forfeit, ban, pick, submit, shareCode, teammateCode, chatHistory } = useGameSocket();
+	const { socket, connected, game, result, error, connect, forfeit, ban, pick, submit, shareCode, teammateCode, teammateQuestion, chatHistory } = useGameSocket();
 	const joined = connected && game !== null;
 	const playing = joined && game.phase === 'playing' && !result;
 	const banning = joined && game.phase === 'banning' && !result;
@@ -207,6 +225,7 @@ function GameContent() {
 						shareCode={shareCode}
 						teammates={teammates}
 						teammateCode={teammateCode}
+						teammateQuestion={teammateQuestion}
 					/>
 				</ChatProvider>
 			</div>

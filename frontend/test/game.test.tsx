@@ -226,6 +226,8 @@ function configureGame(context: Record<string, unknown> = {}) {
 		submit: gameMocks.submit,
 		shareCode: gameMocks.shareCode,
 		teammateCode: {},
+		// No teammate has edited anything yet (US-6-T-13).
+		teammateQuestion: {},
 		chatHistory: [],
 		...context,
 	});
