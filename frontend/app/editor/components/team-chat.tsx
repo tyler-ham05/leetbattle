@@ -1,11 +1,43 @@
 'use client';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useLayoutEffect, useRef, useState } from 'react';
+import { useAuth } from '../../login/context';
 import { useTeamChat } from '../chat-context';
+
+// How close (px) to the bottom of the list still counts as "at the bottom".
+const NEAR_BOTTOM_PX = 48;
 
 export default function TeamChat() {
 	const { messages, send, error } = useTeamChat();
+	const { user } = useAuth();
 	const [draft, setDraft] = useState('');
 	const canSend = draft.trim() !== '';
+	const listRef = useRef<HTMLUListElement>(null);
+	// Whether the player was at (or near) the bottom when they last scrolled.
+	const atBottom = useRef(true);
+	const [hasUnseen, setHasUnseen] = useState(false);
+
+	const scrollToBottom = () => {
+		const list = listRef.current;
+		if (list) list.scrollTop = list.scrollHeight;
+		atBottom.current = true;
+		setHasUnseen(false);
+	};
+
+	const onScroll = () => {
+		const list = listRef.current;
+		if (!list) return;
+		atBottom.current = list.scrollHeight - list.scrollTop - list.clientHeight <= NEAR_BOTTOM_PX;
+		if (atBottom.current) setHasUnseen(false);
+	};
+
+	// A new message follows the list down if the player was at the bottom or
+	// sent it themselves; otherwise the list stays put and "New messages" shows.
+	useLayoutEffect(() => {
+		const newest = messages[messages.length - 1];
+		if (!newest) return;
+		if (atBottom.current || newest.userId === user?.id) scrollToBottom();
+		else setHasUnseen(true);
+	}, [messages, user?.id]);
 
 	const onSubmit = (event: FormEvent) => {
 		event.preventDefault();
@@ -28,14 +60,28 @@ export default function TeamChat() {
 			{messages.length === 0 ? (
 				<p className="flex-1 px-4 py-3 text-muted">No messages yet</p>
 			) : (
-				<ul className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3">
-					{messages.map((message) => (
-						<li key={message.id} className="leading-5">
-							<span className="mr-2 font-medium text-primary">{message.displayName}</span>
-							<span data-testid="chat-text" className="break-words">{message.text}</span>
-						</li>
-					))}
-				</ul>
+				<div className="relative flex min-h-0 flex-1 flex-col">
+					<ul ref={listRef} onScroll={onScroll} className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3">
+						{messages.map((message) => {
+							const own = message.userId === user?.id;
+							return (
+								<li key={message.id} className="leading-5">
+									<span className={`mr-2 font-medium ${own ? 'text-ink' : 'text-primary'}`}>{own ? 'You' : message.displayName}</span>
+									<span data-testid="chat-text" className="break-words">{message.text}</span>
+								</li>
+							);
+						})}
+					</ul>
+					{hasUnseen && (
+						<button
+							type="button"
+							onClick={scrollToBottom}
+							className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-md border border-line bg-surface px-3 py-1 text-xs text-ink hover:bg-raised"
+						>
+							New messages
+						</button>
+					)}
+				</div>
 			)}
 
 			{error && <p role="alert" className="border-t border-line px-4 pt-2 text-xs text-danger">{error}</p>}
