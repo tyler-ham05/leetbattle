@@ -34,3 +34,9 @@
 - "–" should be in muted text
 - The breakdown should come in after the halves (lb-result-rise, delayed past the halves)
 - Once the match has ended, the game page should list the match's questions on the result screen (all mocked, no backend)
+
+## Result screen score count
+- The final score should not pad its digits to equal widths (no gap after a narrow "1")
+- Once the halves have fully risen in, the score should still be counting (well below the final score)
+- Once the count is done, the score should show the final score
+- A winner's crown should only drop once the count has landed
