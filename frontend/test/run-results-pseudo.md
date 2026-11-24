@@ -15,14 +15,19 @@
 
 ## Run shows errors in their own block (AC3)
 - After Run, a case with a runtime error should show an "Error" block
-- After Run, the "Error" block should show the error message (e.g. "ZeroDivisionError: division by zero")
+- After Run, the "Error" block should show the case's full stderr (the traceback)
+- After Run, when an errored case's stderr is empty (e.g. Time Limit Exceeded), the "Error" block should show the error message
 - After Run, a case with a runtime error should not show "Your output"
+- After Run, a case with a runtime error should not show a "Stderr" block (its stderr is already in "Error")
+- After a Runtime Error Submit, the result panel should show an "Error" block with the failing case's traceback
+- After a Runtime Error Submit, the result panel should not show "Your output"
 
 ## Stdout and stderr for each test case (AC4)
 - After Run, the selected case should show a "Stdout" block with what the player printed
 - After Run, the selected case should show a "Stderr" block with what the player's code wrote to stderr
 - After Run, switching to Case 2 should show Case 2's stdout, not Case 1's
-- After Run, a case that printed nothing should say "No output" under "Stdout"
+- After Run, a case that printed nothing should not show a "Stdout" block
+- After Run, a case that wrote nothing to stderr should not show a "Stderr" block
 - After Submit, the result panel should show a "Stdout" block for each case that ran
 - After a match Submit (through the game socket), the result panel should show the "Stdout" block from the grading
 

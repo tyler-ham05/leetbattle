@@ -14,13 +14,18 @@
 //  - After a Wrong Answer Submit, the "Your output" block should show the player's actual output
 // Run shows errors in their own block (AC3)
 //  - After Run, a case with a runtime error should show an "Error" block
-//  - After Run, the "Error" block should show the error message (e.g. "ZeroDivisionError: division by zero")
+//  - After Run, the "Error" block should show the case's full stderr (the traceback)
+//  - After Run, when an errored case's stderr is empty (e.g. Time Limit Exceeded), the "Error" block should show the error message
 //  - After Run, a case with a runtime error should not show "Your output"
+//  - After Run, a case with a runtime error should not show a "Stderr" block (its stderr is already in "Error")
+//  - After a Runtime Error Submit, the result panel should show an "Error" block with the failing case's traceback
+//  - After a Runtime Error Submit, the result panel should not show "Your output"
 // Stdout and stderr for each test case (AC4)
 //  - After Run, the selected case should show a "Stdout" block with what the player printed
 //  - After Run, the selected case should show a "Stderr" block with what the player's code wrote to stderr
 //  - After Run, switching to Case 2 should show Case 2's stdout, not Case 1's
-//  - After Run, a case that printed nothing should say "No output" under "Stdout"
+//  - After Run, a case that printed nothing should not show a "Stdout" block
+//  - After Run, a case that wrote nothing to stderr should not show a "Stderr" block
 //  - After Submit, the result panel should show a "Stdout" block for each case that ran
 //  - After a match Submit (through the game socket), the result panel should show the "Stdout" block from the grading
 // Output Limit Exceeded (AC6)
@@ -71,6 +76,22 @@ const RUN_RUNTIME_ERROR = [
 	{ verdict: 'Runtime Error', expected: '1', response: 'ZeroDivisionError: division by zero', stdout: '', stderr: 'Traceback (most recent call last):\nZeroDivisionError: division by zero' },
 	{ verdict: 'Runtime Error', expected: '2', response: 'ZeroDivisionError: division by zero', stdout: '', stderr: 'Traceback (most recent call last):\nZeroDivisionError: division by zero' },
 ];
+// A timeout has an error message but nothing on stderr.
+const RUN_TIMEOUT = [
+	{ verdict: 'Time Limit Exceeded', expected: '1', response: 'time limit exceeded', stdout: '', stderr: '' },
+	{ verdict: 'Time Limit Exceeded', expected: '2', response: 'time limit exceeded', stdout: '', stderr: '' },
+];
+const TRACEBACK = 'Traceback (most recent call last):\n  File "solution.py", line 3, in solve1\nZeroDivisionError: division by zero';
+// A Submit that failed on case 2 with a runtime error: its traceback is that case's stderr.
+const SUBMIT_RUNTIME_ERROR = {
+	verdict: 'Runtime Error',
+	passed: 1,
+	total: 3,
+	case: '[2]',
+	expected: '2',
+	response: 'ZeroDivisionError: division by zero',
+	cases: [{ verdict: 'Accepted', stdout: '', stderr: '' }, { verdict: 'Runtime Error', stdout: '', stderr: TRACEBACK }],
+};
 const RUN_OUTPUT_LIMIT = [
 	{ verdict: 'Output Limit Exceeded', expected: '1', response: '1', stdout: 'x'.repeat(100), stderr: '' },
 	{ verdict: 'Accepted', expected: '2', response: '2', stdout: '', stderr: '' },
@@ -196,16 +217,42 @@ describe('US-8-T-3 Run shows errors in their own block', () => {
 		expect(screen.getByText('Error')).toBeTruthy();
 	});
 
-	it('US-8-T-3 shows the error message in the "Error" block', async () => {
+	it('US-8-T-3 shows the case\'s full stderr (the traceback) in the "Error" block', async () => {
 		await renderEditor({ run: RUN_RUNTIME_ERROR });
 		await runCode();
-		expect(blockUnder(screen.getByText('Error')).textContent).toContain('ZeroDivisionError: division by zero');
+		expect(blockUnder(screen.getByText('Error')).textContent).toContain('Traceback (most recent call last):');
+	});
+
+	it('US-8-T-3 shows the error message in the "Error" block when stderr is empty', async () => {
+		await renderEditor({ run: RUN_TIMEOUT });
+		await userEvent.click(screen.getByRole('button', { name: 'Run' }));
+		await screen.findAllByText('Time Limit Exceeded');
+		expect(blockUnder(screen.getByText('Error')).textContent).toBe('time limit exceeded');
 	});
 
 	it('US-8-T-3 does not show "Your output" for a case with a runtime error', async () => {
 		await renderEditor({ run: RUN_RUNTIME_ERROR });
 		await runCode();
 		expect(screen.queryByText('Your output')).toBeNull();
+	});
+
+	// The traceback is already in "Error", so it isn't shown a second time.
+	it('US-8-T-3 does not show a "Stderr" block for a case with a runtime error', async () => {
+		await renderEditor({ run: RUN_RUNTIME_ERROR });
+		await runCode();
+		expect(screen.queryByText('Stderr')).toBeNull();
+	});
+
+	it('US-8-T-3 shows the failing case\'s traceback in an "Error" block after a Runtime Error Submit', async () => {
+		await renderEditor({ submit: SUBMIT_RUNTIME_ERROR });
+		const panel = await submitCode();
+		expect(blockUnder(within(panel).getByText('Error')).textContent).toContain('Traceback (most recent call last):');
+	});
+
+	it('US-8-T-3 does not show "Your output" after a Runtime Error Submit', async () => {
+		await renderEditor({ submit: SUBMIT_RUNTIME_ERROR });
+		const panel = await submitCode();
+		expect(within(panel).queryByText('Your output')).toBeNull();
 	});
 });
 
@@ -229,10 +276,16 @@ describe('US-8-T-3 stdout and stderr for each test case', () => {
 		expect(blockUnder(screen.getByText('Stdout')).textContent).toBe('printed on case 2');
 	});
 
-	it('US-8-T-3 says "No output" under "Stdout" when a case printed nothing', async () => {
+	it('US-8-T-3 does not show a "Stdout" block when a case printed nothing', async () => {
 		await renderEditor({ run: RUN_SILENT });
 		await runCode();
-		expect(blockUnder(screen.getByText('Stdout')).textContent).toBe('No output');
+		expect(screen.queryByText('Stdout')).toBeNull();
+	});
+
+	it('US-8-T-3 does not show a "Stderr" block when a case wrote nothing to stderr', async () => {
+		await renderEditor({ run: RUN_SILENT });
+		await runCode();
+		expect(screen.queryByText('Stderr')).toBeNull();
 	});
 
 	// The Wrong Answer result ran two cases: the passing one, then the failing one.

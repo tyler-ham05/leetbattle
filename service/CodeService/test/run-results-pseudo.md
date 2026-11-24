@@ -24,6 +24,9 @@
 - After Run, code that raises ZeroDivisionError should have "Traceback" in the case's stderr
 - After Run, code with a syntax error should get the verdict "Runtime Error"
 - After Run, code with a syntax error should have "SyntaxError" in the case's stderr
+- After Run, a ZeroDivisionError's traceback should point at the player's own code: File "solution.py", line 3, in twoSum
+- After Run, a runtime error's stderr should not contain the server's temporary file path ("coderunner-")
+- After Run, code with a syntax error should name the player's file ("solution.py") in stderr
 
 ## Too much output gets its own verdict (AC6)
 - After Run, a solution that prints more than 64 KB should get "Output Limit Exceeded" on that case

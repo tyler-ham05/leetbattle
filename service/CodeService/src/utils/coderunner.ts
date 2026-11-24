@@ -25,29 +25,37 @@ export const runBodySchema = z.object({
 });
 
 const PYTHON_TIMEOUT_MS = 5000;
-const MAX_OUTPUT_BYTES = 1_000_000;
+// US-8-T-3: how much a test case may print (stdout and stderr together)
+// before it is stopped with Output Limit Exceeded.
+export const OUTPUT_LIMIT_BYTES = 64 * 1024;
+// The harness's own result line is small; this only guards against a runaway.
+const MAX_RESULT_BYTES = 1_000_000;
 
 interface CaseInput {
 	input: string;
 	expected: string;
 }
 
-export type CaseErrorType = 'timeout' | 'runtime_error' | null;
+export type CaseErrorType = 'timeout' | 'output_limit' | 'runtime_error' | null;
 
 export interface CaseResult extends CaseInput {
 	actual: string | null;
 	passed: boolean;
 	error: string | null;
 	errorType: CaseErrorType;
+	// What the player's code wrote while this case ran (US-8-T-3).
+	stdout: string;
+	stderr: string;
 }
 
-export type Verdict = 'Accepted' | 'Wrong Answer' | 'Runtime Error' | 'Time Limit Exceeded';
+export type Verdict = 'Accepted' | 'Wrong Answer' | 'Runtime Error' | 'Time Limit Exceeded' | 'Output Limit Exceeded';
 
 // Classifies a single case: wrong return value vs. an exception/crash vs.
-// a case that hit the per-case timeout.
+// a case that hit the per-case timeout or output limit.
 export function verdictForResult(result: CaseResult): Verdict {
 	if (result.passed) return 'Accepted';
 	if (result.errorType === 'timeout') return 'Time Limit Exceeded';
+	if (result.errorType === 'output_limit') return 'Output Limit Exceeded';
 	if (result.errorType === 'runtime_error') return 'Runtime Error';
 	return 'Wrong Answer';
 }
@@ -88,12 +96,30 @@ export function parseCheckCases(test: string): CaseInput[] {
 	return cases;
 }
 
+// The harness hands its result back on file descriptor 3, not stdout, so
+// whatever the player prints (stdout) or raises (stderr) is theirs alone and
+// can never be mistaken for the result.
+//
+// The player's code is compiled as "solution.py" (and registered with
+// linecache so tracebacks can quote it), and a traceback only shows frames
+// from that file: line numbers match the player's own code, and neither the
+// server's temp path nor the harness's lines appear (US-8-T-3).
 export function buildCaseHarness(imports: string, userCode: string, entryPoint: string, testCase: CaseInput): string {
 	return [
 		imports,
 		'import json',
+		'import linecache as _linecache',
+		'import os as _os',
+		'import traceback as _traceback',
 		'',
-		userCode,
+		`_player_code = ${JSON.stringify(userCode)}`,
+		'_linecache.cache["solution.py"] = (len(_player_code), None, _player_code.splitlines(True), "solution.py")',
+		'',
+		'def _print_player_traceback(e):',
+		'    tb = e.__traceback__',
+		'    while tb is not None and tb.tb_frame.f_code.co_filename != "solution.py":',
+		'        tb = tb.tb_next',
+		'    _traceback.print_exception(type(e), e, tb)',
 		'',
 		'def _parse_literal(value):',
 		'    try:',
@@ -108,6 +134,7 @@ export function buildCaseHarness(imports: string, userCode: string, entryPoint: 
 		`_entry_point_call = ${JSON.stringify(entryPoint)}`,
 		`_case = ${JSON.stringify(testCase)}`,
 		'try:',
+		'    exec(compile(_player_code, "solution.py", "exec"), globals())',
 		'    _actual = eval(f"{_entry_point_call}({_case[\'input\']})")',
 		'    _expected = _parse_literal(_case["expected"])',
 		'    _result = {',
@@ -118,6 +145,7 @@ export function buildCaseHarness(imports: string, userCode: string, entryPoint: 
 		'        "error": None,',
 		'    }',
 		'except Exception as e:',
+		'    _print_player_traceback(e)',
 		'    _result = {',
 		'        "input": _case["input"],',
 		'        "expected": _case["expected"],',
@@ -125,7 +153,8 @@ export function buildCaseHarness(imports: string, userCode: string, entryPoint: 
 		'        "passed": False,',
 		'        "error": f"{type(e).__name__}: {e}",',
 		'    }',
-		'print(json.dumps(_result))',
+		'with _os.fdopen(3, "w") as _result_pipe:',
+		'    _result_pipe.write(json.dumps(_result))',
 		'',
 	].join('\n');
 }
@@ -133,8 +162,11 @@ export function buildCaseHarness(imports: string, userCode: string, entryPoint: 
 interface PythonRunResult {
 	stdout: string;
 	stderr: string;
+	// What the harness wrote on file descriptor 3 (its JSON result).
+	result: string;
 	exitCode: number | null;
 	timedOut: boolean;
+	outputExceeded: boolean;
 }
 
 export async function runPython(script: string, timeoutMs = PYTHON_TIMEOUT_MS): Promise<PythonRunResult> {
@@ -143,30 +175,56 @@ export async function runPython(script: string, timeoutMs = PYTHON_TIMEOUT_MS): 
 	try {
 		await writeFile(file, script, 'utf8');
 		return await new Promise<PythonRunResult>((resolve) => {
-			const proc = spawn('python3', ['-I', file]);
-			let stdout = '';
-			let stderr = '';
+			// stdin, stdout, stderr, and a fourth pipe (fd 3) for the harness's result.
+			const proc = spawn('python3', ['-I', file], { stdio: ['ignore', 'pipe', 'pipe', 'pipe'] });
+			const stdout: Buffer[] = [];
+			const stderr: Buffer[] = [];
+			const result: Buffer[] = [];
+			let outputBytes = 0;
+			let resultBytes = 0;
 			let timedOut = false;
+			let outputExceeded = false;
 
 			const timer = setTimeout(() => {
 				timedOut = true;
 				proc.kill('SIGKILL');
 			}, timeoutMs);
 
-			proc.stdout.on('data', (chunk: Buffer) => {
-				if (stdout.length < MAX_OUTPUT_BYTES) stdout += chunk.toString();
+			// stdout and stderr share one budget. The first OUTPUT_LIMIT_BYTES are
+			// kept; going past it stops the case.
+			const capture = (into: Buffer[]) => (chunk: Buffer) => {
+				if (outputExceeded) return;
+				const room = OUTPUT_LIMIT_BYTES - outputBytes;
+				if (chunk.length > room) {
+					into.push(chunk.subarray(0, room));
+					outputBytes = OUTPUT_LIMIT_BYTES;
+					outputExceeded = true;
+					proc.kill('SIGKILL');
+					return;
+				}
+				into.push(chunk);
+				outputBytes += chunk.length;
+			};
+			proc.stdout?.on('data', capture(stdout));
+			proc.stderr?.on('data', capture(stderr));
+			(proc.stdio[3] as NodeJS.ReadableStream | null)?.on('data', (chunk: Buffer) => {
+				if (resultBytes < MAX_RESULT_BYTES) result.push(chunk);
+				resultBytes += chunk.length;
 			});
-			proc.stderr.on('data', (chunk: Buffer) => {
-				if (stderr.length < MAX_OUTPUT_BYTES) stderr += chunk.toString();
-			});
-			proc.on('close', (exitCode) => {
+
+			const finish = (exitCode: number | null, extraStderr = '') => {
 				clearTimeout(timer);
-				resolve({ stdout, stderr, exitCode, timedOut });
-			});
-			proc.on('error', (err) => {
-				clearTimeout(timer);
-				resolve({ stdout, stderr: String(err), exitCode: null, timedOut });
-			});
+				resolve({
+					stdout: Buffer.concat(stdout).toString(),
+					stderr: Buffer.concat(stderr).toString() + extraStderr,
+					result: Buffer.concat(result).toString(),
+					exitCode,
+					timedOut,
+					outputExceeded,
+				});
+			};
+			proc.on('close', (exitCode) => finish(exitCode));
+			proc.on('error', (err) => finish(null, String(err)));
 		});
 	} finally {
 		await rm(dir, { recursive: true, force: true });
@@ -181,31 +239,22 @@ export async function runCase(
 	timeoutMs = PYTHON_TIMEOUT_MS,
 ): Promise<CaseResult> {
 	const script = buildCaseHarness(imports, userCode, entryPoint, testCase);
-	const { stdout, stderr, exitCode, timedOut } = await runPython(script, timeoutMs);
+	const { stdout, stderr, result, exitCode, timedOut, outputExceeded } = await runPython(script, timeoutMs);
+	const failed = (error: string, errorType: CaseErrorType): CaseResult =>
+		({ ...testCase, actual: null, passed: false, error, errorType, stdout, stderr });
 
-	if (timedOut) {
-		return { ...testCase, actual: null, passed: false, error: 'time limit exceeded', errorType: 'timeout' };
-	}
-	if (exitCode !== 0) {
-		return {
-			...testCase,
-			actual: null,
-			passed: false,
-			error: stderr.trim() || `python exited with code ${exitCode}`,
-			errorType: 'runtime_error',
-		};
+	if (outputExceeded) return failed('output limit exceeded', 'output_limit');
+	if (timedOut) return failed('time limit exceeded', 'timeout');
+	// No result means Python never reached the end of the harness, e.g. the
+	// player's code didn't compile; its error is in stderr.
+	if (exitCode !== 0 || !result.trim()) {
+		return failed(stderr.trim() || `python exited with code ${exitCode}`, 'runtime_error');
 	}
 	try {
-		const parsed = JSON.parse(stdout.trim()) as Omit<CaseResult, 'errorType'>;
-		return { ...parsed, errorType: parsed.error ? 'runtime_error' : null };
+		const parsed = JSON.parse(result) as Omit<CaseResult, 'errorType' | 'stdout' | 'stderr'>;
+		return { ...parsed, errorType: parsed.error ? 'runtime_error' : null, stdout, stderr };
 	} catch {
-		return {
-			...testCase,
-			actual: null,
-			passed: false,
-			error: 'failed to parse interpreter output',
-			errorType: 'runtime_error',
-		};
+		return failed('failed to parse interpreter output', 'runtime_error');
 	}
 }
 

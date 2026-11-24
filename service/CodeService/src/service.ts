@@ -87,6 +87,8 @@ export async function runProblem(req: Request, res: Response, next: NextFunction
 				verdict: verdictForResult(r),
 				expected: r.expected,
 				response: r.error ?? r.actual,
+				stdout: r.stdout,
+				stderr: r.stderr,
 			})),
 		);
 	} catch (err) {
@@ -131,6 +133,9 @@ export async function submitProblem(req: Request, res: Response, next: NextFunct
 			case: firstFailure ? firstFailure.input : null,
 			expected: firstFailure ? firstFailure.expected : null,
 			response: firstFailure ? (firstFailure.error ?? firstFailure.actual) : null,
+			// US-8-T-3: every case that ran (Submit stops at the first failure),
+			// with what the player's code printed on it.
+			cases: results.map((r) => ({ verdict: verdictForResult(r), stdout: r.stdout, stderr: r.stderr })),
 		});
 	} catch (err) {
 		next(err);

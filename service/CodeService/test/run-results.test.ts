@@ -22,6 +22,9 @@
 //  - After Run, code that raises ZeroDivisionError should have "Traceback" in the case's stderr
 //  - After Run, code with a syntax error should get the verdict "Runtime Error"
 //  - After Run, code with a syntax error should have "SyntaxError" in the case's stderr
+//  - After Run, a ZeroDivisionError's traceback should point at the player's own code: File "solution.py", line 3, in twoSum
+//  - After Run, a runtime error's stderr should not contain the server's temporary file path ("coderunner-")
+//  - After Run, code with a syntax error should name the player's file ("solution.py") in stderr
 // Too much output gets its own verdict (AC6)
 //  - After Run, a solution that prints more than 64 KB should get "Output Limit Exceeded" on that case
 //  - After Submit, a solution that prints more than 64 KB should get the verdict "Output Limit Exceeded"
@@ -176,6 +179,22 @@ describe('US-8-T-3 errors come back with their message', () => {
 	it('US-8-T-3 puts the SyntaxError in stderr', async () => {
 		const [first] = await run(syntaxError);
 		expect(first.stderr).toContain('SyntaxError');
+	});
+
+	// `return 1 // 0` is line 3 of the player's code (dividesByZero above).
+	it('US-8-T-3 points a runtime error\'s traceback at the player\'s own code', async () => {
+		const [first] = await run(dividesByZero);
+		expect(first.stderr).toContain('File "solution.py", line 3, in twoSum');
+	});
+
+	it('US-8-T-3 keeps the server\'s temporary file path out of a runtime error\'s stderr', async () => {
+		const [first] = await run(dividesByZero);
+		expect(first.stderr).not.toContain('coderunner-');
+	});
+
+	it('US-8-T-3 names the player\'s file in a syntax error\'s stderr', async () => {
+		const [first] = await run(syntaxError);
+		expect(first.stderr).toContain('solution.py');
 	});
 });
 
