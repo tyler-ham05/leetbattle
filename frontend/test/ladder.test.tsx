@@ -9,7 +9,7 @@
 // The queue socket context is mocked; `emit` records what the page sends,
 // so nothing here talks to QueueService.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { fakeUser } from './helpers';
 
@@ -79,7 +79,8 @@ describe('US-9-T-2 Ladder page queues (criterion 2)', () => {
 		configureQueue({ counts: { '2v2': 3 } });
 		render(<LadderPage />);
 
-		expect(screen.getByText('3 waiting')).toBeTruthy();
+		// US-10-T-9: the arena cards say "N of M players" under the seat bars.
+		expect(screen.getByText('3 of 4 players')).toBeTruthy();
 	});
 
 	it('US-9-T-2 disables the join buttons while QueueService is not connected', () => {
@@ -102,13 +103,14 @@ describe('US-9-T-2 joining and waiting (criteria 6 and 7)', () => {
 		configureQueue({ queue: '2v2', counts: { '2v2': 1 } });
 		render(<LadderPage />);
 
-		expect(screen.getByText(/Waiting for a 2v2 match/)).toBeTruthy();
+		// US-10-T-9: the heading reads "Finding players" and the 2v2 card is marked queued.
+		expect(document.querySelector('[data-mode="2v2"]')?.getAttribute('data-state')).toBe('queued');
 	});
 
 	it('US-9-T-2 does not show the player waiting when they are not in a queue', () => {
 		render(<LadderPage />);
 
-		expect(screen.queryByText(/Waiting for a/)).toBeNull();
+		expect(document.querySelector('[data-state="queued"]')).toBeNull();
 	});
 
 	it('US-9-T-2 lets a player waiting in 1v1 join the 3v3 queue instead', async () => {
@@ -145,8 +147,14 @@ describe('US-9-T-2 leaving a queue (criterion 8)', () => {
 
 describe('US-9-T-2 match found (criterion 3)', () => {
 	it('US-9-T-2 takes the player to the new game once a match is found', () => {
+		// US-10-T-9: after the 2-1 countdown, not straight away.
+		vi.useFakeTimers();
 		configureQueue({ context: { matched: { gameId: 'game-1' } } });
 		render(<LadderPage />);
+		act(() => {
+			vi.advanceTimersByTime(2000);
+		});
+		vi.useRealTimers();
 
 		expect(ladderMocks.push).toHaveBeenCalledWith('/game/game-1');
 	});
