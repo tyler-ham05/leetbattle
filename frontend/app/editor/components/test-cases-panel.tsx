@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useEditor } from '../context';
-import OutputBlock from './output-block';
+import OutputBlock, { CaseOutputBlocks, isErrorVerdict } from './output-block';
 
 // A Run result in color: primary when the case passed, danger when it failed.
 function verdictColor(verdict: string | undefined): string {
@@ -56,7 +56,12 @@ export default function TestCasesPanel() {
 				{run && <p className={`mb-3 font-medium ${verdictColor(run.verdict)}`}>{run.verdict}</p>}
 				<OutputBlock label="Input">{testCase.input}</OutputBlock>
 				<OutputBlock label="Expected output" className="mt-3">{testCase.expected}</OutputBlock>
-				{run && <OutputBlock label="Your output" className="mt-3">{run.response ?? ''}</OutputBlock>}
+				{/* An error has no output to compare, so it gets its own block with the
+				    traceback (the case's stderr), or the message when stderr is empty (US-8-T-3). */}
+				{run && (isErrorVerdict(run.verdict)
+					? <OutputBlock label="Error" className="mt-3">{run.stderr || run.response || ''}</OutputBlock>
+					: <OutputBlock label="Your output" className="mt-3">{run.response ?? ''}</OutputBlock>)}
+				{run && <CaseOutputBlocks stdout={run.stdout} stderr={run.stderr} errored={isErrorVerdict(run.verdict)} />}
 			</div>
 		</div>
 	);
