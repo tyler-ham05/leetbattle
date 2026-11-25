@@ -8,6 +8,7 @@ import CodeRain from './code-rain';
 export const MENU = [
 	{ title: 'Practice', description: 'Three random problems in the editor', href: '/editor' },
 	{ title: 'Lobby', description: 'Join a lobby and pick a team', href: '/lobby' },
+	{ title: 'Ladder', description: 'Queue for a 1v1, 2v2 or 3v3 match', href: '/ladder' },
 	{ title: 'Settings', description: 'Name, password and color theme', href: '/settings' },
 ];
 
