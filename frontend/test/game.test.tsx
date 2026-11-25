@@ -967,13 +967,13 @@ describe('game page during the pick phase', () => {
 		expect(screen.queryByRole('heading', { name: 'Pick a question' })).toBeNull();
 	});
 
-	it('shows each problem in the pool by its topics on the pick screen', () => {
+	it('shows each problem in the pool by its title on the pick screen', () => {
 		configurePicking();
 		render(<GamePage />);
 
-		// Every topic of every problem, in pool order.
-		expect(screen.getAllByTestId('topic').map((topic) => topic.textContent))
-			.toEqual(pickPool.flatMap((entry) => entry.topics));
+		// "search-insert-position" -> "Search Insert Position", etc., in pool order.
+		expect(screen.getAllByTestId('question-title').map((title) => title.textContent))
+			.toEqual(['Search Insert Position', 'Number Of Islands', 'Course Schedule']);
 	});
 
 	it('sends the problem\'s questionId to the game when "Pick this question" is clicked', async () => {
@@ -1176,8 +1176,19 @@ describe('game page workspace switcher', () => {
 });
 
 describe('game page teammate workspace view', () => {
+	// Ada (u1) picked question 1 for herself, Grace (u2) question 2 (US-8-2),
+	// so viewing Grace's workspace below needs her own question, not Ada's.
+	const pickedPool = problemPool.map((entry) => ({
+		...entry,
+		pickedBy: {
+			a: entry.questionId === 1 ? { userId: 'u1', displayName: 'Ada', team: 'a' }
+				: entry.questionId === 2 ? { userId: 'u2', displayName: 'Grace', team: 'a' } : null,
+			b: null,
+		},
+	}));
+
 	async function renderPlayingGame(teammateCode: Record<string, unknown> = {}) {
-		configureConnectedGame({}, teammateCode);
+		configureConnectedGame({ problemPool: pickedPool }, teammateCode);
 		render(<GamePage />);
 		await screen.findByRole('heading', { name: /1\. Problem Number 1/ });
 	}
@@ -1204,6 +1215,17 @@ describe('game page teammate workspace view', () => {
 		await userEvent.click(screen.getByRole('tab', { name: 'Grace' }));
 
 		expect(await screen.findByRole('heading', { name: /2\. Problem Number 2/ })).toBeTruthy();
+	});
+
+	it('US-8-2 shows only the teammate\'s own question in their question nav, not the whole pool', async () => {
+		await renderPlayingGame({ u2: { 2: workspace('teammate code') } });
+
+		await userEvent.click(screen.getByRole('tab', { name: 'Grace' }));
+		await screen.findByRole('heading', { name: /2\. Problem Number 2/ });
+
+		// Grace owns only question 2 (pickedPool above); the nav strip inside
+		// her read-only workspace should show one button, not three.
+		expect(screen.getAllByRole('button', { name: /^\d+$/ })).toHaveLength(1);
 	});
 
 	it('US-6-T-7 shows a teammate\'s current tabs', async () => {
@@ -1253,11 +1275,11 @@ describe('game page teammate workspace view', () => {
 	});
 
 	it('US-6-T-7 updates the read-only view live when the teammate shares new code', async () => {
-		configureConnectedGame({}, { u2: { 2: workspace('first version') } });
+		configureConnectedGame({ problemPool: pickedPool }, { u2: { 2: workspace('first version') } });
 		const { rerender } = render(<GamePage />);
 		await screen.findByRole('heading', { name: /1\. Problem Number 1/ });
 		await userEvent.click(screen.getByRole('tab', { name: 'Grace' }));
-		configureConnectedGame({}, { u2: { 2: workspace('second version') } });
+		configureConnectedGame({ problemPool: pickedPool }, { u2: { 2: workspace('second version') } });
 
 		rerender(<GamePage />);
 
@@ -1269,13 +1291,24 @@ describe('game page teammate workspace view', () => {
 
 		await userEvent.click(screen.getByRole('tab', { name: 'Grace' }));
 
-		expect((screen.getByTestId('monaco') as HTMLTextAreaElement).value).toBe(makeProblem(1, 'Easy').starter_code.replaceAll('\\n', '\n'));
+		// Grace's own question is 2 (US-8-2): with nothing shared yet, her
+		// workspace opens on her own question, not Ada's.
+		expect((screen.getByTestId('monaco') as HTMLTextAreaElement).value).toBe(makeProblem(2, 'Easy').starter_code.replaceAll('\\n', '\n'));
 	});
 
 	it('US-6-T-7 lets you view a teammate\'s other match questions', async () => {
-		await renderPlayingGame({
+		// Grace owns two questions here (unlike the describe block's usual
+		// one-each pickedPool), so the test can exercise switching between a
+		// teammate's own questions, not the whole pool (US-8-2).
+		const gracePicksTwo = problemPool.map((entry) => ({
+			...entry,
+			pickedBy: { a: entry.questionId === 1 || entry.questionId === 2 ? { userId: 'u2', displayName: 'Grace', team: 'a' } : null, b: null },
+		}));
+		configureConnectedGame({ problemPool: gracePicksTwo }, {
 			u2: { 1: workspace('question 1 code for teammate'), 2: workspace('question 2 code for teammate') },
 		});
+		render(<GamePage />);
+		await screen.findByRole('heading', { name: /1\. Problem Number 1/ });
 		await userEvent.click(screen.getByRole('tab', { name: 'Grace' }));
 
 		await userEvent.click(screen.getByRole('button', { name: '2' }));

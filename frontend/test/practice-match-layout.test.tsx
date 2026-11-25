@@ -126,8 +126,10 @@ function rosterWithDisconnected(...userIds: string[]) {
 	return roster.map((entry) => (userIds.includes(entry.userId) ? { ...entry, connected: false } : entry));
 }
 
+// Grace (u2) picked question 1 for herself (US-8-2); the tests below that
+// view her workspace share her code for that same question.
 const problemPool = [
-	{ taskId: 'two-sum', questionId: 1, difficulty: 'Easy', topics: ['Array'], bannedBy: null },
+	{ taskId: 'two-sum', questionId: 1, difficulty: 'Easy', topics: ['Array'], bannedBy: null, pickedBy: { a: { userId: 'u2', displayName: 'Grace', team: 'a' }, b: null } },
 	{ taskId: 'valid-parentheses', questionId: 2, difficulty: 'Easy', topics: ['Stack'], bannedBy: null },
 ];
 

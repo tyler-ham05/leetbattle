@@ -100,7 +100,10 @@ interface GameSocketContextValue {
 	// Bans one problem from the pool during the ban phase.
 	ban: (_questionId: number) => void;
 	// Picks one of the problems the bans left during the pick phase (US-6-T-10).
+	// A player may pick more than one, up to their own limit (US-8-2).
 	pick: (_questionId: number) => void;
+	// Gives back one of the player's own picks during the pick phase (US-8-2).
+	unpick: (_questionId: number) => void;
 	// Has the game grade a solution; rejects with a readable message if refused.
 	submit: (_questionId: number, _code: string) => Promise<SubmitResult>;
 	// Sends the player's editor for one question to their own team.
@@ -243,6 +246,10 @@ export function GameSocketProvider({ children }: { children: ReactNode }) {
 		socketRef.current?.socket.emit('game:pick', { questionId });
 	}, []);
 
+	const unpick = useCallback((questionId: number) => {
+		socketRef.current?.socket.emit('game:unpick', { questionId });
+	}, []);
+
 	const submit = useCallback(async (questionId: number, code: string): Promise<SubmitResult> => {
 		const socket = socketRef.current?.socket;
 		if (!socket) throw new Error(SUBMIT_REFUSALS['not-playing']);
@@ -257,7 +264,7 @@ export function GameSocketProvider({ children }: { children: ReactNode }) {
 
 	const clearError = useCallback(() => setError(null), []);
 	return (
-		<GameSocketContext.Provider value={{ socket, connected, game, result, error, connect, forfeit, ban, pick, submit, shareCode, teammateCode, teammateQuestion, chatHistory, clearError }}>
+		<GameSocketContext.Provider value={{ socket, connected, game, result, error, connect, forfeit, ban, pick, unpick, submit, shareCode, teammateCode, teammateQuestion, chatHistory, clearError }}>
 			{children}
 		</GameSocketContext.Provider>
 	);

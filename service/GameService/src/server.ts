@@ -7,23 +7,13 @@ import { pool } from './db';
 import { findGame, forgetGame, GAME_DURATION_MS, gradeSubmission, onGameCreated, serializeGame } from './service';
 import type { GamePlayerState, GameState, Grading, TeamChatMessage, TeamId, Workspace } from './service';
 
-// How long a new game waits for its players before the clock starts anyway.
 const DEFAULT_JOIN_WAIT_MS = 5_000;
-// How long a dropped player has to reconnect before they count as having left.
 const DEFAULT_RECONNECT_GRACE_MS = 30_000;
-// How long a team must wait after a submission is graded before submitting
-// again, so teams can't spam CodeService's grading functions.
 const DEFAULT_SUBMIT_COOLDOWN_MS = 5_000;
-// How long players have to ban before play starts with the bans made so far.
 const DEFAULT_BAN_WINDOW_MS = 30_000;
-// How long players have to pick before whoever hasn't is auto-assigned
-// (US-6-T-10). Roughly the same as the ban window.
 const DEFAULT_PICK_WINDOW_MS = 30_000;
-// The longest team chat message GameService accepts, in characters.
 const MAX_CHAT_LENGTH = 500;
-// The shortest time between two team chat messages from the same player.
 const CHAT_RATE_LIMIT_MS = 1_000;
-// How long team chat messages are kept before they are deleted, in days.
 const CHAT_RETENTION_DAYS = 10;
 
 interface ServerOptions {
@@ -87,7 +77,15 @@ interface PickRequest {
 }
 
 // The answer to `game:pick`.
-type PickResponse = { ok: true } | { error: 'not-picking' | 'unknown-problem' | 'already-picked' | 'problem-picked' };
+type PickResponse = { ok: true } | { error: 'not-picking' | 'unknown-problem' | 'pick-limit-reached' | 'problem-picked' };
+
+// What a player sends on `game:unpick` (US-8-2): gives back one of their own picks.
+interface UnpickRequest {
+	questionId?: unknown;
+}
+
+// The answer to `game:unpick`.
+type UnpickResponse = { ok: true } | { error: 'not-picking' | 'unknown-problem' | 'not-picked' };
 
 // The answer to `game:submit`: CodeService's grading, or why it was refused.
 type SubmitResponse = Grading | { error: 'not-playing' | 'unknown-problem' | 'team-busy' | 'cooldown' | 'grading-failed' };
@@ -113,6 +111,13 @@ export function pointsForSubmission(difficulty: string, passed: number, total: n
 // When the clock runs out, the higher score wins; level scores are a draw.
 export function resultOnTime({ a, b }: Record<TeamId, number>): GameResult {
 	return { winner: a === b ? null : a > b ? 'a' : 'b', reason: 'time' };
+}
+
+// How many problems a player may claim from their team's shared pool
+// (US-8-2): the pool rounded up to split evenly across the team, so the
+// whole pool is always claimable even when it doesn't divide evenly.
+export function pickLimit(poolSize: number, teamSize: number): number {
+	return Math.ceil(poolSize / teamSize);
 }
 
 // Wraps the Express app in an HTTP server and attaches the socket.io endpoint
@@ -312,20 +317,30 @@ export function createGameServer(app: Express, options: ServerOptions = {}) {
 		broadcastState(game);
 	};
 
-	// Auto-assigns whoever hasn't picked the problem(s) their team hasn't
-	// claimed yet, in pool order, so every player ends the pick phase with
-	// exactly one problem of their own even if they never clicked one.
+	// Auto-assigns whoever picked nothing at all the pool's leftover problems
+	// their team hasn't claimed yet, sequentially in pool order, up to their
+	// own pick limit (US-8-2), so every player ends the pick phase with
+	// problems of their own even if they never clicked one. A player who
+	// picked some but not all of their limit is left as they are -- only
+	// players with no picks at all are auto-assigned.
 	const autoAssignPicks = (game: GameState) => {
 		for (const team of ['a', 'b'] as TeamId[]) {
-			const unpicked = teamOf(game, team).filter((player) => !player.left && !game.picks.has(player.userId));
+			const teamPlayers = teamOf(game, team);
+			const limit = pickLimit(game.problemPool.length, teamPlayers.length);
+			const unpicked = teamPlayers.filter((player) => !player.left && !game.picks.has(player.userId));
 			if (unpicked.length === 0) continue;
-			const pickedByTeam = new Set(
-				[...game.picks].filter(([userId]) => game.players.get(userId)?.team === team).map(([, questionId]) => questionId),
+			const claimedByTeam = new Set(
+				[...game.picks].filter(([userId]) => game.players.get(userId)?.team === team).flatMap(([, questionIds]) => questionIds),
 			);
-			const available = game.problemPool.filter((problem) => !pickedByTeam.has(problem.questionId));
+			const available = game.problemPool.filter((problem) => !claimedByTeam.has(problem.questionId));
 			for (const player of unpicked) {
-				const next = available.shift();
-				if (next) game.picks.set(player.userId, next.questionId);
+				const assigned: number[] = [];
+				while (assigned.length < limit) {
+					const next = available.shift();
+					if (!next) break;
+					assigned.push(next.questionId);
+				}
+				if (assigned.length > 0) game.picks.set(player.userId, assigned);
 			}
 		}
 	};
@@ -412,25 +427,47 @@ export function createGameServer(app: Express, options: ServerOptions = {}) {
 			broadcastState(game);
 		});
 
-		// Each player picks one of the problems the bans left, from their own
-		// team's pool of choices (US-6-T-10). Play starts once every player
-		// still in the game has picked (or the pick window runs out).
+		// Each player picks problems from their own team's pool of choices
+		// (US-6-T-10), exclusively assigned to them and no one else on their
+		// team (US-8-2), up to their pick limit. Play starts once every player
+		// still in the game has picked at least one (or the pick window runs out).
 		socket.on('game:pick', (request: PickRequest, ack?: (_response: PickResponse) => void) => {
 			const reply = typeof ack === 'function' ? ack : () => undefined;
 			if (game.phase !== 'picking') return reply({ error: 'not-picking' });
 			const problem = game.problemPool.find((entry) => entry.questionId === request?.questionId);
 			if (!problem) return reply({ error: 'unknown-problem' });
-			if (game.picks.has(user.id)) return reply({ error: 'already-picked' });
+			const ownPicks = game.picks.get(user.id) ?? [];
+			const limit = pickLimit(game.problemPool.length, teamOf(game, player.team).length);
+			if (ownPicks.length >= limit) return reply({ error: 'pick-limit-reached' });
 			const pickedByTeammate = teamOf(game, player.team)
-				.some((teammate) => game.picks.get(teammate.userId) === problem.questionId);
+				.some((teammate) => (game.picks.get(teammate.userId) ?? []).includes(problem.questionId));
 			if (pickedByTeammate) return reply({ error: 'problem-picked' });
 
-			game.picks.set(user.id, problem.questionId);
+			game.picks.set(user.id, [...ownPicks, problem.questionId]);
 			reply({ ok: true });
 			if (everyonePicked(game)) {
 				void finishPicking(game);
 				return;
 			}
+			broadcastState(game);
+		});
+
+		// Gives back one of the player's own picks (US-8-2), freeing it for a
+		// teammate and leaving room under the player's own limit to pick a
+		// different problem instead. Losing their only pick puts the player back
+		// to not having picked, same as before they ever clicked one.
+		socket.on('game:unpick', (request: UnpickRequest, ack?: (_response: UnpickResponse) => void) => {
+			const reply = typeof ack === 'function' ? ack : () => undefined;
+			if (game.phase !== 'picking') return reply({ error: 'not-picking' });
+			const problem = game.problemPool.find((entry) => entry.questionId === request?.questionId);
+			if (!problem) return reply({ error: 'unknown-problem' });
+			const ownPicks = game.picks.get(user.id) ?? [];
+			if (!ownPicks.includes(problem.questionId)) return reply({ error: 'not-picked' });
+
+			const left = ownPicks.filter((questionId) => questionId !== problem.questionId);
+			if (left.length > 0) game.picks.set(user.id, left);
+			else game.picks.delete(user.id);
+			reply({ ok: true });
 			broadcastState(game);
 		});
 

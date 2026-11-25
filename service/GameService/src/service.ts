@@ -89,7 +89,7 @@ export interface GameState {
 	problemPool: PoolProblem[];
 	bans: Map<string, number>; // userId -> questionId that player banned
 	banEndsAt: number | null; // Date.now() when the ban window runs out; null outside the ban phase
-	picks: Map<string, number>; // userId -> questionId that player picked (US-6-T-10)
+	picks: Map<string, number[]>; // userId -> questionIds exclusively assigned to that player (US-6-T-10, US-8-2)
 	pickEndsAt: number | null; // Date.now() when the pick window runs out; null outside the pick phase
 	selections: Map<string, string>; // userId -> task_id currently being worked (player_selections)
 	// Every player's last-shared editor, kept so a player who joins or
@@ -152,10 +152,12 @@ function bannedBy(game: GameState, questionId: number) {
 // Who on each team has picked the problem with `questionId`, as the pick
 // screen shows it (US-6-T-10). Each team picks independently from the same
 // pool left after banning, so a problem can show up to one picker per team.
+// A player may hold more than one problem (US-8-2), so this checks their
+// whole list, not a single value.
 function pickedBy(game: GameState, questionId: number): Record<TeamId, { userId: string; displayName: string; team: TeamId } | null> {
 	const result: Record<TeamId, { userId: string; displayName: string; team: TeamId } | null> = { a: null, b: null };
 	for (const [userId, picked] of game.picks) {
-		if (picked !== questionId) continue;
+		if (!picked.includes(questionId)) continue;
 		const player = game.players.get(userId);
 		if (player) result[player.team] = { userId, displayName: player.displayName, team: player.team };
 	}

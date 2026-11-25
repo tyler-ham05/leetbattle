@@ -1,102 +1,3 @@
-// US-6-T-2: GameService socket should require authentication
-//  - Connections without a valid login token should be rejected with "unauthorized"
-//  - A logged-in user who is not a player in the game should be rejected with "not-in-game"
-//  - A connection for a gameId that does not exist should be rejected with "not-in-game"
-// GameService socket should send the game state to a player who joins
-//  - The "game:state" event should carry the gameId the player connected to
-//  - The game state should list all six players
-//  - The game state should list the nine problems in the match pool
-//  - The joining player should be shown as connected
-//  - The game state should include how many seconds remain in the match
-// GameService socket should put each player in their team's room
-//  - A player on team a should be in the "game:<gameId>:a" room
-//  - A player on team a should not be in the "game:<gameId>:b" room
-// GameService socket should keep every player's connection status up to date
-//  - When a second player joins, players already connected should receive a game state showing two connected players
-//  - When a player's socket drops, the remaining players should receive a game state showing that player as disconnected
-// Game should wait for its players before the clock starts
-//  - A new game should be waiting for players
-//  - (changed by the ban phase) When every player has connected, the game should move to "banning"
-//  - (changed by the ban phase) When the join wait runs out, the game should move to "banning" with whoever has connected
-// Game should give a dropped player time to reconnect
-//  - Right after a player's socket drops, they should not be marked as left
-//  - When a player reconnects within the window, they should not be marked as left
-//  - When the window runs out, the player should be marked as left
-//  - When every player on a team has left, the other team should win by disconnect
-// Players should be able to forfeit as a team
-//  - When one of two connected teammates forfeits, the game should keep going with one forfeit vote counted
-//  - The same player forfeiting twice should count once
-//  - When every connected teammate has forfeited, the other team should win by forfeit
-// Game should shut down cleanly once it ends
-//  - Once the game ends, the players' sockets should be closed
-//  - Once the game ends, connecting to it should be rejected with "not-in-game"
-//  - Once the game ends, the players should no longer have an active game
-// GameService socket should send enough about each problem for the game page to load it
-//  - Each problem in the match pool should carry its task_id
-//  - Each problem in the match pool should carry the question_id CodeService looks problems up by
-//  - Each problem in the match pool should carry its difficulty
-// Players should be able to submit a solution through the game
-//  - A correct solution should come back from CodeService as "Accepted"
-//  - The code should be graded by CodeService using the problem's question_id
-//  - Once a solution is accepted, the game state should show that problem as solved for the submitter's team
-//  - A wrong solution should not mark the problem as solved
-//  - A problem that isn't in the match pool should be rejected with "unknown-problem"
-//  - Submitting before the game has started should be rejected with "not-playing"
-//  - When CodeService fails, the submission should be rejected with "grading-failed"
-// Teams should not be able to spam submissions
-//  - While a teammate's submission is being graded, another submission from the same team should be rejected with "team-busy"
-//  - While one team's submission is being graded, the other team should still be able to submit
-//  - Right after a team's submission is graded, its next submission should be rejected with "cooldown"
-//  - Once the cooldown has passed, the team should be able to submit again
-// Game should end once a team solves every problem
-//  - When a team has solved every problem in the pool, that team should win with reason "solved"
-//  - Before "game:ended", the players should get a final game state that counts the last problem's points (US-4-T-7)
-//  - Before "game:ended", the players should get a final game state that shows the last problem as solved (US-4-T-7)
-// Game should decide the winner when time runs out
-//  - When team a has the higher score, team a should win
-//  - When team b has the higher score, team b should win
-//  - When the scores are level, the game should be a draw
-// Game should still finish when saving its end fails
-//  - When the database can't save the end of the game, the players should still receive the result
-//
-// Ban phase: every player bans one of the nine, the rest are played; a ban
-// window, and anyone who hasn't banned when it runs out is skipped.
-// Game should hold a ban phase before the clock starts
-//  - When every player has connected, the game should move to "banning"
-//  - When the join wait runs out, the game should move to "banning" with whoever has connected
-//  - While banning, the game state should show the full 20 minutes remaining
-//  - While banning, the game state should include how many seconds are left to ban
-// GameService socket should send each problem's topics for the ban screen
-//  - Each problem in the match pool should carry its tags from CodeService as topics
-// Players should be able to ban one problem each
-//  - When a player bans a problem, the game state should show that problem as banned by that player
-//  - The ban should carry the banning player's display name
-//  - The ban should carry the banning player's team
-//  - When a player bans, the other players should receive a game state showing the ban
-//  - A player's second ban should be rejected with "already-banned"
-//  - Banning a problem another player already banned should be rejected with "problem-banned"
-//  - Banning a problem that isn't in the match pool should be rejected with "unknown-problem"
-//  - Banning once play has started should be rejected with "not-banning"
-//  - Submitting a solution during the ban phase should be rejected with "not-playing"
-// Play should start once the bans are in
-//  - When every player has banned, the game should start playing
-//  - Once play starts, the match pool should only list the problems that weren't banned
-//  - In a 3v3, six bans should leave three problems in play
-//  - In a 1v1, two bans should leave seven problems in play
-//  - When the ban window runs out, the game should start playing with the bans made so far
-//  - When a player has left during the ban phase, the game should start once every remaining player has banned
-// Game should give a player who drops during the ban phase time to reconnect
-//  - When a player's socket drops during the ban phase, their reconnect window should start
-//  - When every player on a team has left during the ban phase, the other team should win by disconnect
-// Game should be won on the problems left in play
-//  - When a team has solved every problem left after the bans, that team should win with reason "solved"
-// Bans should be saved
-//  - Once play starts, the game's saved problems (game_problems) should only be the ones left in play
-//
-// Because a game now bans before it plays, every older test that needs a game
-// in play (forfeit, submitting, winning, ending) gets there through
-// playingGame(), which has every player ban first. What those tests check is
-// unchanged.
 import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EncryptJWT } from 'jose';
@@ -104,7 +5,7 @@ import { io } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
 import { gameServer, request, socketUrl } from './setup';
 import { pool } from '../src/db';
-import { pointsForSubmission, resultOnTime } from '../src/server';
+import { pickLimit, pointsForSubmission, resultOnTime } from '../src/server';
 import { FAKE_GRADING_MS, fakeCodeServiceFetch, fakeTags, sixReadyPlayers } from './fixtures';
 import type { ReadyPlayer } from './fixtures';
 
@@ -278,6 +179,17 @@ interface PickResponse {
 // Picks `questionId` for the player on `socket` and resolves with GameService's answer.
 function pick(socket: Socket, questionId: number): Promise<PickResponse> {
 	return socket.timeout(2_000).emitWithAck('game:pick', { questionId });
+}
+
+// What GameService answers a `game:unpick` with: ok, or why it was refused (US-8-2).
+interface UnpickResponse {
+	ok?: boolean;
+	error?: string;
+}
+
+// Gives back `questionId` for the player on `socket` and resolves with GameService's answer.
+function unpick(socket: Socket, questionId: number): Promise<UnpickResponse> {
+	return socket.timeout(2_000).emitWithAck('game:unpick', { questionId });
 }
 
 // A fresh game with every player connected, resolved once the bans have
@@ -1065,12 +977,16 @@ describe('picking a problem', () => {
 		expect(response.ok).toBe(true);
 	});
 
-	it('rejects a player\'s second pick with "already-picked"', async () => {
+	// US-8-2: a player may now pick more than one problem, up to CEIL(pool
+	// size / team size) -- see "picking more than one problem (US-8-2)" below.
+	// This 2v2's pool of 2 leaves each player a limit of exactly 1, so a
+	// second pick is still rejected, just with the more general error.
+	it('rejects a pick once a player has reached their pick limit with "pick-limit-reached"', async () => {
 		const { sockets, remaining } = await pickingGame(2, 2);
 		await pick(sockets[0], remaining[0].questionId);
 		// The other players haven't picked yet, so the picks are still going on.
 		const response = await pick(sockets[0], remaining[1].questionId);
-		expect(response.error).toBe('already-picked');
+		expect(response.error).toBe('pick-limit-reached');
 	});
 
 	it('rejects picking a problem that isn\'t in the match pool with "unknown-problem"', async () => {
@@ -1491,5 +1407,163 @@ describe('saving scored submissions', () => {
 			test_cases_total: 3,
 			points_awarded: 150,
 		}]);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// US-8-2: questions a player picks are assigned directly to that player
+// (exclusively -- no two teammates ever end up with the same one), instead
+// of every player being handed the whole shared pool. A player may now pick
+// more than one problem, up to CEIL(pool size / team size); whoever picks
+// nothing is assigned the pool's leftovers sequentially, in pool order, once
+// the pick window ends -- same idea as the single-pick auto-assign tested
+// above ("auto-assigns whoever hasn't picked..."), just capped per player at
+// their own limit instead of exactly one.
+// ---------------------------------------------------------------------------
+
+describe('the pick limit a player may select up to (US-8-2)', () => {
+	it('is the pool size divided by the team size when it divides evenly', () => {
+		expect(pickLimit(3, 3)).toBe(1);
+	});
+
+	it('rounds up when the pool does not divide evenly across the team', () => {
+		expect(pickLimit(5, 2)).toBe(3);
+	});
+
+	it('rounds up the same way for a different uneven pool', () => {
+		expect(pickLimit(4, 3)).toBe(2);
+	});
+});
+
+// A picking-phase scenario where only one of the four players banned before
+// the ban window ran out (same trick as "starts picking with the bans made
+// so far when the ban window runs out" above), so a 2v2 is left with 5
+// problems instead of 2 -- enough for the pick limit (CEIL(5 / 2) = 3) to
+// come out above 1, which the single-pick scenarios above never exercise.
+async function overflowPickingGame(teamA: number, teamB: number) {
+	const { game, sockets, pool: matchPool } = await banningGame(teamA, teamB);
+	await ban(sockets[0], matchPool[0].questionId);
+	const state = await nextState(sockets[0], (next) => next.phase === 'picking');
+	return { game, sockets, remaining: state.problemPool };
+}
+
+describe('picking more than one problem (US-8-2)', () => {
+	it('lets a player pick a second, different problem when they are still under their limit', async () => {
+		const { sockets, remaining } = await overflowPickingGame(2, 2);
+		await pick(sockets[0], remaining[0].questionId);
+		// The overflowed pool gives sockets[0] a limit of 3 (CEIL(5 / 2)).
+		const response = await pick(sockets[0], remaining[1].questionId);
+		expect(response.ok).toBe(true);
+	});
+
+	it('rejects a pick once a player has claimed as many problems as their limit allows', async () => {
+		const { sockets, remaining } = await overflowPickingGame(2, 2);
+		await pick(sockets[0], remaining[0].questionId);
+		await pick(sockets[0], remaining[1].questionId);
+		await pick(sockets[0], remaining[2].questionId);
+		// sockets[0]'s limit is 3; a fourth pick is one too many.
+		const response = await pick(sockets[0], remaining[3].questionId);
+		expect(response.error).toBe('pick-limit-reached');
+	});
+
+	it('shows every problem a player picked as picked by them, not just the first', async () => {
+		const { game, sockets, remaining } = await overflowPickingGame(2, 2);
+		const bothPicked = nextState(sockets[0], (state) => [remaining[0].questionId, remaining[1].questionId]
+			.every((questionId) => state.problemPool.find((problem) => problem.questionId === questionId)?.pickedBy.a));
+		await pick(sockets[0], remaining[0].questionId);
+		await pick(sockets[0], remaining[1].questionId);
+		const state = await bothPicked;
+		expect([remaining[0].questionId, remaining[1].questionId].map((questionId) =>
+			state.problemPool.find((problem) => problem.questionId === questionId)?.pickedBy.a?.userId))
+			.toEqual([game.players[0].userId, game.players[0].userId]);
+	});
+
+	it('never lets a teammate claim a problem another teammate already picked', async () => {
+		const { sockets, remaining } = await overflowPickingGame(2, 2);
+		await pick(sockets[0], remaining[0].questionId);
+		// sockets[1] is sockets[0]'s teammate; the problem is already theirs.
+		const response = await pick(sockets[1], remaining[0].questionId);
+		expect(response.error).toBe('problem-picked');
+	});
+});
+
+describe('auto-assigning leftover problems sequentially (US-8-2)', () => {
+	it('gives a player who picked nothing the pool\'s leftovers in order, up to their own limit', async () => {
+		const { game, sockets, remaining } = await overflowPickingGame(2, 2);
+		// sockets[0] claims one of team a's five problems; sockets[1] (team a's
+		// other player) never picks at all, so once the pick window runs out
+		// they should be auto-assigned the next problems left in pool order,
+		// up to their own limit of 3 (CEIL(5 / 2)) -- not everything left over.
+		await pick(sockets[0], remaining[0].questionId);
+		const state = await nextState(sockets[0], (next) => next.phase === 'playing');
+		const assignedToSocket1 = state.problemPool
+			.filter((problem) => problem.pickedBy.a?.userId === game.players[1].userId)
+			.map((problem) => problem.questionId);
+		expect(assignedToSocket1).toEqual([remaining[1].questionId, remaining[2].questionId, remaining[3].questionId]);
+	});
+
+	it('leaves a problem unassigned once every active player on a team has reached their limit', async () => {
+		const { sockets, remaining } = await overflowPickingGame(2, 2);
+		await pick(sockets[0], remaining[0].questionId);
+		const state = await nextState(sockets[0], (next) => next.phase === 'playing');
+		// Team a's limit is 3 per player (6 total capacity) but the pool only
+		// overflowed to 5, so with sockets[0] holding just 1 and sockets[1]
+		// capped at 3, the fifth problem (remaining[4]) is never claimed by team a.
+		const unclaimedByTeamA = state.problemPool.find((problem) => problem.questionId === remaining[4].questionId);
+		expect(unclaimedByTeamA?.pickedBy.a).toBeNull();
+	});
+});
+
+// A player can change their mind about a pick before the window closes,
+// giving it back so a teammate can claim it, or so they can pick something
+// else instead without ever exceeding their own limit (US-8-2).
+describe('deselecting a pick (US-8-2)', () => {
+	it('shows the problem as no longer picked by the player once they give it back', async () => {
+		const { sockets, remaining } = await pickingGame(2, 2);
+		await pick(sockets[0], remaining[0].questionId);
+		const freed = nextState(sockets[0], (state) =>
+			!state.problemPool.find((problem) => problem.questionId === remaining[0].questionId)?.pickedBy.a);
+		await unpick(sockets[0], remaining[0].questionId);
+		const state = await freed;
+		expect(state.problemPool.find((problem) => problem.questionId === remaining[0].questionId)?.pickedBy.a).toBeNull();
+	});
+
+	it('frees the problem for a teammate to pick once it has been given back', async () => {
+		const { sockets, remaining } = await pickingGame(2, 2);
+		await pick(sockets[0], remaining[0].questionId);
+		await unpick(sockets[0], remaining[0].questionId);
+		// sockets[1] is sockets[0]'s teammate; the problem is open again.
+		const response = await pick(sockets[1], remaining[0].questionId);
+		expect(response.ok).toBe(true);
+	});
+
+	it('lets the player claim a different problem after giving one back once they were at their limit', async () => {
+		const { sockets, remaining } = await overflowPickingGame(2, 2);
+		await pick(sockets[0], remaining[0].questionId);
+		await pick(sockets[0], remaining[1].questionId);
+		await pick(sockets[0], remaining[2].questionId);
+		// sockets[0]'s limit is 3, so this would otherwise be "pick-limit-reached".
+		await unpick(sockets[0], remaining[0].questionId);
+		const response = await pick(sockets[0], remaining[3].questionId);
+		expect(response.ok).toBe(true);
+	});
+
+	it('rejects giving back a problem the player never picked with "not-picked"', async () => {
+		const { sockets, remaining } = await pickingGame(2, 2);
+		const response = await unpick(sockets[0], remaining[0].questionId);
+		expect(response.error).toBe('not-picked');
+	});
+
+	it('rejects giving back a problem that isn\'t in the match pool with "unknown-problem"', async () => {
+		const { sockets } = await pickingGame(2, 2);
+		const response = await unpick(sockets[0], -1);
+		expect(response.error).toBe('unknown-problem');
+	});
+
+	it('rejects giving back a pick once play has started with "not-picking"', async () => {
+		const { sockets, remaining } = await pickingGame(2, 2);
+		await pickEveryone(sockets, remaining);
+		const response = await unpick(sockets[0], remaining[0].questionId);
+		expect(response.error).toBe('not-picking');
 	});
 });
