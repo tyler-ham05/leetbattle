@@ -17,7 +17,7 @@ Out of scope: matchmaking by rating (a team's average rating is defined here for
 
 ## Specs
 - **Rating rules** (`service/AuthService/src/utils/rating.ts`)
-  - Every player starts at **100**. A rating never goes below **1**.
+  - Every player starts at **50**, in Bronze I. A rating never goes below **1**.
   - A team's average is the mean of its players' ratings.
   - For each player, the expected score is `E = 1 / (1 + 10^((opponent team average − player rating) / 400))`.
   - The actual score `S` is **1** for a win, **0.5** for a draw and **0** for a loss.
@@ -48,7 +48,7 @@ Out of scope: matchmaking by rating (a team's average rating is defined here for
   - A match that ends on time with level scores (`winner: null`) is a draw for everyone.
   - A player who left mid-match still gets their team's result.
 - **AuthService** (`service/AuthService`)
-  - The `users` table has a `rating` column (default 100) and keeps a record with `games_played`, `games_won` and a new `games_lost`. Draws are `games_played − games_won − games_lost`.
+  - The `users` table has a `rating` column (default 50) and keeps a record with `games_played`, `games_won` and a new `games_lost`. Draws are `games_played − games_won − games_lost`.
   - `POST /internal/match-results` takes `{ "gameId": "<id>", "winner": "a" | "b" | null, "players": [{ "userId": "<uuid>", "team": "a" | "b" }] }`.
     - It requires `Authorization: Bearer <INTERNAL_API_KEY>`. A missing or wrong key returns 401, and nothing changes.
     - A malformed body returns 400, and nothing changes.
@@ -64,14 +64,14 @@ Out of scope: matchmaking by rating (a team's average rating is defined here for
 ## Requirements
 - A rating is only ever changed by `POST /internal/match-results`. Players can't set or change their own rating.
 - `INTERNAL_API_KEY` is a new secret, a long random string, shared only by AuthService and GameService. It is never sent to the browser. It is separate from `SECRET` so the two can be changed independently. Locally it lives in the root `.env`, and tests set their own value.
-- The schema change uses `ADD COLUMN IF NOT EXISTS`, so existing users get rating 100 and a 0–0–0 record.
+- The schema change uses `ADD COLUMN IF NOT EXISTS`, so existing users get rating 50 and a 0–0–0 record.
 - Before this is merged, whoever manages GCP adds the new columns to the deployed AuthService database and sets `INTERNAL_API_KEY` on AuthService and GameService, plus `AUTH_SERVICE_URL` on GameService. Otherwise `GET /me` would fail on the missing column.
 - No new runtime dependencies.
 - Frontend tests use mocked AuthService responses and never call a backend service.
 - Existing AuthService, GameService and frontend tests keep passing.
 
 ## Acceptance criteria
-1. A new player's rating is 100, and their league is Bronze II.
+1. A new player's rating is 50, and their league is Bronze I.
 2. With Team A at 50, 350 and 650 and Team B at 450, 450 and 450, a Team A win changes Team A's ratings to 79, 370 and 658.
 3. A win, a draw and a loss use S = 1, 0.5 and 0, and every change is calculated from the ratings before the match.
 4. A rating never drops below 1.

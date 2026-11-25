@@ -115,6 +115,34 @@ export function resultOnTime({ a, b }: Record<TeamId, number>): GameResult {
 	return { winner: a === b ? null : a > b ? 'a' : 'b', reason: 'time' };
 }
 
+// US-7-T-1: what AuthService needs to rate a finished match: the winner (null
+// for a draw) and every player on the roster with their team, including
+// anyone who left mid-match.
+export function matchResultReport(game: GameState, result: GameResult) {
+	return {
+		gameId: game.gameId,
+		winner: result.winner,
+		players: [...game.players.values()].map(({ userId, team }) => ({ userId, team })),
+	};
+}
+
+// US-7-T-1: sends a finished match to AuthService, which updates every
+// player's rating and record. Read per call so tests and deployments can set
+// them. A failure is only logged: the match has already ended for the players.
+async function reportMatchResult(game: GameState, result: GameResult): Promise<void> {
+	const authServiceUrl = process.env.AUTH_SERVICE_URL ?? 'http://localhost:4002';
+	try {
+		const response = await fetch(`${authServiceUrl}/internal/match-results`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.INTERNAL_API_KEY ?? ''}` },
+			body: JSON.stringify(matchResultReport(game, result)),
+		});
+		if (!response.ok) console.error(`[game-service] AuthService refused the match result (${response.status})`);
+	} catch (err) {
+		console.error('[game-service] could not report the match result to AuthService', err);
+	}
+}
+
 // Wraps the Express app in an HTTP server and attaches the socket.io endpoint
 // to it, so one port serves both the REST routes and the live game traffic.
 //
@@ -197,6 +225,8 @@ export function createGameServer(app: Express, options: ServerOptions = {}) {
 		} catch (err) {
 			console.error('[game-service] failed to delete old chat messages', err);
 		}
+		// Not awaited: the players hear the result whether or not AuthService answers.
+		void reportMatchResult(game, result);
 		io.to(gameRoom(game)).emit('game:ended', result);
 		io.in(gameRoom(game)).disconnectSockets(true);
 	};

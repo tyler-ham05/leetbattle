@@ -23,9 +23,11 @@
 - A rating of 2000 should be Platinum
 
 ## A new player (AC1)
-- A player who just signed up should have a rating of 100 in GET /me
-- A player who just signed up should be in the Bronze II league in GET /me
+- A player who just signed up should have a rating of 50 in GET /me
+- A player who just signed up should be in the Bronze I league in GET /me
 - A player who just signed up should have 0 wins, 0 losses and 0 draws in GET /me
+- The signup response's user should already have a rating of 50
+- After a player changes their name (PATCH /account), the response's user should still have their rating
 
 ## POST /internal/match-results (AC6, AC7)
 - Without an Authorization header it should return 401

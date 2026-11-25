@@ -9,6 +9,7 @@
 //  - The profile page should show the player's number of losses
 //  - The profile page should show the player's number of draws
 //  - The profile page should show the date the player joined
+//  - Opening the profile page should reload the player's data from GET /me, so a rating changed by a match since the app loaded is shown
 // Getting to the profile page
 //  - The user menu should have a "Profile" link to /profile
 //  - A signed-out visitor who opens /profile should be sent to /login
@@ -23,11 +24,12 @@ const ratedUser = { ...fakeUser, rating: 432, league: 'Silver II', wins: 7, loss
 const mocks = vi.hoisted(() => ({
 	user: null as unknown,
 	replace: vi.fn(),
+	refresh: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: mocks.replace, back: vi.fn() }) }));
 vi.mock('../app/login/context', () => ({
-	useAuth: () => ({ user: mocks.user, isLoading: false, logout: vi.fn(), refresh: vi.fn() }),
+	useAuth: () => ({ user: mocks.user, isLoading: false, logout: vi.fn(), refresh: mocks.refresh }),
 }));
 
 import ProfilePage from '../app/profile/page';
@@ -71,6 +73,13 @@ describe('US-7-T-1 the profile page shows the signed-in player\'s stats', () => 
 	it('US-7-T-1 shows the player\'s draws', () => {
 		render(<ProfilePage />);
 		expect(valueOf('Draws')).toBe('1');
+	});
+
+	// The signed-in user is loaded once when the app opens; a match played since
+	// then changed the rating, so the page asks for the latest GET /me.
+	it('US-7-T-1 reloads the player\'s data from GET /me when the profile page opens', () => {
+		render(<ProfilePage />);
+		expect(mocks.refresh).toHaveBeenCalledTimes(1);
 	});
 
 	// fakeUser joined at 2026-01-01T00:00:00Z.

@@ -10,6 +10,7 @@
 - The profile page should show the player's number of losses
 - The profile page should show the player's number of draws
 - The profile page should show the date the player joined
+- Opening the profile page should reload the player's data from GET /me, so a rating changed by a match since the app loaded is shown
 
 ## Getting to the profile page
 - The user menu should have a "Profile" link to /profile

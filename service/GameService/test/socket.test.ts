@@ -1539,10 +1539,16 @@ describe('US-7-T-1 reporting the match result to AuthService', () => {
 		vi.stubGlobal('fetch', codeService);
 	});
 
-	// The report goes out as the match ends; waits until it has been sent.
-	const reportSent = () => vi.waitFor(() => {
-		if (reports.length === 0) throw new Error('no report sent yet');
-	});
+	// Other games in this file (e.g. the spare one beforeEach creates) can end
+	// and report during a test, so each test only looks at its own game's
+	// reports, waiting until at least one has been sent.
+	const reportsFor = (gameId: string) => reports.filter((report) => report.body.gameId === gameId);
+	async function reportFor(gameId: string): Promise<SentReport> {
+		await vi.waitFor(() => {
+			if (reportsFor(gameId).length === 0) throw new Error('no report sent yet');
+		});
+		return reportsFor(gameId)[0];
+	}
 
 	const byUserId = (players: { userId: string; team: string }[]) =>
 		[...players].map(({ userId, team }) => ({ userId, team })).sort((x, y) => x.userId.localeCompare(y.userId));
@@ -1556,31 +1562,28 @@ describe('US-7-T-1 reporting the match result to AuthService', () => {
 	}
 
 	it('US-7-T-1 sends one POST to AuthService\'s /internal/match-results when a match ends', async () => {
-		const { ended } = await forfeitedOneVsOne();
+		const { game, ended } = await forfeitedOneVsOne();
 		await ended;
-		await reportSent();
-		expect(reports.map((report) => report.request)).toEqual([`POST ${AUTH_SERVICE_URL}/internal/match-results`]);
+		await reportFor(game.gameId);
+		expect(reportsFor(game.gameId).map((report) => report.request)).toEqual([`POST ${AUTH_SERVICE_URL}/internal/match-results`]);
 	});
 
 	it('US-7-T-1 sends the internal key with the report', async () => {
-		const { ended } = await forfeitedOneVsOne();
+		const { game, ended } = await forfeitedOneVsOne();
 		await ended;
-		await reportSent();
-		expect(reports[0].authorization).toBe(`Bearer ${INTERNAL_KEY}`);
+		expect((await reportFor(game.gameId)).authorization).toBe(`Bearer ${INTERNAL_KEY}`);
 	});
 
 	it('US-7-T-1 names the winning team in the report', async () => {
-		const { ended } = await forfeitedOneVsOne();
+		const { game, ended } = await forfeitedOneVsOne();
 		await ended;
-		await reportSent();
-		expect(reports[0].body.winner).toBe('b');
+		expect((await reportFor(game.gameId)).body.winner).toBe('b');
 	});
 
 	it('US-7-T-1 lists every player on the roster with their team', async () => {
 		const { game, ended } = await forfeitedOneVsOne();
 		await ended;
-		await reportSent();
-		expect(byUserId(reports[0].body.players)).toEqual(byUserId(game.players));
+		expect(byUserId((await reportFor(game.gameId)).body.players)).toEqual(byUserId(game.players));
 	});
 
 	// Team b's only player drops and never comes back, so team a wins by disconnect.
@@ -1589,8 +1592,7 @@ describe('US-7-T-1 reporting the match result to AuthService', () => {
 		const ended = nextEvent<GameResult>(teamA, 'game:ended');
 		teamB.disconnect();
 		await ended;
-		await reportSent();
-		expect(reports[0].body.players.map((player) => player.userId)).toContain(game.players[1].userId);
+		expect((await reportFor(game.gameId)).body.players.map((player) => player.userId)).toContain(game.players[1].userId);
 	});
 
 	// A match only ends on time after 20 minutes, so the report is built directly

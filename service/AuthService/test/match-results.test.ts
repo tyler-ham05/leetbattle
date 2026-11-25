@@ -1,9 +1,11 @@
 // US-7-T-1 A new player's rating, and POST /internal/match-results
 //
 // A new player (AC1)
-//  - A player who just signed up should have a rating of 100 in GET /me
-//  - A player who just signed up should be in the Bronze II league in GET /me
+//  - A player who just signed up should have a rating of 50 in GET /me
+//  - A player who just signed up should be in the Bronze I league in GET /me
 //  - A player who just signed up should have 0 wins, 0 losses and 0 draws in GET /me
+//  - The signup response's user should already have a rating of 50
+//  - After a player changes their name (PATCH /account), the response's user should still have their rating
 // POST /internal/match-results (AC6, AC7)
 //  - Without an Authorization header it should return 401
 //  - With the wrong internal key it should return 401
@@ -68,19 +70,35 @@ async function oneVsOne(winner: 'a' | 'b' | null) {
 }
 
 describe('US-7-T-1 a new player', () => {
-	it('US-7-T-1 starts a new player at a rating of 100', async () => {
+	it('US-7-T-1 starts a new player at a rating of 50', async () => {
 		const profile = await profileOf(await signUp());
-		expect(profile.rating).toBe(100);
+		expect(profile.rating).toBe(50);
 	});
 
-	it('US-7-T-1 puts a new player in Bronze II', async () => {
+	it('US-7-T-1 puts a new player in Bronze I', async () => {
 		const profile = await profileOf(await signUp());
-		expect(profile.league).toBe('Bronze II');
+		expect(profile.league).toBe('Bronze I');
 	});
 
 	it('US-7-T-1 starts a new player with no wins, losses or draws', async () => {
 		const profile = await profileOf(await signUp());
 		expect({ wins: profile.wins, losses: profile.losses, draws: profile.draws }).toEqual({ wins: 0, losses: 0, draws: 0 });
+	});
+
+	// The app uses the signup response as the signed-in user straight away.
+	it('US-7-T-1 includes the rating in the signup response', async () => {
+		const res = await request.post('/signup').send({
+			email: `rating-${randomUUID()}@example.com`,
+			password: 'correct-horse-battery-staple',
+			name: 'Rated Player',
+		});
+		expect(res.body.user.rating).toBe(50);
+	});
+
+	it('US-7-T-1 keeps the rating in the response after a name change', async () => {
+		const player = await signUp();
+		const res = await request.patch('/account').set('Authorization', `Bearer ${player.token}`).send({ name: 'Renamed' });
+		expect(res.body.user.rating).toBe(50);
 	});
 });
 
@@ -98,7 +116,7 @@ describe('US-7-T-1 POST /internal/match-results only accepts GameService', () =>
 	it('US-7-T-1 changes no rating when the internal key is wrong', async () => {
 		const player = await signUp();
 		await report({ gameId: randomUUID(), winner: 'a', players: [{ userId: player.id, team: 'a' }] }, 'not-the-key');
-		expect((await profileOf(player)).rating).toBe(100);
+		expect((await profileOf(player)).rating).toBe(50);
 	});
 
 	// A player's own login token proves who they are, not that they're GameService.
@@ -117,12 +135,12 @@ describe('US-7-T-1 POST /internal/match-results only accepts GameService', () =>
 describe('US-7-T-1 POST /internal/match-results updates every player', () => {
 	it('US-7-T-1 raises a winning player\'s rating', async () => {
 		const { a } = await oneVsOne('a');
-		expect((await profileOf(a)).rating).toBeGreaterThan(100);
+		expect((await profileOf(a)).rating).toBeGreaterThan(50);
 	});
 
 	it('US-7-T-1 lowers a losing player\'s rating', async () => {
 		const { b } = await oneVsOne('a');
-		expect((await profileOf(b)).rating).toBeLessThan(100);
+		expect((await profileOf(b)).rating).toBeLessThan(50);
 	});
 
 	it('US-7-T-1 counts a win for a winning player', async () => {
@@ -160,10 +178,10 @@ describe('US-7-T-1 POST /internal/match-results updates every player', () => {
 		expect((await profileOf(player)).wins).toBe(1);
 	});
 
-	// Two players at 100: the winner expects 0.5, so they gain 16.
+	// Two new players at 50: the winner expects 0.5, so they gain 16.
 	it('US-7-T-1 lists each player\'s old rating, new rating and change', async () => {
 		const { a, res } = await oneVsOne('a');
 		expect(res.body.players.find((entry: { userId: string }) => entry.userId === a.id))
-			.toEqual({ userId: a.id, oldRating: 100, newRating: 116, change: 16 });
+			.toEqual({ userId: a.id, oldRating: 50, newRating: 66, change: 16 });
 	});
 });

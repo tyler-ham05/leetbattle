@@ -6,6 +6,8 @@ import { encryptJwe } from './utils/jwe';
 import { AuthedRequest } from './middleware';
 import { mailer } from './utils/mailer';
 import { RateLimiter } from './utils/rate-limit';
+import { leagueFor, rateMatch, STARTING_RATING } from './utils/rating';
+import type { TeamId } from './utils/rating';
 
 const RESET_TOKEN_MINUTES = 30;
 
@@ -30,6 +32,10 @@ interface UserRow {
 	name: string | null;
 	email_verified: boolean;
 	created_at: Date;
+	rating: number;
+	games_played: number | null;
+	games_won: number | null;
+	games_lost: number;
 }
 
 function toPublicUser(user: UserRow) {
@@ -39,6 +45,12 @@ function toPublicUser(user: UserRow) {
 		name: user.name,
 		emailVerified: user.email_verified,
 		createdAt: user.created_at,
+		// US-7-T-1: the player's rating, league and match record.
+		rating: user.rating,
+		league: leagueFor(user.rating),
+		wins: user.games_won ?? 0,
+		losses: user.games_lost,
+		draws: (user.games_played ?? 0) - (user.games_won ?? 0) - user.games_lost,
 	};
 }
 
@@ -69,7 +81,7 @@ export async function signup(req: Request, res: Response, next: NextFunction) {
 		const result = await pool.query<UserRow>(
 			`INSERT INTO users (email, password_hash, name)
 			 VALUES ($1, $2, $3)
-			 RETURNING id, email, password_hash, name, created_at`,
+			 RETURNING id, email, password_hash, name, created_at, rating, games_played, games_won, games_lost`,
 			[email, passwordHash, typeof name === 'string' ? name : null],
 		);
 		const user = result.rows[0];
@@ -163,7 +175,7 @@ export async function updateAccount(req: AuthedRequest, res: Response, next: Nex
 	try {
 		const result = await pool.query<UserRow>(
 			`UPDATE users SET name = $1 WHERE id = $2
-			 RETURNING id, email, password_hash, name, email_verified, created_at`,
+			 RETURNING id, email, password_hash, name, email_verified, created_at, rating, games_played, games_won, games_lost`,
 			[name.trim(), req.userId],
 		);
 		const user = result.rows[0];
@@ -243,5 +255,66 @@ export async function resetPassword(req: Request, res: Response, next: NextFunct
 		res.json({ message: 'password has been changed' });
 	} catch (err) {
 		next(err);
+	}
+}
+
+interface ReportedPlayer {
+	userId: string;
+	team: TeamId;
+}
+
+const isTeam = (value: unknown): value is TeamId => value === 'a' || value === 'b';
+const isUuid = (value: unknown) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
+// US-7-T-1: GameService reports a finished match. Every player's new rating
+// is worked out from the ratings before the match, then all of them (and
+// their win/loss/draw records) are saved together in one transaction.
+export async function reportMatchResult(req: Request, res: Response, next: NextFunction) {
+	const { gameId, winner, players } = req.body ?? {};
+	const valid = typeof gameId === 'string'
+		&& (winner === null || isTeam(winner))
+		&& Array.isArray(players) && players.length > 0
+		&& players.every((player: ReportedPlayer) => isUuid(player?.userId) && isTeam(player?.team));
+	if (!valid) {
+		res.status(400).json({ error: 'gameId, winner (a, b or null) and players are required' });
+		return;
+	}
+	const reported = players as ReportedPlayer[];
+
+	const client = await pool.connect();
+	try {
+		await client.query('BEGIN');
+		const found = await client.query<{ id: string; rating: number }>(
+			'SELECT id, rating FROM users WHERE id = ANY($1::uuid[]) FOR UPDATE',
+			[reported.map((player) => player.userId)],
+		);
+		const ratings = new Map(found.rows.map((row) => [row.id, row.rating]));
+		// A player AuthService doesn't know still counts at the starting
+		// rating for their team's average, but isn't saved.
+		const teams = new Map(reported.map((player) => [player.userId, player.team]));
+		const changes = rateMatch(
+			reported.map((player) => ({ ...player, rating: ratings.get(player.userId) ?? STARTING_RATING })),
+			winner,
+		).filter((change) => ratings.has(change.userId));
+		for (const change of changes) {
+			const team = teams.get(change.userId);
+			const won = winner !== null && team === winner;
+			const lost = winner !== null && team !== winner;
+			await client.query(
+				`UPDATE users SET rating = $2,
+				   games_played = COALESCE(games_played, 0) + 1,
+				   games_won = COALESCE(games_won, 0) + $3,
+				   games_lost = games_lost + $4
+				 WHERE id = $1`,
+				[change.userId, change.newRating, won ? 1 : 0, lost ? 1 : 0],
+			);
+		}
+		await client.query('COMMIT');
+		res.json({ players: changes });
+	} catch (err) {
+		await client.query('ROLLBACK');
+		next(err);
+	} finally {
+		client.release();
 	}
 }
