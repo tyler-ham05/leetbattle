@@ -127,9 +127,12 @@ function rosterWithDisconnected(...userIds: string[]) {
 }
 
 const problemPool = [
-	{ taskId: 'two-sum', questionId: 1, difficulty: 'Easy', topics: ['Array'], bannedBy: null },
-	{ taskId: 'valid-parentheses', questionId: 2, difficulty: 'Easy', topics: ['Stack'], bannedBy: null },
+	{ taskId: 'two-sum', questionId: 1, difficulty: 'Easy', topics: ['Array'], votes: [] },
+	{ taskId: 'valid-parentheses', questionId: 2, difficulty: 'Easy', topics: ['Stack'], votes: [] },
 ];
+
+// The ban state the ban screen reads its counts from (US-8-T-1).
+const bans = { perTeam: 1, questionsInPlay: 9, votesCast: 0, voters: 3, revealSecondsRemaining: 0, banned: [] };
 
 // What useGameSocket returns: a connected match in the playing phase unless overridden.
 function configureGame(overrides: Record<string, unknown> = {}, teammateCode: Record<string, unknown> = {}) {
@@ -143,6 +146,7 @@ function configureGame(overrides: Record<string, unknown> = {}, teammateCode: Re
 			secondsRemaining: 20 * 60,
 			banSecondsRemaining: 25,
 			scores: { a: 0, b: 0 },
+			bans,
 			problemPool,
 			players: roster,
 			forfeitVotes: { a: 0, b: 0 },

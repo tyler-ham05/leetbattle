@@ -252,3 +252,51 @@
  // itself (e.g. a pickedBy-style field surviving into the playing phase for
  // the frontend to read), or is the pick only ever used to decide the
  // auto-assignment and otherwise forgotten once play starts?
+
+// ============================================================================
+// US-8-T-1 (#183): the ban phase becomes a team vote, so the cases above that
+// assume one ban per player change. The vote itself is specified in
+// ban-vote-pseudo.md; these are the existing cases whose numbers or meaning
+// move, which is why they stay here rather than there.
+//
+// What changes:
+//   - The pool grows by one question per ban, so it is 3 questions per player
+//     plus 2: 11 for a 3v3, 8 for a 2v2, 5 for a 1v1, a third of them Medium.
+//     Every "pool size" and "nine problems" case above takes the new numbers.
+//   - "Players should be able to ban one problem each" goes: a click is a vote
+//     now, and nothing is banned until the window closes. Only the cases about
+//     how the ban phase sits in the match stay (a vote for a question outside
+//     the pool, a vote once play has started, a submission during the bans).
+//   - "Play should start once the bans are in" becomes picking after the bans,
+//     and the two cases about ending the phase early (every player has banned,
+//     or every remaining player once someone left) go: the window always runs
+//     in full.
+//   - A 1v1 bans now, since its pool of 5 has to lose both bans to reach 3. It
+//     still skips picking.
+// ============================================================================
+
+ // Pool size should scale with team size, with room for both bans
+ //  - A 3v3 (6 players) should get a pool of 8 Easy + 3 Medium problems
+ //  - A 2v2 (4 players) should get a pool of 6 Easy + 2 Medium problems
+ //  - A 1v1 (2 players) should get a pool of 4 Easy + 1 Medium problems
+ //  - A 3v3's match pool should list all eleven problems
+
+ // A 1v1 should ban, then skip picking
+ //  - A 1v1 should move to "banning" once both players have connected
+ //  - A 1v1 should move to "banning" with whoever has connected when the join wait runs out
+ //  - A 1v1's match pool should be all 5 of its problems while it votes
+ //  - A 1v1 should play the 3 problems its bans leave
+ //  - A 1v1 should never show a "picking" phase, even briefly
+
+ // The ban phase should sit in the match as before
+ //  - A vote for a problem that isn't in the match pool should be rejected with "unknown-problem"
+ //  - A vote once play has started should be rejected with "not-banning"
+ //  - Submitting a solution during the ban phase should be rejected with "not-playing"
+
+ // Picking should start once the bans are in
+ //  - Once the window has closed and the bans have been shown, the game should move to "picking"
+ //  - Once picking starts, the match pool should only list the problems that weren't banned
+ //  - A 3v3's two bans should leave nine problems to play
+ //  - A 2v2's two bans should leave six problems to play
+ //  - Picking should start even when nobody voted
+ //  - Once play starts, the saved pool (game_problems) should be only the problems left in play

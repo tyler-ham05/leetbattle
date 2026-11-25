@@ -126,7 +126,7 @@ const gameRosterAdaOnA = [
 ];
 
 const banPool = [1, 2, 3, 4, 5].map((questionId) => ({
-	taskId: `task-${questionId}`, questionId, difficulty: 'Easy', topics: ['Array'], bannedBy: null, pickedBy: { a: null, b: null },
+	taskId: `task-${questionId}`, questionId, difficulty: 'Easy', topics: ['Array'], votes: [], pickedBy: { a: null, b: null },
 }));
 const pickPool = [1, 2].map((questionId) => ({
 	taskId: `task-${questionId}`, questionId, difficulty: 'Easy', topics: ['Array'], pickedBy: { a: null, b: null },
@@ -146,6 +146,7 @@ function configureGame(overrides: Record<string, unknown> = {}) {
 			banSecondsRemaining: 25,
 			pickSecondsRemaining: 25,
 			scores: { a: 0, b: 0 },
+			bans: { perTeam: 1, questionsInPlay: 3, votesCast: 0, voters: 2, revealSecondsRemaining: 0, banned: [] },
 			problemPool: banPool,
 			players: gameRosterAdaOnB,
 			forfeitVotes: { a: 0, b: 0 },
@@ -173,16 +174,25 @@ function main() {
 
 const ADA_B = { userId: 'u1', displayName: 'Ada', team: 'b' as TeamId };
 const ALAN_B = { userId: 'u4', displayName: 'Alan', team: 'b' as TeamId };
-const GRACE_A = { userId: 'u2', displayName: 'Grace', team: 'a' as TeamId };
 
-// Five questions; question 2 banned by Alan (team b) and question 3 by Grace (team a).
-const bannedPool = banPool.map((entry) => ({
-	...entry,
-	bannedBy: entry.questionId === 2 ? ALAN_B : entry.questionId === 3 ? GRACE_A : null,
-}));
+// The ban reveal (US-8-T-1): team b banned the question in place 2 and team a
+// the one in place 3, so both are out of the pool but still shown where they
+// were. Questions 1, 4 and 5 are the ones left in play.
+const revealPool = banPool.filter((entry) => ![2, 3].includes(entry.questionId));
+const revealBans = {
+	perTeam: 1,
+	questionsInPlay: 3,
+	votesCast: 0,
+	voters: 2,
+	revealSecondsRemaining: 3,
+	banned: [
+		{ taskId: 'task-2', questionId: 2, difficulty: 'Easy', topics: ['Array'], team: 'b' as TeamId, position: 2 },
+		{ taskId: 'task-3', questionId: 3, difficulty: 'Easy', topics: ['Array'], team: 'a' as TeamId, position: 3 },
+	],
+};
 
 function renderBan(myTeam: TeamId = 'b') {
-	return render(<BanScreen problems={bannedPool} playerCount={4} myTeam={myTeam} onBan={vi.fn()} />);
+	return render(<BanScreen problems={revealPool} bans={revealBans} myTeam={myTeam} onVote={vi.fn()} />);
 }
 
 // Two questions; Alan (Ada's team b teammate) picked the first.
@@ -365,16 +375,16 @@ describe('connected teammates next to Forfeit', () => {
 });
 
 describe('ban screen', () => {
-	it('colors a team b banner\'s name with the primary color when viewed from team b', () => {
+	it('colors the viewer\'s own team\'s ban with the primary color when viewed from team b', () => {
 		renderBan('b');
-		// Alan is on the viewer's own team.
-		expect(screen.getByText('Alan').className).toContain('text-primary');
+		// Team b banned question 2, and team b is the viewer's own team.
+		expect(screen.getByText('Your team').className).toContain('text-primary');
 	});
 
-	it('colors a team a banner\'s name with the secondary color when viewed from team b', () => {
+	it('colors the other team\'s ban with the secondary color when viewed from team b', () => {
 		renderBan('b');
-		// Grace is on the other team.
-		expect(screen.getByText('Grace').className).toContain('text-secondary');
+		// Team a banned question 3, the rival team from team b's side.
+		expect(screen.getByText('Rival team').className).toContain('text-secondary');
 	});
 
 	it('does not show the "Team 1" legend', () => {
