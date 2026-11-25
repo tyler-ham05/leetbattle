@@ -320,7 +320,8 @@ it('US-4-T-2 shows "Accepted" between the editor and the Case tabs after an Acce
 
 	// Find the three things we are comparing positions of. `findByText` waits for the
 	// verdict and throws "Unable to find an element with the text" if it never appears.
-	const verdict = await screen.findByText('Accepted');
+	// US-10-T-9: the Submit button also says "Accepted" for a moment, so look in the result panel.
+	const verdict = await within(await screen.findByRole('region', { name: 'Submission result' })).findByText('Accepted');
 	const editor = screen.getByTestId('monaco');
 	const firstCaseTab = screen.getByRole('button', { name: 'Case 1' });
 
