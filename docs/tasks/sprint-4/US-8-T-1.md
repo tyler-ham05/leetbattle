@@ -9,7 +9,33 @@ estimate_hours: 5
 # Rework the ban system to be a team vote
 
 ## Description
-Serves US-8 Cohesive Gameplay. Each player votes for one question. Each team bans the one its own members voted for most, instead of every player's click banning a question outright. A 3v3 fetches 11 questions, votes two off, and plays the 9 that are left, instead of the 3 it plays now. The two extra questions are Easy, so the Medium share of the pool does not change.
+Serves US-8 Cohesive Gameplay. Each player votes for one question. Each team bans the one its own members voted for most, instead of every player's click banning a question outright. A 3v3 fetches 11 questions, votes two off, and plays the 9 that are left, instead of the 3 it plays now. The two extra questions are Easy, so the Medium share of the pool does not change.Out of scope changes are assigning 3 questions per player after the ban (task 2). Additional game modes. Auth, code and lobby are untouched. 
+
+
+## Files touched
+Frontend
+
+  - Modified: frontend/app/game/[gameId]/page.tsx
+  - Mo dified: frontend/app/game/components/ban-screen.tsx
+  - Modified: frontend/app/game/socket-context.tsx
+  - Modified: frontend/test/ban-test-pseudo.md
+  - Added: frontend/test/ban-vote-pseudo.md
+  - Added: frontend/test/ban-vote.test.tsx
+  - Deleted: frontend/test/ban.test.tsx
+  -  Modified: frontend/test/game.test.tsx
+  - Modified: frontend/test/match-screens-polish.test.tsx
+  - Modified: frontend/test/practice-match-layout.test.tsx
+
+  GameService
+  - Modified: service/GameService/src/server.ts
+  - Modified: service/GameService/src/service.ts
+  - Added: service/GameService/test/ban-vote-pseudo.md
+  - Added: service/GameService/test/ban-vote.test.ts
+  - Modified: service/GameService/test/service.test.ts
+  - Modified: service/GameService/test/setup.ts
+  - Modified: service/GameService/test/socket-test-pseudo.md
+  - Modified: service/GameService/test/socket.test.ts
+
 
 ## Specs
 
