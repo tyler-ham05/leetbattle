@@ -894,9 +894,50 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 .lb-result-rise { animation: lb-rise 0.5s ease-out both; animation-delay: var(--d, 0s); }
 .lb-result-crown { display: inline-flex; animation: lb-result-crown 0.45s ease-out both; animation-delay: var(--d, 0s); }
 
-/* Something is in progress (Run, Submit, form buttons, loading text). */
+/* Something is in progress (form buttons, loading text). */
 @keyframes lb-spin { to { transform: rotate(360deg); } }
 .lb-spin { animation: lb-spin 0.7s linear infinite; }
+
+/* Run / Submit while busy (US-10-T-9): a light runs around the button's edge
+   and the label breathes. The button sets --lb-fill (its own color) and
+   --lb-glint (the light). The result lands with a nod (pass) or .lb-shake (fail). */
+@property --lb-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@keyframes lb-orbit { to { --lb-angle: 360deg; } }
+.lb-trace {
+  background:
+    linear-gradient(var(--lb-fill), var(--lb-fill)) padding-box,
+    conic-gradient(from var(--lb-angle), transparent 0 58%, var(--lb-glint) 84%, transparent 100%) border-box,
+    linear-gradient(var(--lb-fill), var(--lb-fill)) border-box;
+  animation: lb-orbit 1s linear infinite;
+}
+@keyframes lb-breath { from { opacity: 1; } to { opacity: 0.62; } }
+.lb-breath { animation: lb-breath 0.9s ease-in-out infinite alternate; }
+@keyframes lb-nod {
+  0% { transform: translateY(0); }
+  22% { transform: translateY(3px); }
+  44% { transform: translateY(-1px); }
+  66% { transform: translateY(2px); }
+  100% { transform: translateY(0); }
+}
+.lb-nod { animation: lb-nod 0.46s cubic-bezier(0.3, 0.7, 0.4, 1); }
+
+/* Ladder (US-10-T-9): the queued card's edge light. When a match is found the
+   other cards leave to their own side (--lb-side) and the chosen one glides to
+   the middle column (--lb-shift columns over; only when the cards sit in a row). */
+.lb-card-trace {
+  background: conic-gradient(from var(--lb-angle), var(--lb-line) 0 60%, var(--lb-primary) 86%, var(--lb-line) 100%);
+  animation: lb-orbit 1.4s linear infinite;
+}
+.lb-card-move { transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease, translate 0.2s cubic-bezier(0.22, 1, 0.36, 1); }
+.lb-card-leaving {
+  opacity: 0; pointer-events: none;
+  transform: translateX(calc(var(--lb-side, 1) * 48px)) scale(0.94);
+  transition: transform 0.22s cubic-bezier(0.4, 0, 1, 1), opacity 0.18s ease;
+}
+.lb-card-found { transform: scale(1.04); transition-delay: 0.06s; }
+@media (min-width: 768px) {
+  .lb-card-found { transform: translateX(calc(var(--lb-shift, 0) * (100% + 20px))) scale(1.04); }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .lb-spin { animation-duration: 1.6s; }
@@ -923,6 +964,13 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
   .lb-demo-loop { animation: none !important; }
   .lb-demo-line { width: auto; }
   .lb-result-slam, .lb-result-sink, .lb-result-jolt, .lb-result-rise, .lb-result-crown { animation: none; }
+  .lb-trace {
+    animation: none;
+    background: linear-gradient(var(--lb-fill), var(--lb-fill)) padding-box, linear-gradient(var(--lb-glint), var(--lb-glint)) border-box;
+  }
+  .lb-breath, .lb-nod { animation: none; }
+  .lb-card-trace { animation: none; background: var(--lb-primary); }
+  .lb-card-leaving, .lb-card-found { transform: none !important; transition: opacity 0.2s ease; }
 }
 
 /* =========================================================
