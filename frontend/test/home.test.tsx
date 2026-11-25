@@ -8,8 +8,8 @@
 // Home screen should look like a game title screen, over the falling code
 //  - LeetBattle should be the page heading
 //  - The signed-in player's name is in the top bar now, not above the title
-//  - The menu should list Practice, Lobby and Settings, each with a one-line description
-//  - Practice should link to the editor page, Lobby to the lobby page, Settings to the settings page
+//  - The menu should list Practice, Lobby, Ladder and Settings, each with a one-line description
+//  - Practice should link to the editor page, Lobby to the lobby page, Ladder to the ladder page, Settings to the settings page
 //  - Practice should be selected when the page opens
 //  - Hovering an option should select it
 //  - Focusing an option with the keyboard should select it
@@ -146,6 +146,7 @@ describe('home title screen', () => {
 	const OPTIONS = [
 		{ title: 'Practice', href: '/editor' },
 		{ title: 'Lobby', href: '/lobby' },
+		{ title: 'Ladder', href: '/ladder' },
 		{ title: 'Settings', href: '/settings' },
 	];
 	const list = () => screen.getByRole('list', { name: 'Menu' });
@@ -167,7 +168,7 @@ describe('home title screen', () => {
 		expect(screen.queryByText(new RegExp(fakeUser.name as string))).toBeNull();
 	});
 
-	it('shows Practice, Lobby and Settings, in that order, each with a one-line description', () => {
+	it('shows Practice, Lobby, Ladder and Settings, in that order, each with a one-line description', () => {
 		render(<HomeActions />);
 		// Each row reads "<title><description>": keep the title only if a description follows it.
 		const rows = within(list()).getAllByRole('link').map((link) => {
@@ -175,7 +176,7 @@ describe('home title screen', () => {
 			const description = (link.textContent ?? '').slice(option?.title.length ?? 0).trim();
 			return description ? option?.title : 'no description';
 		});
-		expect(rows).toEqual(['Practice', 'Lobby', 'Settings']);
+		expect(rows).toEqual(['Practice', 'Lobby', 'Ladder', 'Settings']);
 	});
 
 	it.each(OPTIONS)('links $title to $href', ({ title, href }) => {
