@@ -194,6 +194,17 @@ const problemPool = [
 	{ taskId: 'best-time-to-buy-and-sell-stock', questionId: 3, difficulty: 'Medium' },
 ];
 
+// The ban state a 3v3 starts with (US-8-T-1): one ban per team, nine
+// questions played, nobody has voted and no ban has landed yet.
+const openBans = {
+	perTeam: 1,
+	questionsInPlay: 9,
+	votesCast: 0,
+	voters: 3,
+	revealSecondsRemaining: 0,
+	banned: [] as unknown[],
+};
+
 // A freshly started match: full 20 minutes left, no score yet.
 function gameState(overrides: Record<string, unknown> = {}) {
 	return {
@@ -202,6 +213,7 @@ function gameState(overrides: Record<string, unknown> = {}) {
 		startedAt: Date.now(),
 		secondsRemaining: 20 * 60,
 		scores: { a: 0, b: 0 },
+		bans: openBans,
 		problemPool,
 		players: roster,
 		forfeitVotes: { a: 0, b: 0 },
@@ -299,7 +311,7 @@ describe('game page connection problems', () => {
 describe('game page match view', () => {
 	// The rosters show before the match starts; while playing the editor fills
 	// the page instead (US-5-T-19), so these render the ban phase.
-	const banPool = problemPool.map((entry) => ({ ...entry, topics: ['Array'], bannedBy: null }));
+	const banPool = problemPool.map((entry) => ({ ...entry, topics: ['Array'], votes: [] }));
 
 	it('US-6-T-2 renders each player\'s display name', () => {
 		configureConnectedGame({ phase: 'banning', banSecondsRemaining: 25, problemPool: banPool });
@@ -525,7 +537,7 @@ describe('game page teammates next to Forfeit', () => {
 
 	it('US-6-T-12 hides the teammates while banning', () => {
 		// The ban screen needs each problem's topics and ban state.
-		const banPool = problemPool.map((entry) => ({ ...entry, topics: ['Array'], bannedBy: null }));
+		const banPool = problemPool.map((entry) => ({ ...entry, topics: ['Array'], votes: [] }));
 		configureConnectedGame({ phase: 'banning', banSecondsRemaining: 25, problemPool: banPool });
 		render(<GamePage />);
 
@@ -805,23 +817,25 @@ describe('game page without the question list', () => {
 });
 
 describe('game page during the ban phase', () => {
-	// The nine-problem pool as GameService sends it while banning: each problem
-	// carries its topics and who (if anyone) has banned it.
+	// The eleven-question pool as GameService sends it while banning: each
+	// question carries its topics and this team's votes on it.
 	const banPool = [
-		{ taskId: 'two-sum', questionId: 1, difficulty: 'Easy', topics: ['Array', 'Hash Table'], bannedBy: null },
-		{ taskId: 'valid-parentheses', questionId: 2, difficulty: 'Easy', topics: ['Stack'], bannedBy: null },
-		{ taskId: 'climbing-stairs', questionId: 3, difficulty: 'Easy', topics: ['Dynamic Programming'], bannedBy: null },
-		{ taskId: 'valid-palindrome', questionId: 4, difficulty: 'Easy', topics: ['String'], bannedBy: null },
-		{ taskId: 'search-insert-position', questionId: 5, difficulty: 'Easy', topics: ['Binary Search'], bannedBy: null },
-		{ taskId: 'assign-cookies', questionId: 6, difficulty: 'Easy', topics: ['Greedy'], bannedBy: null },
-		{ taskId: 'number-of-islands', questionId: 7, difficulty: 'Medium', topics: ['Graph'], bannedBy: null },
-		{ taskId: 'coin-change', questionId: 8, difficulty: 'Medium', topics: ['Dynamic Programming', 'Array'], bannedBy: null },
-		{ taskId: 'course-schedule', questionId: 9, difficulty: 'Medium', topics: ['Topological Sort'], bannedBy: null },
+		{ taskId: 'two-sum', questionId: 1, difficulty: 'Easy', topics: ['Array', 'Hash Table'], votes: [] },
+		{ taskId: 'valid-parentheses', questionId: 2, difficulty: 'Easy', topics: ['Stack'], votes: [] },
+		{ taskId: 'climbing-stairs', questionId: 3, difficulty: 'Easy', topics: ['Dynamic Programming'], votes: [] },
+		{ taskId: 'valid-palindrome', questionId: 4, difficulty: 'Easy', topics: ['String'], votes: [] },
+		{ taskId: 'search-insert-position', questionId: 5, difficulty: 'Easy', topics: ['Binary Search'], votes: [] },
+		{ taskId: 'assign-cookies', questionId: 6, difficulty: 'Easy', topics: ['Greedy'], votes: [] },
+		{ taskId: 'number-of-islands', questionId: 7, difficulty: 'Medium', topics: ['Graph'], votes: [] },
+		{ taskId: 'coin-change', questionId: 8, difficulty: 'Medium', topics: ['Dynamic Programming', 'Array'], votes: [] },
+		{ taskId: 'course-schedule', questionId: 9, difficulty: 'Medium', topics: ['Topological Sort'], votes: [] },
+		{ taskId: 'merge-two-sorted-lists', questionId: 10, difficulty: 'Easy', topics: ['Linked List'], votes: [] },
+		{ taskId: 'contains-duplicate', questionId: 11, difficulty: 'Easy', topics: ['Hash Table'], votes: [] },
 	];
 
-	// Grace (u2, Team 1) has banned the second problem.
-	const poolWithGraceBan = banPool.map((entry) => (entry.questionId === 2
-		? { ...entry, bannedBy: { userId: 'u2', displayName: 'Grace', team: 'a' } }
+	// Grace (u2, Team 1) has voted for the second question.
+	const poolWithGraceVote = banPool.map((entry) => (entry.questionId === 2
+		? { ...entry, votes: [{ userId: 'u2', displayName: 'Grace' }] }
 		: entry));
 
 	// A 2v2: Ada and Grace on Team 1, Alan and Edsger on Team 2.
@@ -832,11 +846,11 @@ describe('game page during the ban phase', () => {
 		configureConnectedGame({ phase: 'banning', startedAt: null, banSecondsRemaining: 25, problemPool: banPool, ...overrides });
 	}
 
-	it('shows "Ban a question" while the game is banning', () => {
+	it('shows "Vote to ban a question" while the game is banning', () => {
 		configureBanning();
 		render(<GamePage />);
 
-		expect(screen.getByRole('heading', { name: 'Ban a question' })).toBeTruthy();
+		expect(screen.getByRole('heading', { name: 'Vote to ban a question' })).toBeTruthy();
 	});
 
 	it('hides the problem list for play while the game is banning', () => {
@@ -862,11 +876,11 @@ describe('game page during the ban phase', () => {
 		expect(screen.getByText('0:25')).toBeTruthy();
 	});
 
-	it('does not show "Ban a question" once the game is playing', () => {
+	it('does not show "Vote to ban a question" once the game is playing', () => {
 		configureConnectedGame();
 		render(<GamePage />);
 
-		expect(screen.queryByRole('heading', { name: 'Ban a question' })).toBeNull();
+		expect(screen.queryByRole('heading', { name: 'Vote to ban a question' })).toBeNull();
 	});
 
 	it('shows each problem in the pool by its topics on the ban screen', () => {
@@ -878,37 +892,30 @@ describe('game page during the ban phase', () => {
 			.toEqual(banPool.flatMap((entry) => entry.topics));
 	});
 
-	it('sends the problem\'s questionId to the game when "Ban this question" is clicked', async () => {
+	it('US-8-T-1 sends the question\'s questionId to the game when the player votes', async () => {
 		const user = userEvent.setup();
 		configureBanning();
 		render(<GamePage />);
 
-		// The third problem, climbing-stairs, has questionId 3.
-		await user.click(screen.getAllByRole('button', { name: /Ban this question/ })[2]);
+		// The third question, climbing-stairs, has questionId 3.
+		await user.click(screen.getAllByRole('button', { name: /Vote to ban/ })[2]);
 
 		expect(gameMocks.ban).toHaveBeenCalledWith(3);
 	});
 
-	it('shows "Banned by <name>" on a problem another player banned', () => {
-		configureBanning({ problemPool: poolWithGraceBan });
+	it('US-8-T-1 shows a teammate\'s vote on the question they voted for', () => {
+		configureBanning({ problemPool: poolWithGraceVote });
 		render(<GamePage />);
 
-		expect(screen.getByText(/Banned by/).textContent).toContain('Grace');
+		expect(screen.getByTestId('voter').textContent).toBe('Grace');
 	});
 
-	it('shows "1 of 4 bans made" with four players and one ban made', () => {
-		configureBanning({ players: fourPlayers, problemPool: poolWithGraceBan });
+	it('US-8-T-1 shows how many of the player\'s own team have voted', () => {
+		// A 2v2: two players on Ada's team, one of whom has voted.
+		configureBanning({ players: fourPlayers, bans: { ...openBans, votesCast: 1, voters: 2 }, problemPool: poolWithGraceVote });
 		render(<GamePage />);
 
-		expect(screen.getByText('1 of 4 bans made')).toBeTruthy();
-	});
-
-	it('shows "0 of 4 bans made" with four players and no bans yet', () => {
-		configureBanning({ players: fourPlayers });
-		render(<GamePage />);
-
-		// The progress is a plain count; the marker pips are gone (US-5-T-22).
-		expect(screen.getByText('0 of 4 bans made')).toBeTruthy();
+		expect(screen.getByText('1 of 2 votes in')).toBeTruthy();
 	});
 });
 
@@ -1021,7 +1028,7 @@ describe('game page editor after the bans', () => {
 	});
 
 	it('US-6-T-6 does not show the code editor while the game is banning', () => {
-		const banPool = problemPool.map((entry) => ({ ...entry, topics: ['Array'], bannedBy: null }));
+		const banPool = problemPool.map((entry) => ({ ...entry, topics: ['Array'], votes: [] }));
 		configureConnectedGame({ phase: 'banning', banSecondsRemaining: 25, problemPool: banPool });
 		render(<GamePage />);
 
@@ -1160,7 +1167,7 @@ describe('game page workspace switcher', () => {
 	});
 
 	it('US-6-T-7 does not show the workspace switcher while banning', () => {
-		const banPool = problemPool.map((entry) => ({ ...entry, topics: ['Array'], bannedBy: null }));
+		const banPool = problemPool.map((entry) => ({ ...entry, topics: ['Array'], votes: [] }));
 		configureConnectedGame({ phase: 'banning', banSecondsRemaining: 25, problemPool: banPool });
 		render(<GamePage />);
 
@@ -1345,7 +1352,7 @@ describe('game page sprint 4 polish', () => {
 	});
 
 	it('plays no loader while banning', () => {
-		configureConnectedGame({ phase: 'banning', startedAt: null, banSecondsRemaining: 25, problemPool: problemPool.map((entry) => ({ ...entry, topics: ['Array'], bannedBy: null })) });
+		configureConnectedGame({ phase: 'banning', startedAt: null, banSecondsRemaining: 25, problemPool: problemPool.map((entry) => ({ ...entry, topics: ['Array'], votes: [] })) });
 		render(<GamePage />);
 
 		expect(loader()).toBeNull();

@@ -1,3 +1,5 @@
+// SUPERSEDED by ban-vote-pseudo.md (US-8-T-1): bans are a team vote now, so
+// the per-player ban cases below no longer describe the screen.
 // Issue #69: screen where each player bans one question (UI only, all tests use mocked questions and bans, no backend)
 
  // The ban screen should display the nine questions by topic only
