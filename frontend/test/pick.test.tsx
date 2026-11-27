@@ -34,6 +34,7 @@ interface TestProblem {
 	questionId: number;
 	difficulty: string;
 	topics: string[];
+	votes: never[];
 	pickedBy: { a: TestPicker | null; b: TestPicker | null };
 }
 
@@ -43,7 +44,7 @@ const ALAN: TestPicker = { userId: 'u4', displayName: 'Alan', team: 'b' };
 
 // Builds an unpicked problem. questionIds follow the list order.
 function problem(questionId: number, taskId: string, topics: string[]): TestProblem {
-	return { taskId, questionId, difficulty: 'Easy', topics, pickedBy: { a: null, b: null } };
+	return { taskId, questionId, difficulty: 'Easy', topics, votes: [], pickedBy: { a: null, b: null } };
 }
 
 // The three problems left after a 3v3's bans: one each, if every teammate picks.
