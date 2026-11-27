@@ -129,7 +129,7 @@ const banPool = [1, 2, 3, 4, 5].map((questionId) => ({
 	taskId: `task-${questionId}`, questionId, difficulty: 'Easy', topics: ['Array'], votes: [], pickedBy: { a: null, b: null },
 }));
 const pickPool = [1, 2].map((questionId) => ({
-	taskId: `task-${questionId}`, questionId, difficulty: 'Easy', topics: ['Array'], pickedBy: { a: null, b: null },
+	taskId: `task-${questionId}`, questionId, difficulty: 'Easy', topics: ['Array'], votes: [], pickedBy: { a: null, b: null },
 }));
 const playPool = [1, 2].map((questionId) => ({ taskId: `task-${questionId}`, questionId, difficulty: 'Easy' }));
 
