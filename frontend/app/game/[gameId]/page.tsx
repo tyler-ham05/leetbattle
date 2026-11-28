@@ -253,7 +253,11 @@ function GameContent() {
 						</div>
 						{joined && (
 							<div className="flex items-center gap-6">
-								{banning && <span className="flex items-baseline gap-2"><span className="text-sm text-muted">Bans close in</span><Clock seconds={game.banSecondsRemaining} running /></span>}
+								{/* While the votes are open the ban clock counts down; once they close the
+							    reveal's own countdown says how long until the match moves on (US-8-T-1). */}
+								{banning && (game.bans.banned.length > 0
+									? <span className="flex items-baseline gap-2"><span className="text-sm text-muted">Next up in</span><Clock seconds={game.bans.revealSecondsRemaining} running /></span>
+									: <span className="flex items-baseline gap-2"><span className="text-sm text-muted">Votes close in</span><Clock seconds={game.banSecondsRemaining} running /></span>)}
 								{picking && <span className="flex items-baseline gap-2"><span className="text-sm text-muted">Picks close in</span><Clock seconds={game.pickSecondsRemaining} running /></span>}
 								{!banning && !picking && <Clock seconds={game.secondsRemaining} running={game.phase === 'playing'} warn />}
 							</div>
@@ -279,7 +283,7 @@ function GameContent() {
 								))}
 							</div>
 
-							{banning && <BanScreen problems={game.problemPool} playerCount={game.players.length} myTeam={myTeam} onBan={ban} />}
+							{banning && <BanScreen problems={game.problemPool} bans={game.bans} myTeam={myTeam} onVote={ban} />}
 
 							{picking && myTeam && (
 								<PickScreen

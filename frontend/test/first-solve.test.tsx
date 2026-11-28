@@ -18,9 +18,9 @@ const reduced = css.split('@media (prefers-reduced-motion: reduce)').slice(1).jo
 
 // The match pool after the bans: Q1, Q2, Q3 in order.
 const pool = [
-	{ taskId: 'two-sum', questionId: 1, difficulty: 'Easy', topics: [], bannedBy: null, pickedBy: { a: null, b: null } },
-	{ taskId: 'valid-parentheses', questionId: 2, difficulty: 'Easy', topics: [], bannedBy: null, pickedBy: { a: null, b: null } },
-	{ taskId: 'best-time-to-buy-and-sell-stock', questionId: 3, difficulty: 'Medium', topics: [], bannedBy: null, pickedBy: { a: null, b: null } },
+	{ taskId: 'two-sum', questionId: 1, difficulty: 'Easy', topics: [], votes: [], pickedBy: { a: null, b: null } },
+	{ taskId: 'valid-parentheses', questionId: 2, difficulty: 'Easy', topics: [], votes: [], pickedBy: { a: null, b: null } },
+	{ taskId: 'best-time-to-buy-and-sell-stock', questionId: 3, difficulty: 'Medium', topics: [], votes: [], pickedBy: { a: null, b: null } },
 ];
 const NONE = { a: [] as string[], b: [] as string[] };
 

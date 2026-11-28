@@ -68,7 +68,7 @@
 - ladder-arena.test.tsx (US-10-T-9, ours) is deleted: every test in it checks the arena cards, which are gone. The sections above replace it.
 - ladder-busy-motion.test.tsx (US-10-T-9, ours) loses its two Ladder card tests (.lb-card-leaving, .lb-card-found), since those classes are removed. Its lb-trace, lb-nod, lb-shake and lb-digit tests stay (the lobby still uses lb-digit).
 - ladder-busy-test-pseudo.md (US-10-T-9) drops its Ladder sections and keeps the Run and Submit ones.
-- ladder.test.tsx (US-9-T-2, Joshua):
+- ladder.test.tsx (US-7-T-2, Joshua):
   - "shows how many players are waiting in each queue" now checks the queued player's "IN QUEUE" count, since there's no per-queue count
   - "sends queue:join with %s when its join button is clicked" now picks the size in Team size, then clicks PLAY
   - "lets a player waiting in 1v1 join the 3v3 queue instead" is removed: you leave, then pick another size
@@ -76,6 +76,6 @@
   - "shows a Leave queue button while the player is waiting" and "sends queue:leave when Leave queue is clicked" now look for "Leave"
   - "shows the player waiting for a match in the queue they joined" now checks for WAITING and the team columns instead of "Finding players"
   - "takes the player to the new game once a match is found" now goes after the match-start screen, not the 2-1 countdown
-- ladder-socket.test.tsx (US-9-T-2) should still pass: the names are optional extras on queue:matched. It gets one new test: the names in queue:matched reach the page.
+- ladder-socket.test.tsx (US-7-T-2) should still pass: the names are optional extras on queue:matched. It gets one new test: the names in queue:matched reach the page.
 - lobby-arena.test.tsx (US5-Task20): the two "outlines an open seat ... in the muted color" tests now check the lighter raised fill instead, plus one new test that an open seat has no dashed outline (no dotted lines anywhere). "shows \"You\" in the user's own row" now checks the row has no "You" tag
 - ladder-menu.test.tsx, home.test.tsx and match-screens-polish.test.tsx are unchanged.

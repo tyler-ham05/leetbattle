@@ -1,4 +1,4 @@
-// US-9-T-2: shared setup for the QueueService tests.
+// US-7-T-2: shared setup for the QueueService tests.
 // Each test starts a fresh QueueService on a random port and talks to it with
 // real socket.io clients. GameService is never started: fetch is stubbed so
 // PUT /game answers "game-1", "game-2", ..., and tests read the requests back.

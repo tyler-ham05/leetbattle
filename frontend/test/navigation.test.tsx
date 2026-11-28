@@ -8,7 +8,7 @@
 //  - It should show an underline, not a box, when reached with the keyboard
 // The top bar menu should be a three-line button with a dropdown
 //  - The menu button should show three lines
-//  - The menu should link to Home, Practice, Lobby and Settings
+//  - The menu should link to Home, Practice, Lobby, Profile and Settings (US-7-T-1 added Profile)
 //  - The menu button should tell screen readers whether the menu is open
 //  - Pressing Escape should close the menu
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -92,12 +92,12 @@ describe('the top bar menu', () => {
 		expect(menuButton().querySelectorAll('svg path').length).toBe(1);
 	});
 
-	it('links to Home, Practice, Lobby and Settings', async () => {
+	it('links to Home, Practice, Lobby, Profile and Settings', async () => {
 		render(<HomeTopBar />);
 		await userEvent.click(menuButton());
 		// Only the links inside the open dropdown (a navigation list named "Site"), in order.
 		const links = within(screen.getByRole('navigation', { name: 'Site' })).getAllByRole('link').map((link) => link.getAttribute('href'));
-		expect(links).toEqual(['/', '/editor', '/lobby', '/settings']);
+		expect(links).toEqual(['/', '/editor', '/lobby', '/profile', '/settings']);
 	});
 
 	it('tells screen readers when the menu is open', async () => {
