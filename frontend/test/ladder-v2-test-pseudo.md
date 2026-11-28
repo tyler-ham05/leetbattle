@@ -7,6 +7,7 @@
 - Picking 3v3 should make the Team size dropdown show 3v3
 - The Gamemode dropdown should show Classic
 - Opening Gamemode should offer only Classic
+- The Team size and Gamemode tiles should center their label and value
 - There should be a section named "Rank"
 - There should be one button named "PLAY"
 - While not connected, PLAY should be disabled

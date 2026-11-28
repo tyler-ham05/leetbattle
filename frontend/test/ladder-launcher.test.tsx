@@ -137,6 +137,23 @@ describe('US-10-T-10 Ladder before queueing', () => {
 		expect(screen.queryByRole('complementary', { name: 'Rivals' })).toBeNull();
 	});
 
+	// The tiles sit under a centered heading, so their label and value are centered
+	// too (the chevron stays pinned to the right edge). Checked by class, since jsdom
+	// doesn't lay anything out.
+	it.each(['Team size', 'Gamemode'])('US-10-T-10 centers the %s tile\'s label and value', (label) => {
+		render(<LadderPage />);
+
+		expect(screen.getByRole('button', { name: new RegExp(`^${label} `) }).className).toMatch(/\bitems-center\b/);
+	});
+
+	it.each(['Team size', 'Gamemode'])('US-10-T-10 centers the value shown in the %s tile', (label) => {
+		render(<LadderPage />);
+		// The value roll holds one span per option; each one is centered across the tile.
+		const values = screen.getByRole('button', { name: new RegExp(`^${label} `) }).querySelectorAll('.lb-lad-roll > span');
+
+		expect([...values].every((value) => value.classList.contains('text-center'))).toBe(true);
+	});
+
 	it('US-10-T-10 shows no Leave button before queueing', () => {
 		render(<LadderPage />);
 

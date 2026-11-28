@@ -83,18 +83,21 @@ function Tile<T extends string>({ label, value, options, onPick, disabled, mono 
 				aria-expanded={open && !disabled}
 				disabled={disabled}
 				onClick={() => setOpen((current) => !current)}
-				className={`${FOCUS} lb-press group flex h-[92px] w-full flex-col items-start justify-between rounded-[14px] border border-line bg-surface px-4 py-3.5 text-left text-ink hover:enabled:border-primary/55 aria-expanded:border-primary active:enabled:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50`}
+				className={`${FOCUS} lb-press group flex h-[92px] w-full flex-col items-center justify-between rounded-[14px] border border-line bg-surface px-4 py-3.5 text-center text-ink hover:enabled:border-primary/55 aria-expanded:border-primary active:enabled:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50`}
 			>
-				<span className="flex w-full items-center justify-between text-xs font-semibold tracking-[0.1em] text-muted">
+				{/* The label is centered; the chevron is pinned to the right so it doesn't push the label off center. */}
+				<span className="relative flex w-full items-center justify-center text-xs font-semibold tracking-[0.1em] text-muted">
 					{label.toUpperCase()}
-					<Chevron />
+					<span className="absolute right-0 flex items-center">
+						<Chevron />
+					</span>
 				</span>
 				<span className="lb-lad-roll relative block h-[34px] w-full overflow-hidden" aria-hidden="true">
 					{options.map((option, index) => (
 						<span
 							key={option}
 							data-at={index < at ? 'above' : index > at ? 'below' : 'on'}
-							className={`text-[32px] leading-[34px] font-extrabold tracking-[-0.03em] ${mono ? 'font-mono' : 'text-[28px]'}`}
+							className={`inset-x-0 text-center text-[32px] leading-[34px] font-extrabold tracking-[-0.03em] ${mono ? 'font-mono' : 'text-[28px]'}`}
 						>
 							{option}
 						</span>
