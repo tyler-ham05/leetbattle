@@ -1,4 +1,4 @@
-// US-9-T-2: Ladder matchmaking queues: queue socket context (app/ladder/socket-context.tsx)
+// US-7-T-2: Ladder matchmaking queues: queue socket context (app/ladder/socket-context.tsx)
 // Acceptance criteria covered:
 //   - queue:matched hands the page the new gameId
 //   - The socket connects to QueueService (port 4005), never LobbyService
@@ -82,48 +82,48 @@ afterEach(() => {
 	localStorage.clear();
 });
 
-describe('US-9-T-2 connecting to QueueService (criterion 10)', () => {
-	it('US-9-T-2 connects to QueueService on port 4005 by default', () => {
+describe('US-7-T-2 connecting to QueueService (criterion 10)', () => {
+	it('US-7-T-2 connects to QueueService on port 4005 by default', () => {
 		renderConsumer();
 
 		expect(socketMocks.io.mock.calls[0][0]).toBe('http://localhost:4005');
 	});
 
-	it('US-9-T-2 never connects to LobbyService', () => {
+	it('US-7-T-2 never connects to LobbyService', () => {
 		renderConsumer();
 
 		expect(socketMocks.io.mock.calls.some(([url]) => String(url).includes(':4003'))).toBe(false);
 	});
 
-	it('US-9-T-2 sends the login token in the socket handshake', () => {
+	it('US-7-T-2 sends the login token in the socket handshake', () => {
 		renderConsumer();
 
 		expect(socketMocks.io.mock.calls[0][1].auth.token).toBe('token-1');
 	});
 
-	it('US-9-T-2 opens the connection once when connect is called', () => {
+	it('US-7-T-2 opens the connection once when connect is called', () => {
 		renderConsumer();
 
 		expect(sockets[0].socket.connect).toHaveBeenCalledTimes(1);
 	});
 });
 
-describe('US-9-T-2 server events', () => {
-	it('US-9-T-2 exposes the queue the player is waiting in from queue:state', () => {
+describe('US-7-T-2 server events', () => {
+	it('US-7-T-2 exposes the queue the player is waiting in from queue:state', () => {
 		renderConsumer();
 		act(() => sockets[0].fire('queue:state', { queue: '2v2', counts: { '1v1': 0, '2v2': 1, '3v3': 0 } }));
 
 		expect(screen.getByTestId('queue').textContent).toBe('2v2');
 	});
 
-	it('US-9-T-2 exposes the new gameId from queue:matched (criterion 3)', () => {
+	it('US-7-T-2 exposes the new gameId from queue:matched (criterion 3)', () => {
 		renderConsumer();
 		act(() => sockets[0].fire('queue:matched', { gameId: 'game-1' }));
 
 		expect(screen.getByTestId('game-id').textContent).toBe('game-1');
 	});
 
-	it('US-9-T-2 exposes the error from queue:error (criterion 11)', () => {
+	it('US-7-T-2 exposes the error from queue:error (criterion 11)', () => {
 		renderConsumer();
 		act(() => sockets[0].fire('queue:error', { code: 'game-start-failed', message: 'The match could not be started.' }));
 

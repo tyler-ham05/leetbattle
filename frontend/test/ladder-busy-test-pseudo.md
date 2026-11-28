@@ -84,6 +84,6 @@
 - busy-indicators.test.tsx "does not show the word Run while running" now means not the bare word "Run" (it shows "Running")
 - busy-indicators.test.tsx "does not show the word Submit while submitting" now means not the bare word "Submit" (it shows "Judging")
 - editor.test.tsx (US-4-T-2) "shows Accepted between the editor and the Case tabs" looks for "Accepted" inside the Submission result panel, since the Submit button also says "Accepted" for a moment
-- ladder.test.tsx (US-9-T-2) "shows how many players are waiting in each queue" now expects "N of M players" instead of "N waiting"
-- ladder.test.tsx (US-9-T-2) "shows the player waiting for a match in the queue they joined" now expects the "Finding players" heading and the card's queued state instead of "Waiting for a 2v2 match"
-- ladder.test.tsx (US-9-T-2) "takes the player to the new game once a match is found" now goes after the 2-1 countdown
+- ladder.test.tsx (US-7-T-2) "shows how many players are waiting in each queue" now expects "N of M players" instead of "N waiting"
+- ladder.test.tsx (US-7-T-2) "shows the player waiting for a match in the queue they joined" now expects the "Finding players" heading and the card's queued state instead of "Waiting for a 2v2 match"
+- ladder.test.tsx (US-7-T-2) "takes the player to the new game once a match is found" now goes after the 2-1 countdown

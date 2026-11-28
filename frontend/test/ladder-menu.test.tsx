@@ -1,4 +1,4 @@
-// US-9-T-2: Ladder matchmaking queues: home menu entry
+// US-7-T-2: Ladder matchmaking queues: home menu entry
 // Acceptance criteria covered:
 //   - The front page shows a "Ladder" button that opens the Ladder page
 // Checks that the Ladder row:
@@ -40,33 +40,33 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 });
 
-describe('US-9-T-2 Ladder on the home screen (criterion 1)', () => {
-	it('US-9-T-2 shows a Ladder option in the home menu', () => {
+describe('US-7-T-2 Ladder on the home screen (criterion 1)', () => {
+	it('US-7-T-2 shows a Ladder option in the home menu', () => {
 		render(<HomeActions />);
 
 		expect(ladderRow()).toBeTruthy();
 	});
 
-	it('US-9-T-2 links the Ladder option to the Ladder page', () => {
+	it('US-7-T-2 links the Ladder option to the Ladder page', () => {
 		render(<HomeActions />);
 
 		expect(ladderRow().getAttribute('href')).toBe('/ladder');
 	});
 
-	it('US-9-T-2 gives the Ladder option a one-line description like the other options', () => {
+	it('US-7-T-2 gives the Ladder option a one-line description like the other options', () => {
 		render(<HomeActions />);
 
 		expect((ladderRow().textContent ?? '').replace(/^Ladder/, '').trim().length).toBeGreaterThan(0);
 	});
 
-	it('US-9-T-2 lists Ladder right after Lobby', () => {
+	it('US-7-T-2 lists Ladder right after Lobby', () => {
 		render(<HomeActions />);
 		const titles = within(menu()).getAllByRole('link').map((link) => link.textContent?.match(/^(Practice|Lobby|Ladder|Settings)/)?.[1]);
 
 		expect(titles).toEqual(['Practice', 'Lobby', 'Ladder', 'Settings']);
 	});
 
-	it('US-9-T-2 opens the Ladder page with the keyboard like the other options', async () => {
+	it('US-7-T-2 opens the Ladder page with the keyboard like the other options', async () => {
 		render(<HomeActions />);
 		await userEvent.keyboard('{ArrowDown}{ArrowDown}');
 		(document.activeElement as HTMLElement | null)?.blur();
