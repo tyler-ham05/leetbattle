@@ -10,6 +10,12 @@ export interface User {
 	name: string | null;
 	emailVerified: boolean;
 	createdAt: string;
+	// US-7-T-1: the player's rating, league and match record (from GET /me).
+	rating?: number;
+	league?: string;
+	wins?: number;
+	losses?: number;
+	draws?: number;
 }
 
 export function getToken(): string | null {

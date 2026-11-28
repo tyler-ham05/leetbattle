@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { NextFunction, Request, Response } from 'express';
 import { pool } from './db';
 import { decryptJwe } from './utils/jwe';
@@ -57,4 +58,22 @@ export function limitByIp(max: number, windowMs: number) {
 		}
 		next();
 	};
+}
+
+// US-7-T-1: only another backend service (GameService) may report match
+// results. It proves it by sending INTERNAL_API_KEY, which never reaches a
+// browser; a player's login token is not enough. With no key configured,
+// every request is refused.
+export function requireInternalKey(req: Request, res: Response, next: NextFunction) {
+	const expected = process.env.INTERNAL_API_KEY;
+	const header = req.headers.authorization ?? '';
+	const sent = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : '';
+	const matches = expected !== undefined && expected !== ''
+		&& sent.length === expected.length
+		&& timingSafeEqual(Buffer.from(sent), Buffer.from(expected));
+	if (!matches) {
+		res.status(401).json({ error: 'not authorized' });
+		return;
+	}
+	next();
 }

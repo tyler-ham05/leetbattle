@@ -27,3 +27,11 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMPTZ;
 
 -- US-5-T-13: one account per email, whatever its case.
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower ON users (lower(email));
+
+-- US-7-T-1: each player's rating (everyone starts at 50, in Bronze I) and
+-- their match record. Draws are games_played - games_won - games_lost.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS rating INT NOT NULL DEFAULT 50;
+-- A database that already has the column (with the earlier default of 100)
+-- starts new players at 50 too.
+ALTER TABLE users ALTER COLUMN rating SET DEFAULT 50;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS games_lost INT NOT NULL DEFAULT 0;
