@@ -19,11 +19,35 @@ export interface GamePlayer {
 	left: boolean; // didn't reconnect within the window
 }
 
-// The player who banned a problem during the ban phase.
-export interface Banner {
+// One teammate's vote during the ban phase (US-8-T-1). A vote never carries a
+// team: a player is only ever sent their own team's votes.
+export interface Voter {
 	userId: string;
 	displayName: string;
+}
+
+// One question a team banned, as the reveal shows it once the ban window has
+// closed: the question, the team that banned it, never who voted, and the
+// place it had in the pool so the ban screen can strike it through there.
+export interface BannedProblem {
+	taskId: string;
+	questionId: number;
+	difficulty: string;
+	topics: string[];
 	team: TeamId;
+	position: number;
+}
+
+// Everything the ban screen needs that isn't a question, as GameService sends
+// it to one team. Every count the screen shows comes from here, so a later
+// game mode can change the format without touching the frontend.
+export interface BanState {
+	perTeam: number; // how many questions each team bans
+	questionsInPlay: number; // how many the match is played on, after the bans
+	votesCast: number; // how many of the receiving team have voted
+	voters: number; // how many of the receiving team can vote
+	revealSecondsRemaining: number; // 0 until the window closes and the reveal starts
+	banned: BannedProblem[]; // empty until the reveal; dropped when the match moves on
 }
 
 // The player on one team who picked a problem during the pick phase
@@ -42,7 +66,7 @@ export interface PoolProblem {
 	questionId: number;
 	difficulty: string;
 	topics: string[];
-	bannedBy: Banner | null; // null until a player bans it
+	votes: Voter[]; // the receiving team's votes on this question; never the other team's
 	pickedBy: Record<TeamId, Picker | null>; // null per team until a player on it picks
 }
 
@@ -51,7 +75,7 @@ export interface PoolProblem {
 export interface GameState {
 	gameId: string;
 	// waiting: players are still connecting, the clock hasn't started
-	// banning: every player bans one problem; skipped for a 1v1 (US-6-T-10)
+	// banning: every player votes for one problem, and each team bans what it voted for most
 	// picking: every player picks one of the problems the bans left; also skipped for a 1v1
 	phase: 'waiting' | 'banning' | 'picking' | 'playing';
 	startedAt: number | null;
@@ -59,6 +83,7 @@ export interface GameState {
 	banSecondsRemaining: number; // seconds left in the ban window
 	pickSecondsRemaining: number; // seconds left in the pick window (US-6-T-10)
 	scores: Record<TeamId, number>;
+	bans: BanState;
 	problemPool: PoolProblem[];
 	players: GamePlayer[];
 	forfeitVotes: Record<TeamId, number>;
@@ -97,7 +122,7 @@ interface GameSocketContextValue {
 	// Votes for the player's team to forfeit; the team forfeits once every
 	// connected teammate has voted.
 	forfeit: () => void;
-	// Bans one problem from the pool during the ban phase.
+	// Votes for one problem during the ban phase (US-8-T-1); voting again moves the vote.
 	ban: (_questionId: number) => void;
 	// Picks one of the problems the bans left during the pick phase (US-6-T-10).
 	// A player may pick more than one, up to their own limit (US-8-2).

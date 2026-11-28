@@ -3,11 +3,11 @@
 // Loading style 2: while busy, a button's label swaps for a spinner and the
 // button keeps its width; screen readers still hear the label.
 //  - While Run is running, the Run button should be marked busy
-//  - While Run is running, the Run button should show a spinner
+//  - While Run is running, the Run button should show "Running" (US-10-T-9: was a spinner)
 //  - While Run is running, the Run button should still be named "Run" for screen readers
-//  - While Run is running, the Run button should not show the word "Run"
+//  - While Run is running, the Run button should not show the word "Run" on its own
 //  - While Submit is submitting, the Submit button should be marked busy
-//  - While Submit is submitting, the Submit button should show a spinner
+//  - While Submit is submitting, the Submit button should show "Judging" (US-10-T-9: was a spinner)
 //  - While Submit is submitting, the Submit button should not show the word "Submit"
 //  - While Submit is submitting, the Run button should not be marked busy
 //  - While nothing is running, the Submit button should show the word "Submit"
@@ -60,10 +60,11 @@ describe('Run and Submit while busy', () => {
 		expect(runButton().getAttribute('aria-busy')).toBe('true');
 	});
 
-	it('shows a spinner in Run while running', () => {
+	// US-10-T-9: Run and Submit show a word and an edge light instead of a spinner.
+	it('shows "Running" in Run while running', () => {
 		configureEditor('run');
 		render(<SubmitBar />);
-		expect(spinnerIn(runButton())).not.toBeNull();
+		expect(runButton().textContent).toBe('Running');
 	});
 
 	it('still names the Run button "Run" while running (getByRole finds it by name)', () => {
@@ -72,10 +73,10 @@ describe('Run and Submit while busy', () => {
 		expect(runButton()).toBeTruthy();
 	});
 
-	it('does not show the word "Run" while running', () => {
+	it('does not show the word "Run" on its own while running', () => {
 		configureEditor('run');
 		render(<SubmitBar />);
-		expect(runButton().textContent).toBe('');
+		expect(runButton().textContent).not.toBe('Run');
 	});
 
 	it('marks Submit busy while submitting', () => {
@@ -84,16 +85,16 @@ describe('Run and Submit while busy', () => {
 		expect(submitButton().getAttribute('aria-busy')).toBe('true');
 	});
 
-	it('shows a spinner in Submit while submitting', () => {
+	it('shows "Judging" in Submit while submitting', () => {
 		configureEditor('submit');
 		render(<SubmitBar />);
-		expect(spinnerIn(submitButton())).not.toBeNull();
+		expect(submitButton().textContent).toBe('Judging');
 	});
 
 	it('does not show the word "Submit" while submitting', () => {
 		configureEditor('submit');
 		render(<SubmitBar />);
-		expect(submitButton().textContent).toBe('');
+		expect(submitButton().textContent).not.toBe('Submit');
 	});
 
 	it('does not mark Run busy while only Submit is running', () => {

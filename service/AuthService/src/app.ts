@@ -1,7 +1,7 @@
 import cors from 'cors';
 import express from 'express';
 import { NextFunction, ErrorRequestHandler } from 'express';
-import { limitByIp, requireAuth } from './middleware';
+import { limitByIp, requireAuth, requireInternalKey } from './middleware';
 import {
 	getRoot,
 	login,
@@ -12,6 +12,7 @@ import {
 	updateAccount,
 	forgotPassword,
 	resetPassword,
+	reportMatchResult,
 } from './service';
 
 const app = express();
@@ -37,6 +38,8 @@ app.post('/password', requireAuth, changePassword);
 app.post('/password/forgot', limitByIp(RESET_LIMIT, RESET_WINDOW_MS), forgotPassword);
 app.post('/password/reset', limitByIp(RESET_LIMIT, RESET_WINDOW_MS), resetPassword);
 app.patch('/account', requireAuth, updateAccount);
+// US-7-T-1: GameService reports each finished match here (see requireInternalKey).
+app.post('/internal/match-results', requireInternalKey, reportMatchResult);
 
 const errorHandler: ErrorRequestHandler = (err, _req, res, _next: NextFunction) => {
 	res.status(err.status || 500).json( {

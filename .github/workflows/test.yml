@@ -179,6 +179,32 @@ jobs:
       - name: Run test suite
         run: npm test
 
+  queue-service:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: service/QueueService
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: service/QueueService/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Lint and check for duplication
+        run: npm run predev
+
+      - name: Run test suite
+        run: npm test
+
   frontend:
     runs-on: ubuntu-latest
     defaults:

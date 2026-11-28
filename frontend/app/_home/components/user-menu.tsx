@@ -9,6 +9,7 @@ const PAGES = [
 	{ href: '/', label: 'Home' },
 	{ href: '/editor', label: 'Practice' },
 	{ href: '/lobby', label: 'Lobby' },
+	{ href: '/profile', label: 'Profile' },
 	{ href: '/settings', label: 'Settings' },
 ];
 

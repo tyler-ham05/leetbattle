@@ -30,6 +30,7 @@ interface TestProblem {
 	questionId: number;
 	difficulty: string;
 	topics: string[];
+	votes: never[];
 	pickedBy: { a: TestPicker | null; b: TestPicker | null };
 }
 
@@ -39,7 +40,7 @@ const ALAN: TestPicker = { userId: 'u4', displayName: 'Alan', team: 'b' };
 
 // Builds an unpicked problem. questionIds follow the list order.
 function problem(questionId: number, taskId: string, topics: string[]): TestProblem {
-	return { taskId, questionId, difficulty: 'Easy', topics, pickedBy: { a: null, b: null } };
+	return { taskId, questionId, difficulty: 'Easy', topics, votes: [], pickedBy: { a: null, b: null } };
 }
 
 // The problems left after a 2v2's bans, sized so a limit of CEIL(4 / 2) = 2

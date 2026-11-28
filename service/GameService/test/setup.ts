@@ -24,11 +24,26 @@ export function socketUrl(): string {
 
 beforeAll(async () => {
 	// Short timers so lifecycle tests don't wait the real 5 s join wait / 30 s
-	// reconnect window / 5 s submit cooldown / 30 s ban and pick windows
-	// (socket.test.ts relies on these values). The ban and pick windows are
-	// deliberately longer than the reconnect window, so a player can run out
-	// of time to reconnect while the bans or picks are still going on.
-	gameServer = createGameServer(app, { joinWaitMs: 300, reconnectGraceMs: 300, submitCooldownMs: 100, banWindowMs: 1000, pickWindowMs: 1000 });
+	// reconnect window / 5 s submit cooldown / 30 s ban and pick windows / 3 s
+	// ban reveal (socket.test.ts and ban-vote.test.ts rely on these values).
+	// The ban and pick windows are deliberately longer than the reconnect
+	// window, so a player can run out of time to reconnect while the bans or
+	// picks are still going on. The ban window always runs in full now
+	// (US-8-T-1), so every test that needs a playing game waits it out, which
+	// is why it is shorter than it used to be.
+	//
+	// `choose` settles a tie, a team that did not vote and both teams voting
+	// for the same question. Taking the first candidate makes those outcomes
+	// predictable, where the real match picks at random.
+	gameServer = createGameServer(app, {
+		joinWaitMs: 300,
+		reconnectGraceMs: 300,
+		submitCooldownMs: 100,
+		banWindowMs: 700,
+		banRevealMs: 100,
+		pickWindowMs: 700,
+		choose: (choices) => choices[0],
+	});
 	await new Promise<void>((resolve) => gameServer.httpServer.listen(0, '127.0.0.1', resolve));
 	request = supertest(gameServer.httpServer);
 	// The schema is reset once for the whole run in test/global-setup.ts, not

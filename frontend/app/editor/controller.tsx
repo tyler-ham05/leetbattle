@@ -62,11 +62,18 @@ export async function handleResponse(res:Response){
 	return await res.json();
 }
 
-export type RunResult = {
+// What the player's code printed (stdout) and raised (stderr) on one test
+// case (US-8-T-3). Optional, since older results may not carry them.
+export interface CaseOutput {
+    stdout?: string;
+    stderr?: string;
+}
+
+export type RunResult = ({
     verdict: string;
     expected: string;
     response: string | null;
-}[];
+} & CaseOutput)[];
 
 export interface SubmitResult {
     verdict: string;
@@ -75,6 +82,8 @@ export interface SubmitResult {
     case: string | null;
     expected: string | null;
     response: string | null;
+    // Every case that ran, in order; Submit stops at the first failing one.
+    cases?: ({ verdict: string } & CaseOutput)[];
 }
 
 export class APIService {

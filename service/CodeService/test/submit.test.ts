@@ -19,11 +19,13 @@ const buggyCode = `class Solution:
     def twoSum(self, nums: List[int], target: int) -> List[int]:
         neegy`;
 
+// US-8-T-3: the loop doesn't print, so it still tests a pure timeout. A
+// printing loop now hits the 64 KB output limit (Output Limit Exceeded) first.
 const infiniteLoop = `class Solution:
     def twoSum(self, nums: List[int], target: int) -> List[int]:
         i = 1
         while i > 0:
-            print("hello world!")
+            i += 1
         return []`;
 
 describe('solution tests', () => {

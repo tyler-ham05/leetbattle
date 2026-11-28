@@ -4,6 +4,35 @@ import { pool } from './db';
 import { authenticateToken } from './auth';
 
 export const GAME_DURATION_MS = 20 * 60 * 1000;
+
+export type TeamId = 'a' | 'b';
+
+// The two teams every match is played between.
+export const TEAMS: readonly TeamId[] = ['a', 'b'];
+
+// The whole match format in one place (US-8-T-1): every other count in a match
+// is derived from these, so a later game mode changes the format here and
+// nowhere else.
+export const MATCH_FORMAT = {
+	questionsPerPlayer: 3, // how many questions each player is given to play
+	bansPerTeam: 1, // how many questions each team votes off
+	mediumEvery: 3, // one question in every three is Medium, rounded down
+	banWindowMs: 30_000, // how long the votes stay open
+	banRevealMs: 3_000, // how long the bans are shown before the match moves on
+	pickWindowMs: 30_000, // how long the picks stay open
+} as const;
+
+// What a match of this format needs, for a given team size: how many questions
+// it plays, how many bans it holds, how big a pool that takes, and how that
+// pool splits by difficulty. The pool is one question bigger per ban, so every
+// team has one to vote off.
+export function matchPlan(teamSize: number) {
+	const played = MATCH_FORMAT.questionsPerPlayer * teamSize;
+	const bans = MATCH_FORMAT.bansPerTeam * TEAMS.length;
+	const poolSize = played + bans;
+	const medium = Math.floor(poolSize / MATCH_FORMAT.mediumEvery);
+	return { played, bans, poolSize, medium, easy: poolSize - medium };
+}
 const CODE_SERVICE_URL = process.env.CODE_SERVICE_URL ?? 'http://localhost:4001';
 // Where clients open this service's WebSocket (US-6-T-8 hands it out so a
 // player can rejoin). Read per request so a deployment can set it at start-up.
@@ -24,8 +53,6 @@ const startGameBodySchema = z.object({
 	{ message: 'players must be split evenly across team a and team b' },
 );
 
-export type TeamId = 'a' | 'b';
-
 // One accepted team chat message, as sent on `chat:message` and `chat:history`.
 export interface TeamChatMessage {
 	id: string;
@@ -45,6 +72,15 @@ export interface PoolProblem {
 	questionId: number;
 	difficulty: string;
 	topics: string[];
+}
+
+// One question a team voted off, as the ban reveal shows it: the question, the
+// team that banned it (never who voted), and the place it had in the pool, so
+// the ban screen can strike it through where it stood.
+export interface BannedProblem {
+	problem: PoolProblem;
+	team: TeamId;
+	position: number;
 }
 
 // One tab of a player's editor, as the practice editor keeps it.
@@ -69,13 +105,14 @@ export interface GamePlayerState {
 }
 
 // waiting: created, waiting for players to connect (the clock hasn't started)
-// banning: every player bans one problem from the pool (the clock hasn't started)
+// banning: every player votes for one problem and each team bans what it voted for most (the clock hasn't started)
 // picking: every player picks one of the problems the bans left (the clock hasn't started)
 // playing: the 20-minute clock is running on the problems left after banning (and picking)
 // ended:   decided; about to be torn down
-// US-6-T-10: a 1v1 (team size 1) skips "banning" and "picking" entirely, going
-// straight from "waiting" to "playing" on its full, un-banned pool -- there's
-// no teammate to coordinate a ban or a pick with.
+// US-8-T-1: every match bans, a 1v1 included, since its pool of 5 has to lose
+// both bans to reach the 3 it plays. A 1v1 still skips "picking" and goes
+// straight from the ban reveal to "playing": there is no teammate to
+// coordinate a pick with (US-6-T-10).
 export type GamePhase = 'waiting' | 'banning' | 'picking' | 'playing' | 'ended';
 
 export interface GameState {
@@ -87,9 +124,20 @@ export interface GameState {
 	// Problems assigned to this game (task_ids saved in game_problems). All nine
 	// until play starts, then only the ones the bans left.
 	problemPool: PoolProblem[];
-	bans: Map<string, number>; // userId -> questionId that player banned
+	// US-8-T-1: who voted for what during the ban phase. A player has at most
+	// one vote and can move it until the window closes; the server tallies
+	// these per team when it does.
+	banVotes: Map<string, number>; // userId -> questionId that player voted for
+	// The questions the teams voted off, kept only for the reveal: the match
+	// state carries them while the ban screen shows them, then drops them.
+	bannedProblems: BannedProblem[];
+	// Players whose vote can no longer be moved: their reconnect window ran out
+	// while the bans were going on, so the vote they left behind stands even if
+	// they come back (US-8-T-1).
+	voteLocked: Set<string>; // userIds
 	banEndsAt: number | null; // Date.now() when the ban window runs out; null outside the ban phase
 	picks: Map<string, number[]>; // userId -> questionIds exclusively assigned to that player (US-6-T-10, US-8-2)
+  banRevealEndsAt: number | null;
 	pickEndsAt: number | null; // Date.now() when the pick window runs out; null outside the pick phase
 	selections: Map<string, string>; // userId -> task_id currently being worked (player_selections)
 	// Every player's last-shared editor, kept so a player who joins or
@@ -115,6 +163,7 @@ export interface GameState {
 	timers: {
 		join?: NodeJS.Timeout; // ends the join wait
 		ban?: NodeJS.Timeout; // ends the ban window
+		banReveal?: NodeJS.Timeout; // ends the reveal of what each team banned
 		pick?: NodeJS.Timeout; // ends the pick window
 		end?: NodeJS.Timeout; // ends the match when the clock runs out
 		leave: Map<string, NodeJS.Timeout>; // userId -> ends that player's reconnect window
@@ -140,13 +189,22 @@ export function onGameCreated(listener: (_game: GameState) => void): () => void 
 	return () => createdListeners.delete(listener);
 }
 
-// Who banned the problem with `questionId`, as the ban screen shows it, or null.
-function bannedBy(game: GameState, questionId: number) {
-	for (const [userId, banned] of game.bans) {
-		const player = game.players.get(userId);
-		if (banned === questionId && player) return { userId, displayName: player.displayName, team: player.team };
-	}
-	return null;
+// Everyone on one team, left or not: a player who has left still holds their
+// place on the roster, and still counts towards their team's vote (US-8-T-1).
+export const teamRoster = (game: GameState, team: TeamId) =>
+	[...game.players.values()].filter((player) => player.team === team);
+
+// How many players each team has. Every match is an even split, so this is the
+// team size the match format is sized from.
+export const teamSizeOf = (game: GameState) => game.players.size / TEAMS.length;
+
+// The votes `team` has put on the question with `questionId`, as that team's
+// own ban screen shows them. A vote never carries a team: a player is only
+// ever sent their own team's votes.
+function votesFor(game: GameState, questionId: number, team: TeamId) {
+	return teamRoster(game, team)
+		.filter((player) => game.banVotes.get(player.userId) === questionId)
+		.map((player) => ({ userId: player.userId, displayName: player.displayName }));
 }
 
 // Who on each team has picked the problem with `questionId`, as the pick
@@ -166,9 +224,13 @@ function pickedBy(game: GameState, questionId: number): Record<TeamId, { userId:
 
 const secondsUntil = (time: number) => Math.max(0, Math.ceil((time - Date.now()) / 1000));
 
-// The wire form of a GameState for the `game:state` socket event: everything
-// a client needs to render the match, minus server-only timers and who voted.
-export function serializeGame(game: GameState) {
+// The wire form of a GameState for the `game:state` socket event, as the team
+// receiving it sees the match: everything a client needs to render it, minus
+// the server-only timers and the other team's votes. Each team gets its own
+// copy, sent to its own room (see broadcastState in src/server.ts).
+export function serializeGame(game: GameState, team: TeamId) {
+	const plan = matchPlan(teamSizeOf(game));
+	const roster = teamRoster(game, team);
 	return {
 		gameId: game.gameId,
 		phase: game.phase,
@@ -177,9 +239,20 @@ export function serializeGame(game: GameState) {
 		banSecondsRemaining: game.banEndsAt === null ? 0 : secondsUntil(game.banEndsAt),
 		pickSecondsRemaining: game.pickEndsAt === null ? 0 : secondsUntil(game.pickEndsAt),
 		scores: game.scores,
+		// Everything the ban screen needs that isn't a question (US-8-T-1).
+		// These counts come from the match format, so the client never works
+		// them out from the pool's length or the number of players.
+		bans: {
+			perTeam: MATCH_FORMAT.bansPerTeam,
+			questionsInPlay: plan.played,
+			votesCast: roster.filter((player) => game.banVotes.has(player.userId)).length,
+			voters: roster.length,
+			revealSecondsRemaining: game.banRevealEndsAt === null ? 0 : secondsUntil(game.banRevealEndsAt),
+			banned: game.bannedProblems.map((banned) => ({ ...banned.problem, team: banned.team, position: banned.position })),
+		},
 		problemPool: game.problemPool.map((problem) => ({
 			...problem,
-			bannedBy: bannedBy(game, problem.questionId),
+			votes: votesFor(game, problem.questionId, team),
 			pickedBy: pickedBy(game, problem.questionId),
 		})),
 		players: [...game.players.values()],
@@ -197,20 +270,24 @@ class HttpError extends Error {
 	}
 }
 
-// The shared problem pool for a new match: 2*teamSize Easy + teamSize Medium
-// questions from CodeService's GET /problem?difficulty=&quantity= endpoint
-// (9/6/3 for a 3v3/2v2/1v1 -- US-6-T-10). Both teams draw from the same pool
-// (see game_problems in sql/schema.sql).
-// Any failure here (an error status, or CodeService not answering at all)
-// becomes a 502, since it's an upstream problem rather than a bad request.
+// The shared problem pool for a new match, sized by the match format (see
+// matchPlan): the questions it plays plus one per ban, so 11/8/5 for a
+// 3v3/2v2/1v1, a third of them Medium and the rest Easy. They come from
+// CodeService's GET /problem?difficulty=&quantity= endpoint, and both teams
+// draw from the same pool (see game_problems in sql/schema.sql).
+// Any failure here (an error status, CodeService not answering at all, or
+// fewer questions than the match needs) becomes a 502: it's an upstream
+// problem rather than a bad request, and a short pool would quietly change
+// every count the match is played on.
 async function fetchProblemPool(teamSize: number): Promise<PoolProblem[]> {
+	const plan = matchPlan(teamSize);
 	const unavailable = new HttpError(502, 'could not load the problem pool from CodeService');
 	// The fetch Response, not Express's Response imported at the top of this file.
 	let responses: globalThis.Response[];
 	try {
 		responses = await Promise.all([
-			fetch(`${CODE_SERVICE_URL}/problem?difficulty=Easy&quantity=${teamSize * 2}`),
-			fetch(`${CODE_SERVICE_URL}/problem?difficulty=Medium&quantity=${teamSize}`),
+			fetch(`${CODE_SERVICE_URL}/problem?difficulty=Easy&quantity=${plan.easy}`),
+			fetch(`${CODE_SERVICE_URL}/problem?difficulty=Medium&quantity=${plan.medium}`),
 		]);
 	} catch {
 		throw unavailable;
@@ -219,7 +296,9 @@ async function fetchProblemPool(teamSize: number): Promise<PoolProblem[]> {
 	const [easyProblems, mediumProblems] = await Promise.all(
 		responses.map((response) => response.json() as Promise<{ task_id: string; question_id: number; difficulty: string; tags?: string[] }[]>),
 	);
-	return [...easyProblems, ...mediumProblems].map((problem) => ({
+	const problems = [...easyProblems, ...mediumProblems];
+	if (problems.length < plan.poolSize) throw unavailable;
+	return problems.map((problem) => ({
 		taskId: problem.task_id,
 		questionId: problem.question_id,
 		difficulty: problem.difficulty,
@@ -292,8 +371,11 @@ export async function createGame(req: Request, res: Response, next: NextFunction
 			scores: { a: 0, b: 0 },
 			players: new Map(players.map((player) => [player.userId, { ...player, connected: false, left: false }])),
 			problemPool,
-			bans: new Map(),
+			banVotes: new Map(),
+			bannedProblems: [],
+			voteLocked: new Set(),
 			banEndsAt: null,
+			banRevealEndsAt: null,
 			picks: new Map(),
 			pickEndsAt: null,
 			selections: new Map(),
