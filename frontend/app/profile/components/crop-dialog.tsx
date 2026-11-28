@@ -43,7 +43,9 @@ function exportCrop(img: HTMLImageElement, crop: Crop): string {
 		ctx.drawImage(img, sx, sy, side, side, 0, 0, OUT, OUT);
 	}
 	const webp = canvas.toDataURL('image/webp', 0.9);
-	return webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/png');
+	// A browser that can't make WebP falls back to JPEG: a full-size PNG of a photo
+	// can go over AuthService's 200 KB limit.
+	return webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/jpeg', 0.9);
 }
 
 // US-7-T-5: crop a chosen picture into a circle in the browser. Drag (or the

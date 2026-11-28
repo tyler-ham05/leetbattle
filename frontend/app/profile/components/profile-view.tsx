@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import PageLoader from '../../_shared/page-loader';
 import HomeTopBar from '../../_home/components/topbar';
 import type { PublicProfile } from '../../login/controller';
+import { shownName } from './name';
 import PlayerCard, { useProfileCount } from './player-card';
 import type { CardEditor } from './player-card';
 import DescriptionSlot from './description-editor';
@@ -63,7 +64,7 @@ export default function ProfileView({ profile, edit }: { profile: PublicProfile;
 	const losses = profile.losses ?? 0;
 	const draws = profile.draws ?? 0;
 	const played = wins + losses + draws;
-	const name = profile.name ?? '';
+	const name = shownName(profile);
 	return (
 		<main data-testid="player-profile" className="lb-pc-wrap" style={leagueLook(profile.league ?? 'Bronze I')}>
 			<div className="lb-pc-bg" aria-hidden="true"><div className="lb-pc-pool" /><div className="lb-pc-grain" /></div>

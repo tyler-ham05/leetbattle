@@ -8,6 +8,8 @@ export interface User {
 	id: string;
 	email: string;
 	name: string | null;
+	// What to show for the player (AuthService): their name, else the part of their email before the @.
+	displayName?: string;
 	emailVerified: boolean;
 	createdAt: string;
 	// US-7-T-1: the player's rating, league and match record (from GET /me).

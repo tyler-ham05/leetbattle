@@ -9,6 +9,7 @@ import type { ProfileIconKey } from '../../_shared/profile-icons';
 import type { PublicProfile } from '../../login/controller';
 import Odometer from './odometer';
 import CropDialog from './crop-dialog';
+import { shownName } from './name';
 
 // What your own card can change; absent on someone else's card.
 export interface CardEditor {
@@ -220,7 +221,7 @@ export default function PlayerCard({ profile, edit }: { profile: PublicProfile; 
 							onChange={(event) => setFile(event.target.files?.[0] ?? null)}
 						/>
 					)}
-					<p className="lb-pc-card-name">{profile.name}</p>
+					<p className="lb-pc-card-name">{shownName(profile)}</p>
 					<div className="lb-pc-card-league">{profile.league ?? 'Bronze I'}</div>
 					<div className="lb-pc-card-rating">
 						<span className="lb-pc-cap">Rating</span>
