@@ -17,7 +17,8 @@
         "start-game": "cd service/GameService && npm run dev",
         "start-queue": "cd service/QueueService && npm run dev",
         "start-frontend": "cd frontend && npm run dev",
-        "insert-game": "cd service/GameService && npm run dev-match --"
+        "insert-game": "cd service/GameService && npm run dev-match --",
+        "seed-demo": "cd service/AuthService && npm run seed:demo"
     },
     "devDependencies": {
         "concurrently": "^9.1.0"

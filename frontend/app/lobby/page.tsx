@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import RequireAuth from '../login/protected';
 import { useAuth } from '../login/context';
 import HomeTopBar from '../_home/components/topbar';
@@ -199,7 +200,8 @@ function LobbyContent() {
 					</form>
 				) : (
 					<span className={`relative flex items-center gap-2 ${team.mirrored ? 'flex-row-reverse' : ''}`}>
-						<span className="text-[20px] font-semibold">{player.displayName}</span>
+						{/* US-7-T-5: every name opens that player's profile. */}
+						<Link href={`/profile/${player.userId}`} className="text-[20px] font-semibold underline-offset-4 hover:underline">{player.displayName}</Link>
 						{isMe && (
 							<>
 								<button

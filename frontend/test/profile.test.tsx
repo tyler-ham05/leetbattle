@@ -14,7 +14,7 @@
 //  - The user menu should have a "Profile" link to /profile
 //  - A signed-out visitor who opens /profile should be sent to /login
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { fakeUser } from './helpers';
 
@@ -35,14 +35,25 @@ vi.mock('../app/login/context', () => ({
 import ProfilePage from '../app/profile/page';
 import UserMenu from '../app/_home/components/user-menu';
 
-// The value next to a stat's label: the page lists its stats as <dt>label</dt><dd>value</dd>.
-const valueOf = (label: string) => screen.getByText(label, { selector: 'dt' }).nextElementSibling?.textContent;
+// US-7-T-5: the stats are now boxes (role group, named by their label) whose
+// numbers count up, so these tests let the count finish on a fake clock first.
+function statOf(label: string) {
+	vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame', 'performance'] });
+	render(<ProfilePage />);
+	act(() => {
+		vi.advanceTimersByTime(4000);
+	});
+	return screen.getByRole('group', { name: label }).querySelector('.lb-pc-num')?.textContent;
+}
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	mocks.user = ratedUser;
 });
-afterEach(() => cleanup());
+afterEach(() => {
+	cleanup();
+	vi.useRealTimers();
+});
 
 describe('US-7-T-1 the profile page shows the signed-in player\'s stats', () => {
 	it('US-7-T-1 shows the player\'s name', () => {
@@ -51,28 +62,27 @@ describe('US-7-T-1 the profile page shows the signed-in player\'s stats', () => 
 	});
 
 	it('US-7-T-1 shows the player\'s league', () => {
+		// US-7-T-5: the league is on the player card.
 		render(<ProfilePage />);
-		expect(valueOf('League')).toBe('Silver II');
+		expect(within(screen.getByRole('article', { name: 'Player card' })).getByText('Silver II')).toBeTruthy();
 	});
 
 	it('US-7-T-1 shows the player\'s rating', () => {
+		// US-7-T-5: the visible rating is an odometer; screen readers get it as text.
 		render(<ProfilePage />);
-		expect(valueOf('Rating')).toBe('432');
+		expect(screen.getByText('Rating 432')).toBeTruthy();
 	});
 
 	it('US-7-T-1 shows the player\'s wins', () => {
-		render(<ProfilePage />);
-		expect(valueOf('Wins')).toBe('7');
+		expect(statOf('Wins')).toBe('7');
 	});
 
 	it('US-7-T-1 shows the player\'s losses', () => {
-		render(<ProfilePage />);
-		expect(valueOf('Losses')).toBe('3');
+		expect(statOf('Losses')).toBe('3');
 	});
 
 	it('US-7-T-1 shows the player\'s draws', () => {
-		render(<ProfilePage />);
-		expect(valueOf('Draws')).toBe('1');
+		expect(statOf('Draws')).toBe('1');
 	});
 
 	// The signed-in user is loaded once when the app opens; a match played since
@@ -82,10 +92,10 @@ describe('US-7-T-1 the profile page shows the signed-in player\'s stats', () => 
 		expect(mocks.refresh).toHaveBeenCalledTimes(1);
 	});
 
-	// fakeUser joined at 2026-01-01T00:00:00Z.
+	// fakeUser joined at 2026-01-01T00:00:00Z. US-7-T-5: shown as month and year.
 	it('US-7-T-1 shows the date the player joined', () => {
 		render(<ProfilePage />);
-		expect(valueOf('Joined')).toBe('January 1, 2026');
+		expect(screen.getByText('Joined January 2026')).toBeTruthy();
 	});
 });
 

@@ -35,3 +35,24 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS rating INT NOT NULL DEFAULT 50;
 -- starts new players at 50 too.
 ALTER TABLE users ALTER COLUMN rating SET DEFAULT 50;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS games_lost INT NOT NULL DEFAULT 0;
+
+-- US-7-T-5: the player's profile: a preset icon, a short description and an
+-- optional round picture (its bytes and type, checked by AuthService).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS icon TEXT NOT NULL DEFAULT 'katana';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS picture BYTEA;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS picture_type TEXT;
+
+-- US-7-T-5: each player's rated matches, for the profile's last-10 rating
+-- chart. One row per player per match, written with the rating change.
+CREATE TABLE IF NOT EXISTS match_history (
+  id            BIGSERIAL PRIMARY KEY,
+  user_id       UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  game_id       TEXT NOT NULL,
+  result        TEXT NOT NULL CHECK (result IN ('W', 'L', 'D')),
+  change        INT NOT NULL,
+  rating_after  INT NOT NULL,
+  team_size     INT NOT NULL,
+  played_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS match_history_user_played ON match_history (user_id, played_at DESC);

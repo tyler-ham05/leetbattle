@@ -8,7 +8,7 @@
 //  - It should show an underline, not a box, when reached with the keyboard
 // The top bar menu should be a three-line button with a dropdown
 //  - The menu button should show three lines
-//  - The menu should link to Home, Practice, Lobby, Profile and Settings (US-7-T-1 added Profile)
+//  - The menu should link to Profile and Settings only (US-7-T-5: Home, Practice and Lobby are on the home screen)
 //  - The menu button should tell screen readers whether the menu is open
 //  - Pressing Escape should close the menu
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -92,12 +92,14 @@ describe('the top bar menu', () => {
 		expect(menuButton().querySelectorAll('svg path').length).toBe(1);
 	});
 
-	it('links to Home, Practice, Lobby, Profile and Settings', async () => {
+	// US-7-T-5: an account menu. Home, Practice and Lobby are on the home screen,
+	// and the LeetBattle logo goes home from any page, so the menu doesn't repeat them.
+	it('links to Profile and Settings', async () => {
 		render(<HomeTopBar />);
 		await userEvent.click(menuButton());
-		// Only the links inside the open dropdown (a navigation list named "Site"), in order.
-		const links = within(screen.getByRole('navigation', { name: 'Site' })).getAllByRole('link').map((link) => link.getAttribute('href'));
-		expect(links).toEqual(['/', '/editor', '/lobby', '/profile', '/settings']);
+		// Only the links inside the open dropdown, in order.
+		const links = within(screen.getByRole('navigation', { name: 'Account' })).getAllByRole('link').map((link) => link.getAttribute('href'));
+		expect(links).toEqual(['/profile', '/settings']);
 	});
 
 	it('tells screen readers when the menu is open', async () => {
@@ -110,6 +112,6 @@ describe('the top bar menu', () => {
 		render(<HomeTopBar />);
 		await userEvent.click(menuButton());
 		await userEvent.keyboard('{Escape}');
-		expect(screen.queryByRole('navigation', { name: 'Site' })).toBeNull();
+		expect(screen.queryByRole('navigation', { name: 'Account' })).toBeNull();
 	});
 });

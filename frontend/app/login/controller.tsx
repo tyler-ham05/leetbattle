@@ -8,6 +8,8 @@ export interface User {
 	id: string;
 	email: string;
 	name: string | null;
+	// What to show for the player (AuthService): their name, else the part of their email before the @.
+	displayName?: string;
 	emailVerified: boolean;
 	createdAt: string;
 	// US-7-T-1: the player's rating, league and match record (from GET /me).
@@ -16,6 +18,41 @@ export interface User {
 	wins?: number;
 	losses?: number;
 	draws?: number;
+	// US-7-T-5: the player card. `picture` is a data: URL, or null for the icon.
+	icon?: string;
+	description?: string;
+	picture?: string | null;
+	leagueMin?: number;
+	nextLeague?: NextLeague | null;
+	// The player's last ranked matches, oldest first (up to 10). Older
+	// AuthService versions don't send it; treat it as none.
+	recentMatches?: RecentMatch[];
+}
+
+// One ranked match on the profile's "Last 10 matches" line.
+export interface RecentMatch {
+	result: 'W' | 'L' | 'D';
+	// The rating change from this match, and the rating after it.
+	change: number;
+	ratingAfter: number;
+	// 1 for 1v1, 2 for 2v2, 3 for 3v3.
+	teamSize: number;
+	playedAt: string;
+}
+
+// The league after the player's, and the rating it starts at (null in Platinum).
+export interface NextLeague {
+	name: string;
+	at: number;
+}
+
+// Another player's profile from GET /users/:id: the User fields minus the private ones.
+export type PublicProfile = Omit<User, 'email' | 'emailVerified'>;
+
+// What PATCH /account can change on the profile (US-7-T-5).
+export interface ProfileChange {
+	icon?: string;
+	description?: string;
 }
 
 export function getToken(): string | null {
@@ -118,6 +155,41 @@ export class AuthAPIService {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json', ...authHeaders() },
 			body: JSON.stringify({ name }),
+		});
+		const { user } = await parseResponse<{ user: User }>(res);
+		return user;
+	}
+
+	// US-7-T-5: one player's public profile, or null if there is no such player.
+	public async getUser(id: string): Promise<PublicProfile | null> {
+		const res = await fetch(`${AUTHSERVICE}/users/${encodeURIComponent(id)}`, {
+			method: 'GET',
+			headers: authHeaders(),
+		});
+		if (res.status === 404) return null;
+		const { user } = await parseResponse<{ user: PublicProfile }>(res);
+		return user;
+	}
+
+	public async updateProfile(change: ProfileChange): Promise<User> {
+		return this.sendProfile('PATCH', '/account', change);
+	}
+
+	// `image` is the cropped picture as a data: URL.
+	public async setPicture(image: string): Promise<User> {
+		return this.sendProfile('PUT', '/account/picture', { image });
+	}
+
+	public async removePicture(): Promise<User> {
+		return this.sendProfile('DELETE', '/account/picture');
+	}
+
+	// A signed-in change to the caller's own profile, answered with `{ user }`.
+	private async sendProfile(method: string, route: string, body?: object): Promise<User> {
+		const res = await fetch(`${AUTHSERVICE}${route}`, {
+			method,
+			headers: { 'Content-Type': 'application/json', ...authHeaders() },
+			body: body ? JSON.stringify(body) : undefined,
 		});
 		const { user } = await parseResponse<{ user: User }>(res);
 		return user;

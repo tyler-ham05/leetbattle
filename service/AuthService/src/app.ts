@@ -13,6 +13,9 @@ import {
 	forgotPassword,
 	resetPassword,
 	reportMatchResult,
+	setPicture,
+	removePicture,
+	getUser,
 } from './service';
 
 const app = express();
@@ -26,6 +29,10 @@ const RESET_LIMIT = 5;
 const RESET_WINDOW_MS = 15 * 60_000;
 
 app.use(cors());
+// US-7-T-5: a 200 KB picture is about 273 KB in base64, so only the picture
+// upload gets a larger body limit. It is parsed here, before the default
+// 100 KB parser below, which then leaves the already-parsed body alone.
+app.put('/account/picture', express.json({ limit: '400kb' }));
 app.use(express.json());
 
 app.get('/', getRoot);
@@ -38,6 +45,9 @@ app.post('/password', requireAuth, changePassword);
 app.post('/password/forgot', limitByIp(RESET_LIMIT, RESET_WINDOW_MS), forgotPassword);
 app.post('/password/reset', limitByIp(RESET_LIMIT, RESET_WINDOW_MS), resetPassword);
 app.patch('/account', requireAuth, updateAccount);
+app.put('/account/picture', requireAuth, setPicture);
+app.delete('/account/picture', requireAuth, removePicture);
+app.get('/users/:id', requireAuth, getUser);
 // US-7-T-1: GameService reports each finished match here (see requireInternalKey).
 app.post('/internal/match-results', requireInternalKey, reportMatchResult);
 

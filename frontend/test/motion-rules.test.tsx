@@ -77,7 +77,7 @@ describe('entrances', () => {
 		auth.user = fakeUser;
 		render(<UserMenu />);
 		await userEvent.click(screen.getByRole('button', { name: 'Account menu' }));
-		expect(screen.getByRole('navigation', { name: 'Site' }).parentElement?.classList.contains('lb-enter')).toBe(true);
+		expect(screen.getByRole('navigation', { name: 'Account' }).parentElement?.classList.contains('lb-enter')).toBe(true);
 	});
 });
 
