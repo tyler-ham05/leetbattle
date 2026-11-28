@@ -5,7 +5,6 @@ import { io } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
 import { getToken } from '../login/controller';
 import { useAuth } from '../login/context';
-import { displayNameOf } from './display-name';
 
 export type QueueMode = '1v1' | '2v2' | '3v3';
 
@@ -21,12 +20,8 @@ export interface QueueError {
 }
 
 // Sent once GameService has created the match; the page moves to /game/<gameId>.
-// yourTeam / rivals are the display names on each side, from this player's
-// point of view (US-10-T-10); an older QueueService sends only gameId.
 export interface QueueMatch {
 	gameId: string;
-	yourTeam?: string[];
-	rivals?: string[];
 }
 
 interface QueueSocketContextValue {
@@ -61,7 +56,7 @@ export function QueueSocketProvider({ children }: { children: ReactNode }) {
 
 		const queueSocket = io(QUEUE_URL, {
 			autoConnect: false,
-			auth: { token, displayName: displayNameOf(user) },
+			auth: { token, displayName: user.name?.trim() || user.email.split('@')[0] },
 		});
 		queueSocket.on('connect', () => {
 			setConnected(true);

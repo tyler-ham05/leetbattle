@@ -87,18 +87,10 @@ export function createQueueService(options: ServiceOptions = {}) {
 			});
 			if (!response.ok) throw new Error(`GameService responded with status ${response.status}`);
 			const { gameId } = await response.json() as { gameId: string };
-			// Same split as sent to GameService: the first teamSize players are team a.
-			const teamA = players.slice(0, teamSize).map((player) => player.displayName);
-			const teamB = players.slice(teamSize).map((player) => player.displayName);
-			players.forEach(({ userId }, index) => {
+			for (const { userId } of players) {
 				matching.delete(userId);
-				const onTeamA = index < teamSize;
-				socketsByUserId.get(userId)?.emit('queue:matched', {
-					gameId,
-					yourTeam: onTeamA ? teamA : teamB,
-					rivals: onTeamA ? teamB : teamA,
-				});
-			});
+				socketsByUserId.get(userId)?.emit('queue:matched', { gameId });
+			}
 		} catch (error) {
 			console.error('[queue-service] could not start the game', error);
 			// Back to the front of the queue, in their original order. The next

@@ -24,7 +24,7 @@
 // Seats
 //  - A ready player's row should be marked ready (the team-colour sweep)
 //  - A player who is not ready should not be marked ready
-//  - The user's own row should not show a "You" tag (US-10-T-10: the name and the edit button already mark it)
+//  - The user's own row should show "You"
 
 // Choosing a team (open seats replace the "Join / Switch / Your team / Team full" buttons)
 //  - When the user has no team, Team 1's open seat should be a "Join Team 1" button
@@ -33,9 +33,8 @@
 //  - When the user is on Team 1, Team 1's open seats should not be buttons
 //  - The "Your team" button should no longer be shown
 //  - An open seat the user can take should hold "Open seat" and "Join here" in the same spot, so one fades into the other
-//  - An open seat the user can take should use the lighter raised fill, with no dashed outline (US-10-T-10)
-//  - An open seat on the user's own team (not a button) should use the same fill
-//  - An open seat should have no dashed outline
+//  - An open seat's dashed outline should use the muted color at 40%, so it still shows in light mode
+//  - An open seat on the user's own team (not a button) should use the same outline
 
 // Display name (edited in the user's own row instead of a separate form)
 //  - The user's row should have an "Edit your display name" button
@@ -256,11 +255,11 @@ describe('lobby seats', () => {
 		expect(screen.getByText('Alan').closest('[data-ready]')?.getAttribute('data-ready')).toBe('false');
 	});
 
-	it('US-10-T-10 shows no "You" tag in the user\'s own row', () => {
+	it('US5-Task20 shows "You" in the user\'s own row', () => {
 		render(<LobbyPage />);
 		// The name also shows in the top bar's account button, so pick the one in a seat row.
 		const seat = screen.getAllByText('Ada').map((el) => el.closest('[data-ready]')).find(Boolean);
-		expect(seat?.textContent).not.toContain('You');
+		expect(seat?.textContent).toContain('You');
 	});
 });
 
@@ -298,21 +297,15 @@ describe('lobby team choice through open seats', () => {
 		expect(seat.textContent).toBe('Join here');
 	});
 
-	// US-10-T-10: open seats are marked by a lighter solid fill instead of a dashed outline.
-	it('fills an open seat the user can take with the raised color', () => {
+	it('outlines an open seat the user can take in the muted color', () => {
 		configureLobby([{ ...ada, team: null }, grace, alan]);
 		render(<LobbyPage />);
-		expect(screen.getAllByRole('button', { name: 'Join Team 1' })[0].classList.contains('bg-raised')).toBe(true);
+		expect(screen.getAllByRole('button', { name: 'Join Team 1' })[0].classList.contains('border-muted/40')).toBe(true);
 	});
 
-	it('fills an open seat on the user\'s own team with the raised color', () => {
+	it('outlines an open seat on the user\'s own team in the muted color', () => {
 		render(<LobbyPage />);
-		expect(screen.getAllByText('Open seat')[0].classList.contains('bg-raised')).toBe(true);
-	});
-
-	it('draws no dashed outline around an open seat', () => {
-		render(<LobbyPage />);
-		expect(screen.getAllByText('Open seat')[0].classList.contains('border-dashed')).toBe(false);
+		expect(screen.getAllByText('Open seat')[0].classList.contains('border-muted/40')).toBe(true);
 	});
 
 	it('US5-Task20 no longer shows a "Your team" button', () => {

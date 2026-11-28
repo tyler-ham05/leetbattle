@@ -17,14 +17,6 @@ export interface QueueState {
 	counts: Record<QueueMode, number>;
 }
 
-// `queue:matched` payload. yourTeam/rivals are optional here only so tests
-// written before US-10-T-10 keep type-checking; the new tests assert them.
-export interface MatchedPayload {
-	gameId: string;
-	yourTeam?: string[];
-	rivals?: string[];
-}
-
 export interface GamePlayer {
 	userId: string;
 	displayName: string;
@@ -151,8 +143,8 @@ export async function joinInOrder(players: Socket[], mode: QueueMode): Promise<v
 }
 
 // Like joinInOrder, but the last join fills the queue; resolves with each `queue:matched`.
-export async function joinUntilMatched(players: Socket[], mode: QueueMode): Promise<MatchedPayload[]> {
-	const matched = players.map((player) => nextEvent<MatchedPayload>(player, 'queue:matched'));
+export async function joinUntilMatched(players: Socket[], mode: QueueMode): Promise<{ gameId: string }[]> {
+	const matched = players.map((player) => nextEvent<{ gameId: string }>(player, 'queue:matched'));
 	for (const player of players.slice(0, -1)) await joinQueue(player, mode);
 	players[players.length - 1].emit('queue:join', mode);
 	return Promise.all(matched);

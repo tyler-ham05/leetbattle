@@ -177,7 +177,7 @@ function LobbyContent() {
 			<li
 				key={player.userId}
 				data-ready={String(player.ready)}
-				className={`${enter} ${team.mirrored ? 'flex-row-reverse' : ''} relative flex min-h-[72px] items-center justify-between gap-3 overflow-hidden rounded-2xl px-6 py-2 ${isMe ? 'bg-raised' : 'bg-surface'}`}
+				className={`${enter} ${team.mirrored ? 'flex-row-reverse' : ''} relative flex min-h-[54px] items-center justify-between gap-3 overflow-hidden rounded-[10px] px-4 py-2 ${isMe ? 'bg-raised' : 'bg-surface'}`}
 			>
 				<span
 					aria-hidden="true"
@@ -199,9 +199,10 @@ function LobbyContent() {
 					</form>
 				) : (
 					<span className={`relative flex items-center gap-2 ${team.mirrored ? 'flex-row-reverse' : ''}`}>
-						<span className="text-[20px] font-semibold">{player.displayName}</span>
+						<span className="text-[15px] font-medium">{player.displayName}</span>
 						{isMe && (
 							<>
+								<span className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">You</span>
 								<button
 									type="button"
 									aria-label="Edit your display name"
@@ -214,7 +215,7 @@ function LobbyContent() {
 						)}
 					</span>
 				)}
-				<span className={`relative flex items-center gap-1.5 text-[15px] font-medium transition-colors duration-300 ${player.ready ? 'text-ink' : 'text-muted'}`}>
+				<span className={`relative flex items-center gap-1.5 text-[13px] font-medium transition-colors duration-300 ${player.ready ? 'text-ink' : 'text-muted'}`}>
 					{!player.connected ? 'Reconnecting…' : (
 						<>
 							{player.ready && <svg viewBox="0 0 16 16" aria-hidden="true" className={`lb-check ${team.check}`}><path d="M3 8.5l3.2 3.2L13 4.8" /></svg>}
@@ -297,12 +298,12 @@ function LobbyContent() {
 							return (
 								<Fragment key={team.id}>
 									{team.mirrored && <span aria-hidden="true" className="hidden md:block" />}
-									<section className="flex flex-col gap-3">
+									<section className="flex flex-col gap-1.5">
 										<div className={`flex items-baseline justify-between px-1 pb-2.5 ${team.mirrored ? 'flex-row-reverse' : ''}`}>
 											<h2 className={`text-[22px] font-extrabold tracking-[-0.03em] ${team.nameColor}`}>{name}</h2>
 											<span className="font-mono text-[13px] font-semibold text-muted">{teamPlayers.length}/{teamSize}</span>
 										</div>
-										<ul className="flex flex-col gap-3" aria-label={`${name} players`}>
+										<ul className="flex flex-col gap-1.5" aria-label={`${name} players`}>
 											{teamPlayers.map((player) => seatRow(player, team))}
 											{Array.from({ length: openSeats }, (_, i) => (
 												<li key={`open-${i}`} className="lb-fade-in">
@@ -312,12 +313,12 @@ function LobbyContent() {
 															aria-label={seatAction}
 															onClick={() => (currentPlayer ? send('lobby:join-team', team.id) : joinSeat(team.id))}
 															disabled={!connected || (!currentPlayer && full)}
-															className={`${BUTTON} min-h-[72px] w-full rounded-2xl border border-transparent bg-raised px-6 text-[17px] font-semibold opacity-60 transition-opacity hover:enabled:opacity-100 focus-visible:opacity-100 ${team.nameColor}`}
+															className={`${BUTTON} min-h-[54px] w-full rounded-[10px] border border-dashed border-muted/40 px-4 text-sm font-semibold hover:bg-surface ${team.nameColor}`}
 														>
 															{currentPlayer?.team ? 'Switch here' : 'Join here'}
 														</button>
 													) : (
-														<div className="flex min-h-[72px] items-center justify-center rounded-2xl border border-transparent bg-raised px-6 text-[17px] text-muted opacity-50">Open seat</div>
+														<div className="flex min-h-[54px] items-center justify-center rounded-[10px] border border-dashed border-muted/40 px-4 text-sm text-muted">Open seat</div>
 													)}
 												</li>
 											))}
