@@ -10,8 +10,6 @@ import type { GamePlayerState, GameState, Grading, TeamChatMessage, TeamId, Work
 const DEFAULT_JOIN_WAIT_MS = 5_000;
 const DEFAULT_RECONNECT_GRACE_MS = 30_000;
 const DEFAULT_SUBMIT_COOLDOWN_MS = 5_000;
-const DEFAULT_BAN_WINDOW_MS = 30_000;
-const DEFAULT_PICK_WINDOW_MS = 30_000;
 const MAX_CHAT_LENGTH = 500;
 const CHAT_RATE_LIMIT_MS = 1_000;
 const CHAT_RETENTION_DAYS = 10;
@@ -130,6 +128,8 @@ export function resultOnTime({ a, b }: Record<TeamId, number>): GameResult {
 // whole pool is always claimable even when it doesn't divide evenly.
 export function pickLimit(poolSize: number, teamSize: number): number {
 	return Math.ceil(poolSize / teamSize);
+}
+
 // US-7-T-1: what AuthService needs to rate a finished match: the winner (null
 // for a draw) and every player on the roster with their team, including
 // anyone who left mid-match.

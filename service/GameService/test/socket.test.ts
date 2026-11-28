@@ -1008,18 +1008,6 @@ describe('picking a problem', () => {
 		expect(response.ok).toBe(true);
 	});
 
-	// US-8-2: a player may now pick more than one problem, up to CEIL(pool
-	// size / team size) -- see "picking more than one problem (US-8-2)" below.
-	// This 2v2's pool of 2 leaves each player a limit of exactly 1, so a
-	// second pick is still rejected, just with the more general error.
-	it('rejects a pick once a player has reached their pick limit with "pick-limit-reached"', async () => {
-		const { sockets, remaining } = await pickingGame(2, 2);
-		await pick(sockets[0], remaining[0].questionId);
-		// The other players haven't picked yet, so the picks are still going on.
-		const response = await pick(sockets[0], remaining[1].questionId);
-		expect(response.error).toBe('pick-limit-reached');
-	});
-
 	it('rejects picking a problem that isn\'t in the match pool with "unknown-problem"', async () => {
 		const { sockets } = await pickingGame(2, 2);
 		const response = await pick(sockets[0], -1);
@@ -1597,123 +1585,126 @@ describe('deselecting a pick (US-8-2)', () => {
 		await pickEveryone(sockets, remaining);
 		const response = await unpick(sockets[0], remaining[0].questionId);
 		expect(response.error).toBe('not-picking');
-// US-7-T-1 GameService reports each match's result to AuthService
-// (AuthService is replaced with a stand-in; no test calls the real service.)
-// Reporting the result when a match ends (AC6)
-//  - When a match ends with a winner, GameService should send one POST to AuthService's /internal/match-results
-//  - The report should carry the internal key as "Authorization: Bearer <INTERNAL_API_KEY>"
-//  - The report should name the winning team ("a" or "b")
-//  - The report should list every player on the roster with their team
-//  - A player who left mid-match should still be listed in the report
-//  - When a match ends on time with level scores, the report's winner should be null (a draw)
-// A failed report doesn't break the match
-//  - When AuthService answers with an error, the players should still receive "game:ended"
-//  - When AuthService can't be reached, the players should still receive "game:ended"
-describe('US-7-T-1 reporting the match result to AuthService', () => {
-	// Matches the AUTH_SERVICE_URL fallback in src/server.ts (AuthService's own default port).
-	const AUTH_SERVICE_URL = 'http://localhost:4002';
-	const INTERNAL_KEY = 'test-internal-api-key';
-
-	interface MatchReport { gameId: string; winner: 'a' | 'b' | null; players: { userId: string; team: 'a' | 'b' }[] }
-	interface SentReport { request: string; authorization: string | undefined; body: MatchReport }
-
-	let reports: SentReport[];
-	// How the AuthService stand-in answers a report; a test can make it fail.
-	let answerReport: () => Promise<Response>;
-
-	// Every fetch still reaches the CodeService stand-in, except calls to
-	// AuthService, which are recorded and answered by answerReport.
-	beforeEach(() => {
-		process.env.INTERNAL_API_KEY = INTERNAL_KEY;
-		reports = [];
-		answerReport = async () => new Response(JSON.stringify({ players: [] }), { status: 200 });
-		vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
-			if (!String(url).startsWith(AUTH_SERVICE_URL)) return codeService(url, init);
-			reports.push({
-				request: `${init?.method ?? 'GET'} ${String(url)}`,
-				authorization: (init?.headers as Record<string, string> | undefined)?.Authorization,
-				body: JSON.parse(String(init?.body)),
-			});
-			return answerReport();
-		}));
+	
 	});
+	// US-7-T-1 GameService reports each match's result to AuthService
+	// (AuthService is replaced with a stand-in; no test calls the real service.)
+	// Reporting the result when a match ends (AC6)
+	//  - When a match ends with a winner, GameService should send one POST to AuthService's /internal/match-results
+	//  - The report should carry the internal key as "Authorization: Bearer <INTERNAL_API_KEY>"
+	//  - The report should name the winning team ("a" or "b")
+	//  - The report should list every player on the roster with their team
+	//  - A player who left mid-match should still be listed in the report
+	//  - When a match ends on time with level scores, the report's winner should be null (a draw)
+	// A failed report doesn't break the match
+	//  - When AuthService answers with an error, the players should still receive "game:ended"
+	//  - When AuthService can't be reached, the players should still receive "game:ended"
+	describe('US-7-T-1 reporting the match result to AuthService', () => {
+		// Matches the AUTH_SERVICE_URL fallback in src/server.ts (AuthService's own default port).
+		const AUTH_SERVICE_URL = 'http://localhost:4002';
+		const INTERNAL_KEY = 'test-internal-api-key';
 
-	afterEach(() => {
-		vi.stubGlobal('fetch', codeService);
-	});
+		interface MatchReport { gameId: string; winner: 'a' | 'b' | null; players: { userId: string; team: 'a' | 'b' }[] }
+		interface SentReport { request: string; authorization: string | undefined; body: MatchReport }
 
-	// Other games in this file (e.g. the spare one beforeEach creates) can end
-	// and report during a test, so each test only looks at its own game's
-	// reports, waiting until at least one has been sent.
-	const reportsFor = (gameId: string) => reports.filter((report) => report.body.gameId === gameId);
-	async function reportFor(gameId: string): Promise<SentReport> {
-		await vi.waitFor(() => {
-			if (reportsFor(gameId).length === 0) throw new Error('no report sent yet');
+		let reports: SentReport[];
+		// How the AuthService stand-in answers a report; a test can make it fail.
+		let answerReport: () => Promise<Response>;
+
+		// Every fetch still reaches the CodeService stand-in, except calls to
+		// AuthService, which are recorded and answered by answerReport.
+		beforeEach(() => {
+			process.env.INTERNAL_API_KEY = INTERNAL_KEY;
+			reports = [];
+			answerReport = async () => new Response(JSON.stringify({ players: [] }), { status: 200 });
+			vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+				if (!String(url).startsWith(AUTH_SERVICE_URL)) return codeService(url, init);
+				reports.push({
+					request: `${init?.method ?? 'GET'} ${String(url)}`,
+					authorization: (init?.headers as Record<string, string> | undefined)?.Authorization,
+					body: JSON.parse(String(init?.body)),
+				});
+				return answerReport();
+			}));
 		});
-		return reportsFor(gameId)[0];
-	}
 
-	const byUserId = (players: { userId: string; team: string }[]) =>
-		[...players].map(({ userId, team }) => ({ userId, team })).sort((x, y) => x.userId.localeCompare(y.userId));
+		afterEach(() => {
+			vi.stubGlobal('fetch', codeService);
+		});
 
-	// A 1v1 that team a forfeits, so team b wins. Resolves once the players hear it ended.
-	async function forfeitedOneVsOne() {
-		const { game, sockets } = await playingGame(1, 1);
-		const ended = nextEvent<GameResult>(sockets[1], 'game:ended');
-		sockets[0].emit('game:forfeit');
-		return { game, ended };
-	}
+		// Other games in this file (e.g. the spare one beforeEach creates) can end
+		// and report during a test, so each test only looks at its own game's
+		// reports, waiting until at least one has been sent.
+		const reportsFor = (gameId: string) => reports.filter((report) => report.body.gameId === gameId);
+		async function reportFor(gameId: string): Promise<SentReport> {
+			await vi.waitFor(() => {
+				if (reportsFor(gameId).length === 0) throw new Error('no report sent yet');
+			});
+			return reportsFor(gameId)[0];
+		}
 
-	it('US-7-T-1 sends one POST to AuthService\'s /internal/match-results when a match ends', async () => {
-		const { game, ended } = await forfeitedOneVsOne();
-		await ended;
-		await reportFor(game.gameId);
-		expect(reportsFor(game.gameId).map((report) => report.request)).toEqual([`POST ${AUTH_SERVICE_URL}/internal/match-results`]);
-	});
+		const byUserId = (players: { userId: string; team: string }[]) =>
+			[...players].map(({ userId, team }) => ({ userId, team })).sort((x, y) => x.userId.localeCompare(y.userId));
 
-	it('US-7-T-1 sends the internal key with the report', async () => {
-		const { game, ended } = await forfeitedOneVsOne();
-		await ended;
-		expect((await reportFor(game.gameId)).authorization).toBe(`Bearer ${INTERNAL_KEY}`);
-	});
+		// A 1v1 that team a forfeits, so team b wins. Resolves once the players hear it ended.
+		async function forfeitedOneVsOne() {
+			const { game, sockets } = await playingGame(1, 1);
+			const ended = nextEvent<GameResult>(sockets[1], 'game:ended');
+			sockets[0].emit('game:forfeit');
+			return { game, ended };
+		}
 
-	it('US-7-T-1 names the winning team in the report', async () => {
-		const { game, ended } = await forfeitedOneVsOne();
-		await ended;
-		expect((await reportFor(game.gameId)).body.winner).toBe('b');
-	});
+		it('US-7-T-1 sends one POST to AuthService\'s /internal/match-results when a match ends', async () => {
+			const { game, ended } = await forfeitedOneVsOne();
+			await ended;
+			await reportFor(game.gameId);
+			expect(reportsFor(game.gameId).map((report) => report.request)).toEqual([`POST ${AUTH_SERVICE_URL}/internal/match-results`]);
+		});
 
-	it('US-7-T-1 lists every player on the roster with their team', async () => {
-		const { game, ended } = await forfeitedOneVsOne();
-		await ended;
-		expect(byUserId((await reportFor(game.gameId)).body.players)).toEqual(byUserId(game.players));
-	});
+		it('US-7-T-1 sends the internal key with the report', async () => {
+			const { game, ended } = await forfeitedOneVsOne();
+			await ended;
+			expect((await reportFor(game.gameId)).authorization).toBe(`Bearer ${INTERNAL_KEY}`);
+		});
 
-	// Team b's only player drops and never comes back, so team a wins by disconnect.
-	it('US-7-T-1 still lists a player who left mid-match', async () => {
-		const { game, sockets: [teamA, teamB] } = await playingGame(1, 1);
-		const ended = nextEvent<GameResult>(teamA, 'game:ended');
-		teamB.disconnect();
-		await ended;
-		expect((await reportFor(game.gameId)).body.players.map((player) => player.userId)).toContain(game.players[1].userId);
-	});
+		it('US-7-T-1 names the winning team in the report', async () => {
+			const { game, ended } = await forfeitedOneVsOne();
+			await ended;
+			expect((await reportFor(game.gameId)).body.winner).toBe('b');
+		});
 
-	// A match only ends on time after 20 minutes, so the report is built directly
-	// from a finished game here.
-	it('US-7-T-1 reports a draw as winner null when time runs out with level scores', () => {
-		const game = { gameId: 'drawn-game', players: new Map([['u1', { userId: 'u1', team: 'a' }], ['u2', { userId: 'u2', team: 'b' }]]) };
-		expect(matchResultReport(game as never, resultOnTime({ a: 2, b: 2 })).winner).toBeNull();
-	});
+		it('US-7-T-1 lists every player on the roster with their team', async () => {
+			const { game, ended } = await forfeitedOneVsOne();
+			await ended;
+			expect(byUserId((await reportFor(game.gameId)).body.players)).toEqual(byUserId(game.players));
+		});
 
-	it('US-7-T-1 still ends the match for the players when AuthService answers with an error', async () => {
-		answerReport = async () => new Response(JSON.stringify({ error: 'down' }), { status: 500 });
-		const { ended } = await forfeitedOneVsOne();
-		expect(await ended).toEqual({ winner: 'b', reason: 'forfeit' });
-	});
+		// Team b's only player drops and never comes back, so team a wins by disconnect.
+		it('US-7-T-1 still lists a player who left mid-match', async () => {
+			const { game, sockets: [teamA, teamB] } = await playingGame(1, 1);
+			const ended = nextEvent<GameResult>(teamA, 'game:ended');
+			teamB.disconnect();
+			await ended;
+			expect((await reportFor(game.gameId)).body.players.map((player) => player.userId)).toContain(game.players[1].userId);
+		});
 
-	it('US-7-T-1 still ends the match for the players when AuthService can\'t be reached', async () => {
-		answerReport = () => Promise.reject(new TypeError('fetch failed'));
-		const { ended } = await forfeitedOneVsOne();
-		expect(await ended).toEqual({ winner: 'b', reason: 'forfeit' });
+		// A match only ends on time after 20 minutes, so the report is built directly
+		// from a finished game here.
+		it('US-7-T-1 reports a draw as winner null when time runs out with level scores', () => {
+			const game = { gameId: 'drawn-game', players: new Map([['u1', { userId: 'u1', team: 'a' }], ['u2', { userId: 'u2', team: 'b' }]]) };
+			expect(matchResultReport(game as never, resultOnTime({ a: 2, b: 2 })).winner).toBeNull();
+		});
+
+		it('US-7-T-1 still ends the match for the players when AuthService answers with an error', async () => {
+			answerReport = async () => new Response(JSON.stringify({ error: 'down' }), { status: 500 });
+			const { ended } = await forfeitedOneVsOne();
+			expect(await ended).toEqual({ winner: 'b', reason: 'forfeit' });
+		});
+
+		it('US-7-T-1 still ends the match for the players when AuthService can\'t be reached', async () => {
+			answerReport = () => Promise.reject(new TypeError('fetch failed'));
+			const { ended } = await forfeitedOneVsOne();
+			expect(await ended).toEqual({ winner: 'b', reason: 'forfeit' });
+		});
 	});
 });
