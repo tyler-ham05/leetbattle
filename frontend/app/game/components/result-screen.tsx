@@ -54,7 +54,8 @@ function TeamHalf({ team, score, players, won, side }: { team: ShownTeam; score:
 				{players.map((player, i) => (
 					<li key={player.userId} className={`flex items-center gap-3 text-2xl tracking-[-0.02em] ${won ? 'font-bold text-ink' : 'font-semibold text-muted'}`}>
 						{won && <Crown delay={CROWNS_AT + i * 0.12} fill={team.fill} />}
-						{player.displayName}
+						{/* US-7-T-5: every name opens that player's profile. */}
+						<Link href={`/profile/${player.userId}`} className="underline-offset-4 hover:underline">{player.displayName}</Link>
 					</li>
 				))}
 			</ul>
