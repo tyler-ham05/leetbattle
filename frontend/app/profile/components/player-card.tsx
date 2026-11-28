@@ -122,6 +122,8 @@ function useTilt() {
 export default function PlayerCard({ profile, edit }: { profile: PublicProfile; edit?: CardEditor }) {
 	const { card, move, leave } = useTilt();
 	const [picking, setPicking] = useState(false);
+	// A short message when saving an icon or removing the picture fails.
+	const [problem, setProblem] = useState<string | null>(null);
 	const [file, setFile] = useState<File | null>(null);
 	const avatar = useRef<HTMLButtonElement>(null);
 	const fileInput = useRef<HTMLInputElement>(null);
@@ -175,6 +177,7 @@ export default function PlayerCard({ profile, edit }: { profile: PublicProfile; 
 								className="lb-pc-avatar lb-pc-avatar-button"
 								onClick={(event) => {
 									event.stopPropagation();
+									setProblem(null);
 									setPicking((open) => !open);
 								}}
 							>
@@ -189,7 +192,7 @@ export default function PlayerCard({ profile, edit }: { profile: PublicProfile; 
 									profile={profile}
 									onIcon={(key) => {
 										setPicking(false);
-										void edit.icon(key);
+										void edit.icon(key).then((ok) => setProblem(ok ? null : 'Couldn\'t save your icon. Try again.'));
 									}}
 									onUpload={() => {
 										setPicking(false);
@@ -200,12 +203,13 @@ export default function PlayerCard({ profile, edit }: { profile: PublicProfile; 
 									}}
 									onRemove={() => {
 										setPicking(false);
-										void edit.removePicture();
+										void edit.removePicture().then((ok) => setProblem(ok ? null : 'Couldn\'t remove your picture. Try again.'));
 									}}
 								/>
 							</div>
 						)}
 					</div>
+					{problem && <p role="alert" className="lb-pc-problem">{problem}</p>}
 					{edit && (
 						<input
 							ref={fileInput}

@@ -4,11 +4,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../login/context';
 
-// Every page you can reach from the menu, in the order they are listed.
+// US-7-T-5: an account menu. Home, Practice and Lobby are on the home screen, and
+// the LeetBattle logo goes home from any page, so the menu doesn't repeat them.
 const PAGES = [
-	{ href: '/', label: 'Home' },
-	{ href: '/editor', label: 'Practice' },
-	{ href: '/lobby', label: 'Lobby' },
 	{ href: '/profile', label: 'Profile' },
 	{ href: '/settings', label: 'Settings' },
 ];
@@ -65,7 +63,7 @@ export default function UserMenu() {
 
 			{open && (
 				<div className="lb-enter absolute right-0 top-full z-10 mt-2 w-48 origin-top-right rounded-lg border border-line bg-surface py-1 shadow-lg">
-					<nav aria-label="Site">
+					<nav aria-label="Account">
 						{PAGES.map((page) => (
 							<Link
 								key={page.href}

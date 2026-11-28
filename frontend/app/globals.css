@@ -1280,6 +1280,7 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 .lb-pc-picker button:hover { transform: translateY(-2px); color: var(--lb-ink); background: var(--lb-raised); }
 .lb-pc-picker button[aria-pressed="true"] { color: var(--lb-pc-metal); border-color: var(--lb-pc-metal); }
 .lb-pc-picker svg { width: 24px; height: 24px; }
+.lb-pc-problem { margin: 10px 0 0; text-align: center; font-size: 13px; color: var(--lb-danger); }
 .lb-pc-picker .lb-pc-wide { grid-column: 1 / -1; width: auto; height: 42px; font-size: 13px; font-weight: 700; color: var(--lb-ink); }
 .lb-pc-picker .lb-pc-quiet { color: var(--lb-muted); font-weight: 600; }
 /* The picker, the description field and the crop dialog pop in. */
