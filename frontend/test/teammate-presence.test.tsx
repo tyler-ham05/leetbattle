@@ -239,7 +239,16 @@ describe('game page teammate question', () => {
 		banSecondsRemaining: 0,
 		pickSecondsRemaining: 0,
 		scores: { a: 0, b: 0 },
-		problemPool: [1, 2, 3].map((questionId) => ({ taskId: `problem-${questionId}`, questionId, difficulty: 'Easy', topics: [], bannedBy: null, pickedBy: { a: null, b: null } })),
+		// Grace (u2) picked question 2 for herself (US-8-2), matching the
+		// question she's shown editing below.
+		problemPool: [1, 2, 3].map((questionId) => ({
+			taskId: `problem-${questionId}`,
+			questionId,
+			difficulty: 'Easy',
+			topics: [],
+			bannedBy: null,
+			pickedBy: { a: questionId === 2 ? { userId: 'u2', displayName: 'Grace', team: 'a' } : null, b: null },
+		})),
 		players: [player('u1', 'Ada'), player('u2', 'Grace'), player('u3', 'Katherine'), { ...player('u4', 'Alan'), team: 'b' }],
 		forfeitVotes: { a: 0, b: 0 },
 	};

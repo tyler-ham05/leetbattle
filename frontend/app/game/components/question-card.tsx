@@ -40,39 +40,50 @@ export function ChoiceScreen({ title, intro, progress, status, children }: {
 
 interface QuestionCardProps {
 	position: number;
-	topics: string[];
+	// The ban screen shows topics only, keeping the name hidden; the pick
+	// screen shows the title instead (US-8-2). A card renders whichever one
+	// it's given.
+	topics?: string[];
+	title?: string;
 	// taken: banned or picked (dashed, topics struck through); open: still in
 	// play but this player can't choose it; choose: a button that calls onChoose.
 	state: 'taken' | 'open' | 'choose';
 	// The line along the bottom of the card ("Banned by Grace", "Available", ...).
 	footer: ReactNode;
+	// For "choose", asks to claim the card. For "taken", given only on a
+	// player's own pick (US-8-2), it asks to give that pick back instead --
+	// the card stays a button so it can be clicked, but keeps its taken look.
 	onChoose?: () => void;
 	// A line strikes across the card as it lands (a ban).
 	strike?: boolean;
 }
 
-export function QuestionCard({ position, topics, state, footer, onChoose, strike = false }: QuestionCardProps) {
+export function QuestionCard({ position, topics, title, state, footer, onChoose, strike = false }: QuestionCardProps) {
 	const taken = state === 'taken';
 	const label = taken ? 'border border-line font-medium text-muted line-through' : 'bg-raised font-semibold';
 	const body = (
 		<>
 			<span className="flex flex-col gap-3.5">
 				<span data-testid="question-label" className="text-sm font-medium text-muted">Question {position}</span>
-				<span className="flex flex-wrap gap-2">
-					{topics.map((topic) => (
-						<span key={topic} data-testid="topic" className={`rounded-md px-2.5 py-1 text-[15px] ${label}`}>{topic}</span>
-					))}
-				</span>
+				{title ? (
+					<span data-testid="question-title" className={`text-[17px] font-semibold ${taken ? 'text-muted line-through' : 'text-ink'}`}>{title}</span>
+				) : (
+					<span className="flex flex-wrap gap-2">
+						{topics?.map((topic) => (
+							<span key={topic} data-testid="topic" className={`rounded-md px-2.5 py-1 text-[15px] ${label}`}>{topic}</span>
+						))}
+					</span>
+				)}
 			</span>
 			{footer}
 			{strike && <span aria-hidden="true" data-testid="ban-strike" className="lb-ban-strike pointer-events-none absolute inset-x-5 top-1/2 h-0.5 bg-danger/70" />}
 		</>
 	);
 
-	if (state === 'choose') {
+	if (state === 'choose' || (taken && onChoose)) {
 		return (
 			<li className="flex">
-				<button onClick={onChoose} className={`lb-press ${CARD} border border-line bg-surface hover:bg-raised`}>{body}</button>
+				<button onClick={onChoose} className={`lb-press ${CARD} border border-line ${taken ? 'border-dashed' : 'bg-surface hover:bg-raised'}`}>{body}</button>
 			</li>
 		);
 	}
