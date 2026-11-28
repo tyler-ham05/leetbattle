@@ -283,6 +283,34 @@ describe('US-7-T-5 the avatar and the picker (AC8)', () => {
 		expect(mocks.removePicture).toHaveBeenCalledTimes(1);
 	});
 
+	// A failed save says so on the card instead of silently doing nothing.
+	it('US-7-T-5 says when a chosen icon could not be saved', async () => {
+		mocks.updateProfile.mockRejectedValueOnce(new Error('offline'));
+		openOwn();
+		await userEvent.click(avatar());
+		await userEvent.click(screen.getByRole('button', { name: 'Bolt' }));
+		expect((await screen.findByRole('alert')).textContent).toBe('Couldn\'t save your icon. Try again.');
+	});
+
+	it('US-7-T-5 says when the picture could not be removed', async () => {
+		mocks.removePicture.mockRejectedValueOnce(new Error('offline'));
+		openOwn({ picture: 'data:image/png;base64,AAAA' });
+		await userEvent.click(avatar());
+		await userEvent.click(screen.getByRole('button', { name: 'Remove picture' }));
+		expect((await screen.findByRole('alert')).textContent).toBe('Couldn\'t remove your picture. Try again.');
+	});
+
+	// Trying again starts clean.
+	it('US-7-T-5 clears the message when the picker opens again', async () => {
+		mocks.updateProfile.mockRejectedValueOnce(new Error('offline'));
+		openOwn();
+		await userEvent.click(avatar());
+		await userEvent.click(screen.getByRole('button', { name: 'Bolt' }));
+		await screen.findByRole('alert');
+		await userEvent.click(avatar());
+		expect(screen.queryByRole('alert')).toBeNull();
+	});
+
 	it('US-7-T-5 closes the picker on Escape', async () => {
 		openOwn();
 		await userEvent.click(avatar());

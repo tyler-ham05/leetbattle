@@ -97,6 +97,14 @@
 - The card's entrance should fill backwards so it doesn't hold transform after it ends
 - The metal colours should be defined for light mode as well as dark (--lb-metal-gold under [data-mode="light"])
 
+## Saving icons and pictures fails (AC8)
+- If saving a chosen icon fails, the card should say "Couldn't save your icon. Try again."
+- If removing the picture fails, the card should say "Couldn't remove your picture. Try again."
+- Opening the picker again should clear the message
+
+## Reaching the profile (AC7)
+- The account menu should list only Profile and Settings (then Log out): Home, Practice and Lobby are on the home screen, and the LeetBattle logo goes home from any page
+
 ## Existing tests this task changes
 - `test/profile.test.tsx` "US-7-T-1 shows the player's league": the page no longer lists stats as `<dt>`/`<dd>`; it now reads the league name from the card.
 - `test/profile.test.tsx` "US-7-T-1 shows the player's rating": now reads the rating from the screen-reader text, since the visible rating is an odometer.
@@ -161,3 +169,4 @@
 - The chart's line drawing itself in (lb-pc-seg) should have a reduced-motion override
 - The shake should not hold its end state (no forwards or both fill)
 - The line drawing in should fill backwards
+- navigation.test.tsx "links to Home, Practice, Lobby, Profile and Settings" becomes "links to Profile and Settings": the account menu no longer repeats the home screen's pages
