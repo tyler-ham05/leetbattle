@@ -1,4 +1,4 @@
-// US-10-T-9: motion rules for the Ladder reveal and the Run/Submit feedback.
+// US-10-T-9: motion rules for the Run/Submit feedback.
 // Pseudocode: test/ladder-busy-test-pseudo.md, "Motion rules (globals.css)".
 // Every new animation needs a prefers-reduced-motion override, and the
 // buttons' fail shake reuses the wrong-password shake. Reads globals.css only.
@@ -30,14 +30,6 @@ describe('US-10-T-9 motion rules', () => {
 
 	it('US-10-T-9 shakes buttons with the wrong-password keyframes (lb-shake)', () => {
 		expect(rule('.lb-shake')).toContain('lb-shake');
-	});
-
-	it('US-10-T-9 turns the Ladder cards leaving off under reduced motion', () => {
-		expect(reducedMotionRules()).toContain('.lb-card-leaving');
-	});
-
-	it('US-10-T-9 turns the chosen Ladder card gliding to the middle off under reduced motion', () => {
-		expect(reducedMotionRules()).toContain('.lb-card-found');
 	});
 
 	it('US-10-T-9 turns the countdown digit (lb-digit) off under reduced motion', () => {

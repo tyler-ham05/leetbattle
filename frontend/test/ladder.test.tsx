@@ -1,10 +1,10 @@
 // US-7-T-2: Ladder matchmaking queues: Ladder page (app/ladder/page.tsx)
 // Acceptance criteria covered:
-//   - The page shows 1v1, 2v2 and 3v3 queues (join buttons and waiting counts)
-//   - A found match takes the player to /game/<gameId>
-//   - While waiting, the page says "Waiting for a <mode> match"
-//   - A waiting player can join a different queue
-//   - A "Leave queue" button shows while waiting and sends queue:leave
+//   - The Team size menu offers 1v1, 2v2 and 3v3; PLAY joins the chosen queue
+//   - The queued player sees how many are in the queue
+//   - A found match takes the player to /game/<gameId> after the match-start screen
+//   - While waiting, PLAY is replaced by a WAITING status
+//   - A "Leave" button shows while waiting and sends queue:leave
 //   - A QueueService error is shown to the player
 // The queue socket context is mocked; `emit` records what the page sends,
 // so nothing here talks to QueueService.
@@ -63,10 +63,12 @@ describe('US-7-T-2 Ladder page queues (criterion 2)', () => {
 		expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Ladder');
 	});
 
-	it.each(['1v1', '2v2', '3v3'])('US-7-T-2 shows a button to join the %s queue', (mode) => {
+	// US-10-T-10: there are no per-queue join buttons any more; the sizes live in the Team size menu.
+	it.each(['1v1', '2v2', '3v3'])('US-7-T-2 offers the %s queue in the Team size menu', async (mode) => {
 		render(<LadderPage />);
+		await userEvent.click(screen.getByRole('button', { name: 'Team size 2v2' }));
 
-		expect(screen.getByRole('button', { name: `Join ${mode}` })).toBeTruthy();
+		expect(screen.getByRole('button', { name: mode })).toBeTruthy();
 	});
 
 	it('US-7-T-2 connects to QueueService when the page opens', () => {
@@ -76,25 +78,29 @@ describe('US-7-T-2 Ladder page queues (criterion 2)', () => {
 	});
 
 	it('US-7-T-2 shows how many players are waiting in each queue', () => {
-		configureQueue({ counts: { '2v2': 3 } });
+		configureQueue({ queue: '2v2', counts: { '2v2': 3 } });
 		render(<LadderPage />);
 
-		// US-10-T-9: the arena cards say "N of M players" under the seat bars.
-		expect(screen.getByText('3 of 4 players')).toBeTruthy();
+		// US-10-T-10: there is no per-queue count; the queued player sees the IN QUEUE number for their queue.
+		expect(screen.getByTestId('in-queue').textContent).toBe('3');
 	});
 
 	it('US-7-T-2 disables the join buttons while QueueService is not connected', () => {
 		configureQueue({ context: { connected: false } });
 		render(<LadderPage />);
 
-		expect((screen.getByRole('button', { name: 'Join 1v1' }) as HTMLButtonElement).disabled).toBe(true);
+		// US-10-T-10: the only join button is PLAY.
+		expect((screen.getByRole('button', { name: 'PLAY' }) as HTMLButtonElement).disabled).toBe(true);
 	});
 });
 
 describe('US-7-T-2 joining and waiting (criteria 6 and 7)', () => {
-	it.each(['1v1', '2v2', '3v3'])('US-7-T-2 sends queue:join with %s when its join button is clicked', async (mode) => {
+	it.each(['1v1', '2v2', '3v3'])('US-7-T-2 sends queue:join with %s when PLAY is clicked', async (mode) => {
 		render(<LadderPage />);
-		await userEvent.click(screen.getByRole('button', { name: `Join ${mode}` }));
+		// US-10-T-10: pick the size in the Team size menu, then click PLAY.
+		await userEvent.click(screen.getByRole('button', { name: 'Team size 2v2' }));
+		await userEvent.click(screen.getByRole('button', { name: mode }));
+		await userEvent.click(screen.getByRole('button', { name: 'PLAY' }));
 
 		expect(ladderMocks.emit).toHaveBeenCalledWith('queue:join', mode);
 	});
@@ -103,56 +109,53 @@ describe('US-7-T-2 joining and waiting (criteria 6 and 7)', () => {
 		configureQueue({ queue: '2v2', counts: { '2v2': 1 } });
 		render(<LadderPage />);
 
-		// US-10-T-9: the heading reads "Finding players" and the 2v2 card is marked queued.
-		expect(document.querySelector('[data-mode="2v2"]')?.getAttribute('data-state')).toBe('queued');
+		// US-10-T-10: PLAY is replaced by a WAITING status (no "Finding players" heading or card state).
+		expect(screen.getByRole('status').textContent).toContain('WAITING');
 	});
 
 	it('US-7-T-2 does not show the player waiting when they are not in a queue', () => {
 		render(<LadderPage />);
 
-		expect(document.querySelector('[data-state="queued"]')).toBeNull();
+		// US-10-T-10: no WAITING status when not queued.
+		expect(screen.queryByRole('status')).toBeNull();
 	});
 
-	it('US-7-T-2 lets a player waiting in 1v1 join the 3v3 queue instead', async () => {
-		configureQueue({ queue: '1v1', counts: { '1v1': 1 } });
-		render(<LadderPage />);
-		await userEvent.click(screen.getByRole('button', { name: 'Join 3v3' }));
-
-		expect(ladderMocks.emit).toHaveBeenCalledWith('queue:join', '3v3');
-	});
+	// US-10-T-10: "lets a player waiting in 1v1 join the 3v3 queue instead" is removed;
+	// the player leaves first, then picks another size.
 });
 
 describe('US-7-T-2 leaving a queue (criterion 8)', () => {
-	it('US-7-T-2 shows a Leave queue button while the player is waiting', () => {
+	it('US-7-T-2 shows a Leave button while the player is waiting', () => {
 		configureQueue({ queue: '1v1', counts: { '1v1': 1 } });
 		render(<LadderPage />);
 
-		expect(screen.getByRole('button', { name: 'Leave queue' })).toBeTruthy();
+		// US-10-T-10: the button is named "Leave" (was "Leave queue").
+		expect(screen.getByRole('button', { name: 'Leave' })).toBeTruthy();
 	});
 
-	it('US-7-T-2 sends queue:leave when Leave queue is clicked', async () => {
+	it('US-7-T-2 sends queue:leave when Leave is clicked', async () => {
 		configureQueue({ queue: '1v1', counts: { '1v1': 1 } });
 		render(<LadderPage />);
-		await userEvent.click(screen.getByRole('button', { name: 'Leave queue' }));
+		await userEvent.click(screen.getByRole('button', { name: 'Leave' }));
 
 		expect(ladderMocks.emit).toHaveBeenCalledWith('queue:leave');
 	});
 
-	it('US-7-T-2 hides the Leave queue button when the player is not in a queue', () => {
+	it('US-7-T-2 hides the Leave button when the player is not in a queue', () => {
 		render(<LadderPage />);
 
-		expect(screen.queryByRole('button', { name: 'Leave queue' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Leave' })).toBeNull();
 	});
 });
 
 describe('US-7-T-2 match found (criterion 3)', () => {
 	it('US-7-T-2 takes the player to the new game once a match is found', () => {
-		// US-10-T-9: after the 2-1 countdown, not straight away.
+		// US-10-T-10: after the match-start screen (600 ms + 2800 ms = 3400 ms), not straight away.
 		vi.useFakeTimers();
 		configureQueue({ context: { matched: { gameId: 'game-1' } } });
 		render(<LadderPage />);
 		act(() => {
-			vi.advanceTimersByTime(2000);
+			vi.advanceTimersByTime(3400);
 		});
 		vi.useRealTimers();
 
