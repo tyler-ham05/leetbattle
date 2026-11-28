@@ -43,8 +43,35 @@ interface UserRow {
 	picture_type: string | null;
 }
 
+interface MatchRow {
+	result: 'W' | 'L' | 'D';
+	change: number;
+	rating_after: number;
+	team_size: number;
+	played_at: Date;
+}
+
+// US-7-T-5: the player's last 10 matches, oldest first, for the profile's
+// rating chart. One query per profile response.
+async function recentMatchesOf(userId: string) {
+	const result = await pool.query<MatchRow>(
+		`SELECT * FROM (
+			SELECT id, result, change, rating_after, team_size, played_at FROM match_history
+			WHERE user_id = $1 ORDER BY played_at DESC, id DESC LIMIT 10
+		 ) recent ORDER BY played_at, id`,
+		[userId],
+	);
+	return result.rows.map((row) => ({
+		result: row.result,
+		change: row.change,
+		ratingAfter: row.rating_after,
+		teamSize: row.team_size,
+		playedAt: row.played_at.toISOString(),
+	}));
+}
+
 // US-7-T-5: what anyone signed in may see of a player (never their email).
-function toPublicProfile(user: UserRow) {
+async function toPublicProfile(user: UserRow) {
 	return {
 		id: user.id,
 		name: user.name,
@@ -60,13 +87,14 @@ function toPublicProfile(user: UserRow) {
 		wins: user.games_won ?? 0,
 		losses: user.games_lost,
 		draws: (user.games_played ?? 0) - (user.games_won ?? 0) - user.games_lost,
+		recentMatches: await recentMatchesOf(user.id),
 	};
 }
 
 // The signed-in player's own profile: the public one plus their email.
-function toPublicUser(user: UserRow) {
+async function toPublicUser(user: UserRow) {
 	return {
-		...toPublicProfile(user),
+		...(await toPublicProfile(user)),
 		email: user.email,
 		emailVerified: user.email_verified,
 	};
@@ -105,7 +133,7 @@ export async function signup(req: Request, res: Response, next: NextFunction) {
 		const user = result.rows[0];
 
 		const token = await encryptJwe(user.id, user.email);
-		res.status(201).json({ user: toPublicUser(user), token });
+		res.status(201).json({ user: await toPublicUser(user), token });
 	} catch (err) {
 		next(err);
 	}
@@ -127,7 +155,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
 		}
 
 		const token = await encryptJwe(user.id, user.email);
-		res.json({ user: toPublicUser(user), token });
+		res.json({ user: await toPublicUser(user), token });
 	} catch (err) {
 		next(err);
 	}
@@ -149,7 +177,7 @@ async function sendOwnUser(res: Response, next: NextFunction, sql: string, param
 			res.status(401).json({ error: 'not authenticated' });
 			return;
 		}
-		res.json({ user: toPublicUser(user) });
+		res.json({ user: await toPublicUser(user) });
 	} catch (err) {
 		next(err);
 	}
@@ -264,7 +292,7 @@ export async function getUser(req: AuthedRequest, res: Response, next: NextFunct
 			res.status(404).json({ error: 'player not found' });
 			return;
 		}
-		res.json({ user: toPublicProfile(user) });
+		res.json({ user: await toPublicProfile(user) });
 	} catch (err) {
 		next(err);
 	}
@@ -373,6 +401,7 @@ export async function reportMatchResult(req: Request, res: Response, next: NextF
 		// A player AuthService doesn't know still counts at the starting
 		// rating for their team's average, but isn't saved.
 		const teams = new Map(reported.map((player) => [player.userId, player.team]));
+		const teamSize = (team: TeamId | undefined) => reported.filter((player) => player.team === team).length;
 		const changes = rateMatch(
 			reported.map((player) => ({ ...player, rating: ratings.get(player.userId) ?? STARTING_RATING })),
 			winner,
@@ -388,6 +417,12 @@ export async function reportMatchResult(req: Request, res: Response, next: NextF
 				   games_lost = games_lost + $4
 				 WHERE id = $1`,
 				[change.userId, change.newRating, won ? 1 : 0, lost ? 1 : 0],
+			);
+			// US-7-T-5: the match as this player saw it, for their rating chart.
+			await client.query(
+				`INSERT INTO match_history (user_id, game_id, result, change, rating_after, team_size)
+				 VALUES ($1, $2, $3, $4, $5, $6)`,
+				[change.userId, gameId, won ? 'W' : lost ? 'L' : 'D', change.change, change.newRating, teamSize(team)],
 			);
 		}
 		await client.query('COMMIT');
