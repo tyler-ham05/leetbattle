@@ -25,7 +25,7 @@ Out of scope:
 (frontend/app/game)
 - The user should be able to see only their selected questions in their workspace
 (frontend/app/game/pick-screen)
-- The frontend should support deselecting questions, and  
+- The frontend should support deselecting questions
 
 
 ## Requirements
