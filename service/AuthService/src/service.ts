@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'node:crypto';
 import { NextFunction, Request, Response } from 'express';
+import type { PoolClient } from 'pg';
 import { pool } from './db';
 import { encryptJwe } from './utils/jwe';
 import { AuthedRequest } from './middleware';
@@ -75,6 +76,9 @@ async function toPublicProfile(user: UserRow) {
 	return {
 		id: user.id,
 		name: user.name,
+		// What to show for the player: their name, or (like the lobby and queue) the
+		// part of their email before the @. Never the whole email.
+		displayName: user.name?.trim() || user.email.split('@')[0],
 		icon: user.icon,
 		description: user.description,
 		picture: pictureUrl(user.picture, user.picture_type),
@@ -383,14 +387,24 @@ export async function reportMatchResult(req: Request, res: Response, next: NextF
 	const valid = typeof gameId === 'string'
 		&& (winner === null || isTeam(winner))
 		&& Array.isArray(players) && players.length > 0
-		&& players.every((player: ReportedPlayer) => isUuid(player?.userId) && isTeam(player?.team));
+		&& players.every((player: ReportedPlayer) => isUuid(player?.userId) && isTeam(player?.team))
+		// Both teams need players, or the opponents' average rating is 0/0.
+		&& players.some((player: ReportedPlayer) => player.team === 'a')
+		&& players.some((player: ReportedPlayer) => player.team === 'b');
 	if (!valid) {
 		res.status(400).json({ error: 'gameId, winner (a, b or null) and players are required' });
 		return;
 	}
 	const reported = players as ReportedPlayer[];
 
-	const client = await pool.connect();
+	// A database that can't be reached is a 500, not a hung request.
+	let client: PoolClient;
+	try {
+		client = await pool.connect();
+	} catch (err) {
+		next(err);
+		return;
+	}
 	try {
 		await client.query('BEGIN');
 		const found = await client.query<{ id: string; rating: number }>(
