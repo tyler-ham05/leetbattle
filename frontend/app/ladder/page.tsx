@@ -36,7 +36,7 @@ function QueueTimer() {
 
 function Chevron() {
 	return (
-		<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="transition-transform duration-200 group-aria-expanded:rotate-180">
+		<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="transition-transform duration-200 group-hover:group-enabled:translate-y-[2px] group-aria-expanded:rotate-180">
 			<path d="M6 9l6 6 6-6" />
 		</svg>
 	);
@@ -85,12 +85,10 @@ function Tile<T extends string>({ label, value, options, onPick, disabled, mono 
 				onClick={() => setOpen((current) => !current)}
 				className={`${FOCUS} lb-press group flex h-[92px] w-full flex-col items-center justify-between rounded-[14px] border border-line bg-surface px-4 py-3.5 text-center text-ink hover:enabled:border-primary/55 aria-expanded:border-primary active:enabled:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50`}
 			>
-				{/* The label is centered; the chevron is pinned to the right so it doesn't push the label off center. */}
-				<span className="relative flex w-full items-center justify-center text-xs font-semibold tracking-[0.1em] text-muted">
+				{/* The chevron sits right after the label, centered with it as one unit. */}
+				<span className="flex items-center justify-center gap-1.5 text-xs font-semibold tracking-[0.1em] text-muted">
 					{label.toUpperCase()}
-					<span className="absolute right-0 flex items-center">
-						<Chevron />
-					</span>
+					<Chevron />
 				</span>
 				<span className="lb-lad-roll relative block h-[34px] w-full overflow-hidden" aria-hidden="true">
 					{options.map((option, index) => (
@@ -128,8 +126,9 @@ function Tile<T extends string>({ label, value, options, onPick, disabled, mono 
 // What a seat says. There are no player icons yet, so seats show names: the
 // player's own name, the real names once the match sends them, "Player found"
 // for someone QueueService hasn't named yet, and "Searching" for an open seat.
-function seatName(seat: number, filled: number, names: string[] | undefined, own: string | undefined) {
-	if (seat >= filled) return 'Searching';
+function seatName(seat: number, filled: number, names: string[] | undefined, own: string | undefined, searching: boolean) {
+	// Before Play nothing is being searched yet, so an open seat is just Open.
+	if (seat >= filled) return searching ? 'Searching' : 'Open';
 	if (names?.[seat]) return names[seat];
 	if (seat === 0 && own) return own;
 	return 'Player found';
@@ -140,23 +139,23 @@ const FOCUS = 'outline-none focus-visible:outline-2 focus-visible:outline-offset
 
 // One team's seats down the side of the page. It slides in only while the
 // player is queued (and is hidden from screen readers otherwise).
-function TeamColumn({ side, label, size, filled, names, own, shown }: {
+function TeamColumn({ side, label, size, filled, names, own, searching, entered }: {
 	side: 'mine' | 'rivals';
 	label: string;
 	size: number;
 	filled: number;
 	names?: string[];
 	own?: string;
-	shown: boolean;
+	searching: boolean;
+	entered: boolean;
 }) {
 	const mine = side === 'mine';
 	return (
 		<aside
 			aria-label={label}
-			aria-hidden={!shown}
 			data-side={side}
-			data-shown={shown}
-			className={`lb-lad-side pointer-events-none absolute top-0 flex w-[clamp(260px,calc(50vw-50%-48px-3vw),400px)] flex-col gap-3 max-xl:hidden ${mine ? 'right-[calc(100%+48px)]' : 'left-[calc(100%+48px)]'}`}
+			data-shown={entered}
+			className={`lb-lad-side pointer-events-none absolute top-0 flex w-[clamp(220px,calc(50vw-50%-48px-8vw),300px)] flex-col gap-3 max-xl:hidden ${mine ? 'right-[calc(100%+48px)]' : 'left-[calc(100%+48px)]'}`}
 		>
 			<span className="absolute inset-x-0 bottom-full mb-3 flex items-baseline justify-between text-[13px] leading-none font-semibold tracking-[0.1em] text-muted">
 				{label.toUpperCase()}
@@ -164,7 +163,7 @@ function TeamColumn({ side, label, size, filled, names, own, shown }: {
 			</span>
 			{Array.from({ length: size }, (_, seat) => {
 				const isFilled = seat < filled;
-				const name = seatName(seat, filled, names, mine ? own : undefined);
+				const name = seatName(seat, filled, names, mine ? own : undefined, searching);
 				const known = isFilled && name !== 'Player found';
 				const isYou = mine && seat === 0;
 				return (
@@ -176,8 +175,8 @@ function TeamColumn({ side, label, size, filled, names, own, shown }: {
 							isFilled ? `lb-lad-filled border-solid bg-surface ${mine ? 'border-primary/55' : 'border-secondary/55'}` : 'border-transparent bg-raised text-muted'
 						} ${known ? `text-[24px] font-extrabold ${mine ? 'text-primary' : 'text-secondary'}` : isFilled ? 'text-ink' : ''}`}
 					>
-						<span data-seat-name="" className={`min-w-0 flex-1 ${isFilled ? 'truncate' : 'lb-lad-searching'}`}>
-							{/* On an open seat the dots after "Searching" count up (CSS), then start again. */}
+						<span data-seat-name="" className={`min-w-0 flex-1 ${isFilled ? 'truncate' : searching ? 'lb-lad-searching' : ''}`}>
+							{/* While queued, the dots after "Searching" count up (CSS), then start again. */}
 							{name}
 						</span>
 						{isYou && <span className="rounded-md bg-primary px-2 py-1 font-mono text-[12px] font-bold tracking-[0.16em] text-on-primary">YOU</span>}
@@ -201,6 +200,12 @@ function Ladder() {
 	if (waitingIn && waitingIn !== lastQueue) setLastQueue(waitingIn);
 	const shownSize = matched ? lastQueue ?? size : waitingIn ?? size;
 	const busy = Boolean(waitingIn || matched);
+	// The team columns glide in from the edges once the page has opened.
+	const [entered, setEntered] = useState(false);
+	useEffect(() => {
+		const frame = requestAnimationFrame(() => setEntered(true));
+		return () => cancelAnimationFrame(frame);
+	}, []);
 	const you = user ? displayNameOf(user) : undefined;
 
 	// The game the match-start screen is showing for, once FOUND_MS has passed.
@@ -227,7 +232,8 @@ function Ladder() {
 
 	// Seats fill in the order the match is made: the player, their team, then the rivals.
 	const team = TEAM[shownSize];
-	const waiting = matched ? team * 2 : Math.min(Math.max(queue?.counts[shownSize] ?? 1, 1), team * 2);
+	// Before Play only the player sits in their team.
+	const waiting = matched ? team * 2 : busy ? Math.min(Math.max(queue?.counts[shownSize] ?? 1, 1), team * 2) : 1;
 	const mineFilled = Math.min(waiting, team);
 	const rivalsFilled = Math.max(waiting - team, 0);
 
@@ -253,7 +259,7 @@ function Ladder() {
 				{/* While queued the background dims a little, so the teams stand out. */}
 				<div data-on={busy} className="lb-lad-dim absolute inset-0 bg-page" />
 			</div>
-			<main className="relative mx-auto flex w-full max-w-[520px] flex-1 flex-col gap-6 px-6 pt-10 pb-14">
+			<main className="relative mx-auto flex w-full max-w-[440px] flex-1 flex-col gap-6 px-6 pt-10 pb-14">
 				<h1 className="m-0 text-center text-[64px] leading-none font-black tracking-[-0.05em]">Ladder</h1>
 				<div className="grid grid-cols-2 gap-3.5">
 					<Tile label="Team size" value={shownSize} options={SIZES} onPick={setSize} disabled={busy} mono />
@@ -261,8 +267,8 @@ function Ladder() {
 				</div>
 				{/* The team columns hang off the rank card: the first seat lines up with its top. */}
 				<div className="relative">
-					<TeamColumn side="mine" label="Your team" size={team} filled={mineFilled} names={matched?.yourTeam} own={you} shown={busy} />
-					<TeamColumn side="rivals" label="Rivals" size={team} filled={rivalsFilled} names={matched?.rivals} shown={busy} />
+					<TeamColumn side="mine" label="Your team" size={team} filled={mineFilled} names={matched?.yourTeam} own={you} searching={busy} entered={entered} />
+					<TeamColumn side="rivals" label="Rivals" size={team} filled={rivalsFilled} names={matched?.rivals} searching={busy} entered={entered} />
 					<section aria-label="Rank" className="relative flex flex-col items-center gap-5 rounded-[20px] bg-surface p-7">
 						{['top-0 left-0 border-t-2 border-l-2 rounded-tl-[20px]', 'top-0 right-0 border-t-2 border-r-2 rounded-tr-[20px]', 'bottom-0 left-0 border-b-2 border-l-2 rounded-bl-[20px]', 'right-0 bottom-0 border-r-2 border-b-2 rounded-br-[20px]'].map((corner) => (
 							<span key={corner} aria-hidden="true" className={`absolute size-[22px] border-primary ${corner}`} />
@@ -271,14 +277,18 @@ function Ladder() {
 						<div aria-hidden="true" className="size-[140px] rounded-full bg-raised" />
 						<div aria-hidden="true" className="h-1.5 w-full rounded-[3px] bg-raised" />
 					</section>
-				</div>
-				<div className="flex min-h-12 justify-center">
-					{waitingIn && (
-						<p className="lb-enter m-0 flex flex-col items-center gap-0.5">
-							<b data-testid="in-queue" className="font-mono text-[30px] leading-none font-extrabold">{queue?.counts[waitingIn] ?? 0}</b>
-							<span className="text-xs tracking-[0.1em] text-muted">IN QUEUE</span>
-						</p>
-					)}
+					{/* The queue count, only while queued. It folds open under the rank card on
+					    Play and shut again on Leave, so there is no empty gap before PLAY. */}
+					<div data-testid="queue-count-slot" data-collapsed={!waitingIn} className="lb-fold">
+						<div className="flex justify-center pt-6">
+							{waitingIn && (
+								<p className="lb-enter m-0 flex flex-col items-center gap-0.5">
+									<b data-testid="in-queue" className="font-mono text-[30px] leading-none font-extrabold">{queue?.counts[waitingIn] ?? 0}</b>
+									<span className="text-xs tracking-[0.1em] text-muted">IN QUEUE</span>
+								</p>
+							)}
+						</div>
+					</div>
 				</div>
 				{busy ? (
 					<div className="lb-enter grid grid-cols-[minmax(0,1fr)_auto] gap-2.5">
@@ -309,7 +319,7 @@ function Ladder() {
 						type="button"
 						onClick={() => socket?.emit('queue:join', size)}
 						disabled={!connected}
-						className={`${FOCUS} lb-press lb-enter h-[72px] w-full rounded-[14px] bg-primary text-[22px] font-black tracking-[0.24em] text-on-primary hover:enabled:brightness-105 active:enabled:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40`}
+						className={`${FOCUS} lb-press lb-press-lift lb-enter h-[72px] w-full rounded-[14px] bg-primary text-[22px] font-black tracking-[0.24em] text-on-primary hover:enabled:brightness-105 active:enabled:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40`}
 					>
 						PLAY
 					</button>

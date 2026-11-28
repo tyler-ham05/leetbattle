@@ -440,7 +440,7 @@ button:active:not(:disabled) { scale: 0.97; }
   from { opacity: 0; transform: scale(0.97); }
   to { opacity: 1; transform: none; }
 }
-.lb-enter { animation: lb-enter 160ms ease-out both; }
+.lb-enter { animation: lb-enter 160ms ease-out backwards; }
 
 /* A wrong password shakes its field (it also turns red). */
 @keyframes lb-shake {
