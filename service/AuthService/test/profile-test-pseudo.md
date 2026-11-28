@@ -84,3 +84,10 @@ Drafted from the spec (docs/tasks/sprint-4/US-7-T-5.md); the user asked to proce
 - Running the seed should not change another user's rating
 - Running the seed should not remove another user's match_history rows
 - The demo user should be able to log in with demo@leetbattle.local / demo-password
+
+## Fixes from the code review
+- A player with a name should have it as their displayName in GET /me
+- A player who signed up without a name should get the part of their email before the @ as their displayName in GET /me
+- GET /users/:id should give the same displayName for a player without a name (the lobby already shows that name)
+- POST /internal/match-results with every player on one team should return 400, not rate anyone
+- POST /internal/match-results should answer 500 (not hang) when the database can't be reached

@@ -369,3 +369,30 @@ describe('US-7-T-5 GET /users/:id shows another player\'s public profile', () =>
 		expect(res.status).toBe(404);
 	});
 });
+
+// Code review: a player who never set a name still needs something to show.
+// The lobby and queue already show the part of the email before the @, so the
+// profile does too (still never the whole email).
+describe('display name', () => {
+	// Signs up a player without a name, with a known email.
+	async function signUpNameless() {
+		const local = `nameless-${randomUUID().slice(0, 8)}`;
+		const res = await request.post('/signup').send({ email: `${local}@example.com`, password: 'correct-horse-battery-staple' });
+		return { local, player: { id: res.body.user.id, token: res.body.token } as Player };
+	}
+
+	it('uses the name as the display name', async () => {
+		expect((await profileOf(await signUp())).displayName).toBe('Profile Player');
+	});
+
+	it('uses the part of the email before the @ when there is no name', async () => {
+		const { local, player } = await signUpNameless();
+		expect((await profileOf(player)).displayName).toBe(local);
+	});
+
+	it('gives other players the same display name', async () => {
+		const { local, player } = await signUpNameless();
+		const res = await viewProfile(await signUp(), player.id);
+		expect(res.body.user.displayName).toBe(local);
+	});
+});

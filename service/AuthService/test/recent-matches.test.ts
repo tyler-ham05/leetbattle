@@ -18,7 +18,7 @@
 //  - An unknown user in the payload should not stop the known player getting their entry
 //  - The signup response's user should include recentMatches []
 import { randomUUID } from 'node:crypto';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { request } from './setup';
 import { pool } from '../src/db';
 
@@ -178,5 +178,27 @@ describe('US-7-T-5 an unknown user in a reported match', () => {
 		const player = await signUp();
 		await report({ gameId: randomUUID(), winner: 'a', players: [{ userId: player.id, team: 'a' }, { userId: randomUUID(), team: 'b' }] });
 		expect(await recentOf(player)).toHaveLength(1);
+	});
+});
+
+// Code review: reports that can't be rated must fail cleanly.
+describe('reports that cannot be rated', () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	// With nobody on the other team the opponents' average is 0/0 (NaN).
+	it('returns 400 when every player is on one team', async () => {
+		const [a, b] = [await signUp(), await signUp()];
+		const res = await report({ gameId: randomUUID(), winner: 'a', players: [{ userId: a.id, team: 'a' }, { userId: b.id, team: 'a' }] });
+		expect(res.status).toBe(400);
+	});
+
+	// pool.connect() failing used to leave the request hanging with an unhandled rejection.
+	it('answers 500 when the database cannot be reached', async () => {
+		const [a, b] = [await signUp(), await signUp()];
+		vi.spyOn(pool, 'connect').mockRejectedValueOnce(new Error('database is down') as never);
+		const res = await report({ gameId: randomUUID(), winner: 'a', players: [{ userId: a.id, team: 'a' }, { userId: b.id, team: 'b' }] });
+		expect(res.status).toBe(500);
 	});
 });
