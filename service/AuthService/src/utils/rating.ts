@@ -28,6 +28,24 @@ export function leagueFor(rating: number): string {
 	return LEAGUES.find(([floor]) => rating >= floor)?.[1] ?? 'Bronze I';
 }
 
+// US-7-T-5: where the player's league starts, and the league above it
+// (null in Platinum), for the profile's progress bar.
+const leagueIndex = (rating: number) => {
+	const index = LEAGUES.findIndex(([floor]) => rating >= floor);
+	return index === -1 ? LEAGUES.length - 1 : index;
+};
+
+export function leagueMinFor(rating: number): number {
+	return LEAGUES[leagueIndex(rating)][0];
+}
+
+export function nextLeagueFor(rating: number): { name: string; at: number } | null {
+	const index = leagueIndex(rating);
+	if (index === 0) return null;
+	const [at, name] = LEAGUES[index - 1];
+	return { name, at };
+}
+
 // The chance the player is expected to win against a team with this average.
 export function expectedScore(rating: number, opponentAverage: number): number {
 	return 1 / (1 + 10 ** ((opponentAverage - rating) / 400));

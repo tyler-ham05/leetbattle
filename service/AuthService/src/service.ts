@@ -6,7 +6,8 @@ import { encryptJwe } from './utils/jwe';
 import { AuthedRequest } from './middleware';
 import { mailer } from './utils/mailer';
 import { RateLimiter } from './utils/rate-limit';
-import { leagueFor, rateMatch, STARTING_RATING } from './utils/rating';
+import { leagueFor, leagueMinFor, nextLeagueFor, rateMatch, STARTING_RATING } from './utils/rating';
+import { cleanDescription, isIcon, parsePicture, pictureUrl } from './utils/profile';
 import type { TeamId } from './utils/rating';
 
 const RESET_TOKEN_MINUTES = 30;
@@ -36,21 +37,38 @@ interface UserRow {
 	games_played: number | null;
 	games_won: number | null;
 	games_lost: number;
+	icon: string;
+	description: string;
+	picture: Buffer | null;
+	picture_type: string | null;
 }
 
-function toPublicUser(user: UserRow) {
+// US-7-T-5: what anyone signed in may see of a player (never their email).
+function toPublicProfile(user: UserRow) {
 	return {
 		id: user.id,
-		email: user.email,
 		name: user.name,
-		emailVerified: user.email_verified,
+		icon: user.icon,
+		description: user.description,
+		picture: pictureUrl(user.picture, user.picture_type),
 		createdAt: user.created_at,
 		// US-7-T-1: the player's rating, league and match record.
 		rating: user.rating,
 		league: leagueFor(user.rating),
+		leagueMin: leagueMinFor(user.rating),
+		nextLeague: nextLeagueFor(user.rating),
 		wins: user.games_won ?? 0,
 		losses: user.games_lost,
 		draws: (user.games_played ?? 0) - (user.games_won ?? 0) - user.games_lost,
+	};
+}
+
+// The signed-in player's own profile: the public one plus their email.
+function toPublicUser(user: UserRow) {
+	return {
+		...toPublicProfile(user),
+		email: user.email,
+		emailVerified: user.email_verified,
 	};
 }
 
@@ -81,7 +99,7 @@ export async function signup(req: Request, res: Response, next: NextFunction) {
 		const result = await pool.query<UserRow>(
 			`INSERT INTO users (email, password_hash, name)
 			 VALUES ($1, $2, $3)
-			 RETURNING id, email, password_hash, name, created_at, rating, games_played, games_won, games_lost`,
+			 RETURNING *`,
 			[email, passwordHash, typeof name === 'string' ? name : null],
 		);
 		const user = result.rows[0];
@@ -121,9 +139,11 @@ export function logout(_req: Request, res: Response) {
 	res.status(204).send();
 }
 
-export async function me(req: AuthedRequest, res: Response, next: NextFunction) {
+// Runs a query for the signed-in player's row and answers with their own
+// profile, or 401 when the account no longer exists.
+async function sendOwnUser(res: Response, next: NextFunction, sql: string, params: unknown[]) {
 	try {
-		const result = await pool.query<UserRow>('SELECT * FROM users WHERE id = $1', [req.userId]);
+		const result = await pool.query<UserRow>(sql, params);
 		const user = result.rows[0];
 		if (!user) {
 			res.status(401).json({ error: 'not authenticated' });
@@ -133,6 +153,10 @@ export async function me(req: AuthedRequest, res: Response, next: NextFunction) 
 	} catch (err) {
 		next(err);
 	}
+}
+
+export async function me(req: AuthedRequest, res: Response, next: NextFunction) {
+	await sendOwnUser(res, next, 'SELECT * FROM users WHERE id = $1', [req.userId]);
 }
 
 export async function changePassword(req: AuthedRequest, res: Response, next: NextFunction) {
@@ -165,25 +189,82 @@ export async function changePassword(req: AuthedRequest, res: Response, next: Ne
 	}
 }
 
+// Saves `changes` (column -> value, columns named only by this file) on the
+// signed-in player only and answers with their updated profile.
+async function saveOwnProfile(req: AuthedRequest, res: Response, next: NextFunction, changes: Record<string, unknown>) {
+	const columns = Object.keys(changes);
+	const assignments = columns.map((column, i) => `${column} = $${i + 2}`).join(', ');
+	await sendOwnUser(
+		res,
+		next,
+		`UPDATE users SET ${assignments} WHERE id = $1 RETURNING *`,
+		[req.userId, ...columns.map((column) => changes[column])],
+	);
+}
+
+// The column changes a PATCH /account body asks for, or an error message.
+function accountChanges(body: Record<string, unknown>): Record<string, unknown> | string {
+	const { name, icon, description } = body;
+	if (name === undefined && icon === undefined && description === undefined) {
+		return 'name, icon or description is required';
+	}
+	const changes: Record<string, unknown> = {};
+	if (name !== undefined) {
+		if (typeof name !== 'string' || name.trim().length === 0) return 'name is required';
+		changes.name = name.trim();
+	}
+	if (icon !== undefined) {
+		if (!isIcon(icon)) return 'icon must be one of the preset icons';
+		changes.icon = icon;
+	}
+	if (description !== undefined) {
+		const cleaned = cleanDescription(description);
+		if (cleaned === null) return 'description must be at most 80 characters';
+		changes.description = cleaned;
+	}
+	return changes;
+}
+
+// US-7-T-5: name, icon and description are each optional, but at least one
+// is needed. Any id in the body is ignored: the account is the token's.
 export async function updateAccount(req: AuthedRequest, res: Response, next: NextFunction) {
-	const { name } = req.body ?? {};
-	if (typeof name !== 'string' || name.trim().length === 0) {
-		res.status(400).json({ error: 'name is required' });
+	const changes = accountChanges(req.body ?? {});
+	if (typeof changes === 'string') {
+		res.status(400).json({ error: changes });
 		return;
 	}
+	await saveOwnProfile(req, res, next, changes);
+}
 
+// US-7-T-5: stores the signed-in player's picture, checked by its bytes.
+export async function setPicture(req: AuthedRequest, res: Response, next: NextFunction) {
+	const picture = parsePicture(req.body?.image);
+	if (!picture) {
+		res.status(400).json({ error: 'image must be a PNG, JPEG or WebP of at most 200 KB' });
+		return;
+	}
+	await saveOwnProfile(req, res, next, { picture: picture.bytes, picture_type: picture.type });
+}
+
+// US-7-T-5: removes the signed-in player's picture, so their icon shows again.
+export async function removePicture(req: AuthedRequest, res: Response, next: NextFunction) {
+	await saveOwnProfile(req, res, next, { picture: null, picture_type: null });
+}
+
+// US-7-T-5: another player's public profile. A malformed id is a 404, like a missing one.
+export async function getUser(req: AuthedRequest, res: Response, next: NextFunction) {
+	if (!isUuid(req.params.id)) {
+		res.status(404).json({ error: 'player not found' });
+		return;
+	}
 	try {
-		const result = await pool.query<UserRow>(
-			`UPDATE users SET name = $1 WHERE id = $2
-			 RETURNING id, email, password_hash, name, email_verified, created_at, rating, games_played, games_won, games_lost`,
-			[name.trim(), req.userId],
-		);
+		const result = await pool.query<UserRow>('SELECT * FROM users WHERE id = $1', [req.params.id]);
 		const user = result.rows[0];
 		if (!user) {
-			res.status(401).json({ error: 'not authenticated' });
+			res.status(404).json({ error: 'player not found' });
 			return;
 		}
-		res.json({ user: toPublicUser(user) });
+		res.json({ user: toPublicProfile(user) });
 	} catch (err) {
 		next(err);
 	}
