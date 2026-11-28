@@ -460,7 +460,7 @@ button:active:not(:disabled) { scale: 0.97; }
   from { opacity: 0; transform: scale(0.97); }
   to { opacity: 1; transform: none; }
 }
-.lb-enter { animation: lb-enter 160ms ease-out both; }
+.lb-enter { animation: lb-enter 160ms ease-out backwards; }
 
 /* A wrong password shakes its field (it also turns red). */
 @keyframes lb-shake {
@@ -941,23 +941,130 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 }
 .lb-nod { animation: lb-nod 0.46s cubic-bezier(0.3, 0.7, 0.4, 1); }
 
-/* Ladder (US-10-T-9): the queued card's edge light. When a match is found the
-   other cards leave to their own side (--lb-side) and the chosen one glides to
-   the middle column (--lb-shift columns over; only when the cards sit in a row). */
-.lb-card-trace {
-  background: conic-gradient(from var(--lb-angle), var(--lb-line) 0 60%, var(--lb-primary) 86%, var(--lb-line) 100%);
-  animation: lb-orbit 1.4s linear infinite;
+/* Ladder (US-10-T-10): a new team size rolls into its tile and the faint
+   background size fades and sharpens in. The team columns slide in from their
+   sides only while the player is queued; open seats breathe, filled ones pop. */
+.lb-lad-roll > span { position: absolute; top: 0; left: 0; transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease; }
+.lb-lad-roll > [data-at="above"] { transform: translateY(-100%); opacity: 0; }
+.lb-lad-roll > [data-at="below"] { transform: translateY(100%); opacity: 0; }
+/* The faint size, drawn as three characters behind the controls. A horizontal
+   mask fades it toward the middle so the "v" only just shows. The mask is
+   multiplied by a fine noise tile: at this faint an opacity a plain gradient
+   only has a few shades to step through and shows as stripes; the noise
+   dithers those steps away. On a size change the digits slide out of the "v"
+   to their places, and fold back into it as that size leaves. */
+.lb-lad-zone {
+  container-type: size;
+  --lb-lad-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .6 0 0 0 .5'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --lb-lad-fade: linear-gradient(90deg, #000 0%, #000 18%, rgb(0 0 0 / 0.75) 26%, rgb(0 0 0 / 0.42) 34%, rgb(0 0 0 / 0.3) 40%, rgb(0 0 0 / 0.3) 60%, rgb(0 0 0 / 0.42) 66%, rgb(0 0 0 / 0.75) 74%, #000 82%, #000 100%);
+  -webkit-mask-image: var(--lb-lad-noise), var(--lb-lad-fade);
+  mask-image: var(--lb-lad-noise), var(--lb-lad-fade);
+  -webkit-mask-size: 160px 160px, 100% 100%;
+  mask-size: 160px 160px, 100% 100%;
+  -webkit-mask-repeat: repeat, no-repeat;
+  mask-repeat: repeat, no-repeat;
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
 }
-.lb-card-move { transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease, translate 0.2s cubic-bezier(0.22, 1, 0.36, 1); }
-.lb-card-leaving {
-  opacity: 0; pointer-events: none;
-  transform: translateX(calc(var(--lb-side, 1) * 48px)) scale(0.94);
-  transition: transform 0.22s cubic-bezier(0.4, 0, 1, 1), opacity 0.18s ease;
+.lb-lad-giant {
+  font-size: min(50cqw, 82cqh); white-space: nowrap;
+  opacity: 0; filter: blur(14px);
+  transition: opacity 0.5s ease, filter 0.5s ease;
 }
-.lb-card-found { transform: scale(1.04); transition-delay: 0.06s; }
-@media (min-width: 768px) {
-  .lb-card-found { transform: translateX(calc(var(--lb-shift, 0) * (100% + 20px))) scale(1.04); }
+.lb-lad-giant[data-on="true"] { opacity: 1; filter: blur(0); }
+.lb-lad-giant > span {
+  opacity: 0.05;
+  transition: transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
 }
+/* The tight look comes from pulling the digits in around the "v" with equal
+   negative margins, so the word stays centred on the "v". (Negative
+   letter-spacing left a gap after the last digit and pushed it off-centre.) */
+.lb-lad-giant > span:nth-child(2) { margin-inline: -0.08em; }
+.lb-lad-giant > span:first-child { transform: translateX(0.55em); }
+.lb-lad-giant > span:last-child { transform: translateX(-0.55em); }
+.lb-lad-giant[data-on="true"] > span { transform: none; }
+.lb-lad-side {
+  opacity: 0; filter: blur(8px);
+  transition: opacity 0.35s ease, filter 0.35s ease, transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Each team glides in from its edge toward the middle, growing as it comes,
+   and settles just beside the rank card. */
+.lb-lad-side[data-side="mine"] { transform-origin: right center; transform: translateX(-10vw) scale(0.86); }
+.lb-lad-side[data-side="rivals"] { transform-origin: left center; transform: translateX(10vw) scale(0.86); }
+.lb-lad-side[data-shown="true"] { opacity: 1; filter: blur(0); transform: none; }
+/* A flat page-coloured veil over the background number (flat, so no banding). */
+.lb-lad-dim { opacity: 0; transition: opacity 0.4s ease; }
+.lb-lad-dim[data-on="true"] { opacity: 0.55; }
+.lb-lad-side[data-side="rivals"][data-shown="true"] { transition-delay: 0.05s; }
+/* The WAITING glint moves at an even pace along the straight edges and eases a
+   little round each corner. Turning the angle at a steady rate would do the
+   opposite on a wide box (whip round the corners, crawl along the middle), so
+   these keyframes come from walking the box's border (333x61px). */
+@keyframes lb-lad-orbit { 0.00% { --lb-angle: -302.4deg; } 1.56% { --lb-angle: -277.7deg; } 3.12% { --lb-angle: -260.8deg; } 4.69% { --lb-angle: -249.6deg; } 6.25% { --lb-angle: -241.8deg; } 7.81% { --lb-angle: -236.8deg; } 9.38% { --lb-angle: -233.2deg; } 10.94% { --lb-angle: -230.5deg; } 12.50% { --lb-angle: -228.3deg; } 14.06% { --lb-angle: -226.6deg; } 15.62% { --lb-angle: -225.3deg; } 17.19% { --lb-angle: -224.2deg; } 18.75% { --lb-angle: -223.4deg; } 20.31% { --lb-angle: -222.8deg; } 21.88% { --lb-angle: -220.1deg; } 23.44% { --lb-angle: -216.7deg; } 25.00% { --lb-angle: -212.2deg; } 26.56% { --lb-angle: -207.8deg; } 28.12% { --lb-angle: -204.4deg; } 29.69% { --lb-angle: -202.0deg; } 31.25% { --lb-angle: -201.4deg; } 32.81% { --lb-angle: -200.6deg; } 34.38% { --lb-angle: -199.4deg; } 35.94% { --lb-angle: -198.0deg; } 37.50% { --lb-angle: -196.3deg; } 39.06% { --lb-angle: -194.2deg; } 40.62% { --lb-angle: -191.4deg; } 42.19% { --lb-angle: -187.4deg; } 43.75% { --lb-angle: -182.2deg; } 45.31% { --lb-angle: -174.7deg; } 46.88% { --lb-angle: -163.4deg; } 48.44% { --lb-angle: -144.7deg; } 50.00% { --lb-angle: -121.5deg; } 51.56% { --lb-angle: -98.5deg; } 53.12% { --lb-angle: -80.4deg; } 54.69% { --lb-angle: -69.4deg; } 56.25% { --lb-angle: -62.1deg; } 57.81% { --lb-angle: -57.0deg; } 59.38% { --lb-angle: -53.2deg; } 60.94% { --lb-angle: -50.5deg; } 62.50% { --lb-angle: -48.4deg; } 64.06% { --lb-angle: -46.7deg; } 65.62% { --lb-angle: -45.3deg; } 67.19% { --lb-angle: -44.2deg; } 68.75% { --lb-angle: -43.4deg; } 70.31% { --lb-angle: -42.8deg; } 71.88% { --lb-angle: -40.1deg; } 73.44% { --lb-angle: -36.7deg; } 75.00% { --lb-angle: -32.2deg; } 76.56% { --lb-angle: -27.8deg; } 78.12% { --lb-angle: -24.4deg; } 79.69% { --lb-angle: -22.0deg; } 81.25% { --lb-angle: -21.4deg; } 82.81% { --lb-angle: -20.6deg; } 84.38% { --lb-angle: -19.4deg; } 85.94% { --lb-angle: -18.1deg; } 87.50% { --lb-angle: -16.4deg; } 89.06% { --lb-angle: -14.1deg; } 90.62% { --lb-angle: -11.3deg; } 92.19% { --lb-angle: -7.7deg; } 93.75% { --lb-angle: -2.6deg; } 95.31% { --lb-angle: 5.5deg; } 96.88% { --lb-angle: 17.1deg; } 98.44% { --lb-angle: 34.5deg; } 100.00% { --lb-angle: 57.6deg; } }
+.lb-trace.lb-lad-trace { animation: lb-lad-orbit 2.6s linear infinite; }
+/* "Searching": dots count up . .. ... and start again. The dots sit in a
+   fixed-width box so the word never shifts, even right-aligned for the rivals. */
+@keyframes lb-lad-dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75%, 100% { content: "..."; } }
+.lb-lad-searching::after { content: "..."; display: inline-block; width: 1em; text-align: left; animation: lb-lad-dots 1.6s steps(1, end) infinite; }
+@keyframes lb-lad-fill { from { opacity: 0.4; transform: scale(0.97); } to { opacity: 1; transform: none; } }
+.lb-lad-filled { animation: lb-lad-fill 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* Match-start screen (US-10-T-10): each team's names in one row, sized so the
+   widest row fits (--lb-ms-em is its width in em). The rows sweep in from
+   opposite sides, drift and sweep out. The VS spins in whole; when the blade
+   passes it is swapped for two halves cut corner to corner, which part along
+   the cut, so no seam shows before the cut. */
+@keyframes lb-ms-out { to { opacity: 0; } }
+@keyframes lb-ms-show { to { opacity: 1; } }
+.lb-ms { container-type: size; animation: lb-ms-out 0.35s ease forwards 2.45s; }
+.lb-ms-row {
+  position: absolute; left: 50%; translate: -50% -50%;
+  display: flex; align-items: center; white-space: nowrap;
+  font-size: min(190px, calc(92cqw / var(--lb-ms-em, 10)), 20cqh);
+  font-weight: 900; letter-spacing: -0.05em; line-height: 1; text-transform: uppercase;
+}
+.lb-ms-mine { top: 29%; animation: lb-ms-drift-l 2.7s linear forwards; }
+.lb-ms-rivals { top: 71%; animation: lb-ms-drift-r 2.7s linear forwards; }
+.lb-ms-rep { opacity: 0.14; padding: 0 0.3em; }
+.lb-ms-main { display: inline-flex; align-items: center; gap: 0.3em; padding: 0 0.3em; }
+.lb-ms-sep { display: inline-block; width: 0.05em; height: 0.62em; margin: 0 0.1em; background: currentColor; opacity: 0.35; }
+.lb-ms-you { align-self: flex-start; margin-top: 0.15em; padding: 0.4em 0.7em; font-size: max(11px, 0.11em); font-weight: 700; letter-spacing: 0.14em; }
+@keyframes lb-ms-drift-l {
+  0% { opacity: 0; transform: translateX(45%); animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
+  24% { opacity: 1; transform: translateX(0); animation-timing-function: linear; }
+  76% { opacity: 1; transform: translateX(-3%); animation-timing-function: cubic-bezier(0.6, 0, 0.9, 0.4); }
+  100% { opacity: 0; transform: translateX(-55%); }
+}
+@keyframes lb-ms-drift-r {
+  0% { opacity: 0; transform: translateX(-45%); animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
+  24% { opacity: 1; transform: translateX(0); animation-timing-function: linear; }
+  76% { opacity: 1; transform: translateX(3%); animation-timing-function: cubic-bezier(0.6, 0, 0.9, 0.4); }
+  100% { opacity: 0; transform: translateX(55%); }
+}
+.lb-ms-vs { position: absolute; top: 50%; left: 50%; width: 200px; height: 120px; translate: -50% -50%; }
+.lb-ms-spin { position: absolute; inset: 0; opacity: 0; animation: lb-ms-spin 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.45s; }
+@keyframes lb-ms-spin { 0% { opacity: 0; transform: rotate(-360deg) scale(0.35); } 60% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+.lb-ms-part { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 96px; font-weight: 900; letter-spacing: -0.04em; line-height: 1; }
+.lb-ms-whole { animation: lb-ms-out 0.01s forwards 1.46s; }
+.lb-ms-top {
+  opacity: 0; clip-path: polygon(0 0, 100% 0, 0 100%);
+  animation: lb-ms-show 0.01s forwards 1.46s, lb-ms-slip-top 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 1.46s, lb-ms-part-top 0.6s cubic-bezier(0.6, 0, 0.25, 1) forwards 1.68s;
+}
+.lb-ms-bottom {
+  opacity: 0; clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  animation: lb-ms-show 0.01s forwards 1.46s, lb-ms-slip-bottom 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 1.46s, lb-ms-part-bottom 0.6s cubic-bezier(0.6, 0, 0.25, 1) forwards 1.68s;
+}
+@keyframes lb-ms-slip-top { to { transform: translate(3px, -6px); } }
+@keyframes lb-ms-slip-bottom { to { transform: translate(-3px, 6px); } }
+@keyframes lb-ms-part-top { from { opacity: 1; transform: translate(3px, -6px); } to { opacity: 0; transform: translate(64px, -50px) rotate(-4deg); } }
+@keyframes lb-ms-part-bottom { from { opacity: 1; transform: translate(-3px, 6px); } to { opacity: 0; transform: translate(-64px, 50px) rotate(4deg); } }
+.lb-ms-cut { position: absolute; top: 50%; left: 50%; width: 300px; height: 3px; translate: -50% -50%; rotate: -31deg; overflow: hidden; }
+.lb-ms-blade {
+  position: absolute; inset: 0; width: 40%; border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--lb-ink));
+  transform: translateX(-110%); animation: lb-ms-blade 0.28s cubic-bezier(0.45, 0, 0.2, 1) forwards 1.3s;
+}
+@keyframes lb-ms-blade { to { transform: translateX(260%); } }
 
 @media (prefers-reduced-motion: reduce) {
   .lb-spin { animation-duration: 1.6s; }
@@ -989,8 +1096,16 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
     background: linear-gradient(var(--lb-fill), var(--lb-fill)) padding-box, linear-gradient(var(--lb-glint), var(--lb-glint)) border-box;
   }
   .lb-breath, .lb-nod { animation: none; }
-  .lb-card-trace { animation: none; background: var(--lb-primary); }
-  .lb-card-leaving, .lb-card-found { transform: none !important; transition: opacity 0.2s ease; }
+  .lb-lad-giant, .lb-lad-roll > span { filter: none; transition: opacity 0.2s ease; }
+  .lb-lad-giant > span { transform: none !important; transition: none; }
+  .lb-lad-side { filter: none; transform: none !important; transition: opacity 0.2s ease; }
+  .lb-lad-filled { animation: none; }
+  .lb-lad-searching::after { animation: none; }
+  .lb-trace.lb-lad-trace { animation: none; }
+  .lb-ms-row { animation: lb-ms-out 0.3s ease forwards 2.1s; }
+  .lb-ms-spin { opacity: 1; animation: none; }
+  .lb-ms-cut, .lb-ms-half { display: none; }
+  .lb-ms-whole { animation: lb-ms-out 0.3s ease forwards 2s; }
 }
 
 /* =========================================================

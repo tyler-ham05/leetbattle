@@ -141,7 +141,7 @@ function OpenOnQuestion({ questionId }: { questionId?: number }) {
 	return null;
 }
 
-function MatchEditor({ questionIds, defaultQuestionId, submit, shareCode, teammates, teammateCode, teammateQuestion }: {
+function MatchEditor({ questionIds, defaultQuestionId, submit, shareCode, teammates, teammateCode, teammateQuestion, teammateQuestionIds }: {
 	questionIds: number[];
 	// The question the player picked on the pick screen, if any (US-6-T-10).
 	defaultQuestionId?: number;
@@ -151,6 +151,10 @@ function MatchEditor({ questionIds, defaultQuestionId, submit, shareCode, teamma
 	teammateCode: TeammateCode;
 	// The questionId each teammate last edited (US-6-T-13).
 	teammateQuestion: Record<string, number>;
+	// Each teammate's own questions (US-8-2): a teammate's picks are usually
+	// a different subset of the pool than the viewer's own, so viewing them
+	// read only needs their questions, not the viewer's.
+	teammateQuestionIds: Record<string, number[]>;
 }) {
 	const [viewedUserId, setViewedUserId] = useState<string | null>(null);
 	const viewedTeammate = teammates.find((teammate) => teammate.userId === viewedUserId) ?? null;
@@ -163,7 +167,7 @@ function MatchEditor({ questionIds, defaultQuestionId, submit, shareCode, teamma
 			<WorkspaceSwitcher teammates={teammates} viewedUserId={viewedUserId} onSelect={setViewedUserId} questionIds={questionIds} teammateQuestion={teammateQuestion} />
 			{viewedTeammate ? (
 				// The code tab bar says whose code this is (US-5-T-19).
-				<EditorProvider key={viewedTeammate.userId} questionIds={questionIds} readOnly ownerName={viewedTeammate.displayName} externalWorkspaces={teammateCode[viewedTeammate.userId] ?? {}} defaultQuestionId={teammateQuestion[viewedTeammate.userId]}>
+				<EditorProvider key={viewedTeammate.userId} questionIds={teammateQuestionIds[viewedTeammate.userId] ?? []} readOnly ownerName={viewedTeammate.displayName} externalWorkspaces={teammateCode[viewedTeammate.userId] ?? {}} defaultQuestionId={teammateQuestion[viewedTeammate.userId]}>
 					<OpenOnQuestion questionId={teammateQuestion[viewedTeammate.userId]} />
 					<EditorLayout belowQuestion={<TeamChat />} />
 				</EditorProvider>
@@ -177,15 +181,32 @@ function MatchEditor({ questionIds, defaultQuestionId, submit, shareCode, teamma
 function GameContent() {
 	const { gameId } = useParams<{ gameId: string }>();
 	const { user } = useAuth();
-	const { socket, connected, game, result, error, connect, forfeit, ban, pick, submit, shareCode, teammateCode, teammateQuestion, chatHistory } = useGameSocket();
+	const { socket, connected, game, result, error, connect, forfeit, ban, pick, unpick, submit, shareCode, teammateCode, teammateQuestion, chatHistory } = useGameSocket();
 	const joined = connected && game !== null;
 	const playing = joined && game.phase === 'playing' && !result;
 	const banning = joined && game.phase === 'banning' && !result;
 	const picking = joined && game.phase === 'picking' && !result;
 	const myTeam = game?.players.find((entry) => entry.userId === user?.id)?.team;
 	const teammates = game?.players.filter((entry) => entry.team === myTeam && entry.userId !== user?.id) ?? [];
-	// The player's own pick, if any, so it carries over as their default editor tab.
-	const myPick = myTeam && game?.problemPool.find((problem) => problem.pickedBy?.[myTeam]?.userId === user?.id);
+	// The questions exclusively assigned to the signed-in player (US-8-2), not
+	// the whole shared pool. A 1v1 never bans or picks at all, and a player
+	// who somehow ends up with none of their own still needs something to
+	// play, so both fall back to the full pool.
+	const myOwnQuestionIds = myTeam
+		? game?.problemPool.filter((problem) => problem.pickedBy?.[myTeam]?.userId === user?.id).map((problem) => problem.questionId) ?? []
+		: [];
+	const myQuestionIds = myOwnQuestionIds.length > 0 ? myOwnQuestionIds : (game?.problemPool.map((problem) => problem.questionId) ?? []);
+	// Each teammate's own questions (US-8-2), for viewing their workspace read
+	// only -- a teammate's picks are usually a different subset of the pool
+	// than the viewer's, so the switcher can't reuse myQuestionIds for them.
+	const teammateQuestionIds: Record<string, number[]> = {};
+	for (const teammate of teammates) {
+		teammateQuestionIds[teammate.userId] = myTeam
+			? game?.problemPool.filter((problem) => problem.pickedBy?.[myTeam]?.userId === teammate.userId).map((problem) => problem.questionId) ?? []
+			: [];
+	}
+	// The first of the player's own picks, so it carries over as their default editor tab.
+	const myPick = myQuestionIds[0];
 
 	useEffect(() => {
 		connect(gameId);
@@ -219,13 +240,14 @@ function GameContent() {
 				    The provider wraps the whole editor so its messages survive switching workspaces. */}
 				<ChatProvider socket={socket} history={chatHistory}>
 					<MatchEditor
-						questionIds={game.problemPool.map((problem) => problem.questionId)}
-						defaultQuestionId={myPick ? myPick.questionId : undefined}
+						questionIds={myQuestionIds}
+						defaultQuestionId={myPick}
 						submit={submit}
 						shareCode={shareCode}
 						teammates={teammates}
 						teammateCode={teammateCode}
 						teammateQuestion={teammateQuestion}
+						teammateQuestionIds={teammateQuestionIds}
 					/>
 				</ChatProvider>
 			</div>
@@ -291,6 +313,7 @@ function GameContent() {
 									teamSize={game.players.filter((player) => player.team === myTeam).length}
 									myTeam={myTeam}
 									onPick={pick}
+									onUnpick={unpick}
 								/>
 							)}
 						</>

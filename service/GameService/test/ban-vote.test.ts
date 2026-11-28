@@ -236,8 +236,13 @@ describe('voting for a question', () => {
 	});
 
 	it('runs the full ban window even once every player has voted', async () => {
-		const { sockets, pool } = await banningGame(2, 2);
+		// Timed from before the game even starts banning, not after, so the
+		// server's own window start (which the client only learns about once its
+		// broadcast arrives) can never land before this clock does -- otherwise a
+		// slow test runner could make the measured window look shorter than the
+		// real one and fail this assertion despite the server behaving correctly.
 		const started = Date.now();
+		const { sockets, pool } = await banningGame(2, 2);
 		const reveal = nextReveal(sockets[0]);
 		for (const socket of sockets) await vote(socket, pool[0].questionId);
 		await reveal;

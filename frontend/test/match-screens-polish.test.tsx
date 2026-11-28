@@ -199,7 +199,7 @@ function renderBan(myTeam: TeamId = 'b') {
 const pickedPool = pickPool.map((entry) => (entry.questionId === 1 ? { ...entry, pickedBy: { a: null, b: ALAN_B } } : entry));
 
 function renderPick() {
-	return render(<PickScreen problems={pickedPool} teamSize={2} myTeam="b" onPick={vi.fn()} />);
+	return render(<PickScreen problems={pickedPool} teamSize={2} myTeam="b" onPick={vi.fn()} onUnpick={vi.fn()} />);
 }
 
 // The list item for the question in the given position (1-based).
@@ -446,9 +446,10 @@ describe('pick screen', () => {
 		expect(container.querySelectorAll('.rounded-full')).toHaveLength(0);
 	});
 
-	it('shows each topic as a flat rounded-md label', () => {
+	it('shows the question\'s title instead of a topic label', () => {
+		// The pick screen shows titles now, not the topic pills the ban screen keeps.
 		renderPick();
-		expect(screen.getAllByTestId('topic')[0].className).toContain('rounded-md');
+		expect(screen.queryAllByTestId('topic')).toHaveLength(0);
 	});
 
 	it('has no "--" in its intro', () => {
@@ -456,9 +457,11 @@ describe('pick screen', () => {
 		expect(screen.getByText(/questions are left after the bans/).textContent).not.toContain('--');
 	});
 
-	it('says "Pick one to work on. Your teammates can\'t pick the one you choose."', () => {
+	it('says "Your teammates can\'t pick the ones you choose."', () => {
+		// US-8-2 lets a player pick more than one, so the copy no longer
+		// promises just "the one you choose".
 		renderPick();
-		expect(screen.getByText(/questions are left after the bans/).textContent).toContain('Pick one to work on. Your teammates can\'t pick the one you choose.');
+		expect(screen.getByText(/questions are left after the bans/).textContent).toContain('Your teammates can\'t pick the ones you choose.');
 	});
 
 	it('colors a teammate\'s "Picked by" name with the primary color when viewed from team b', () => {
@@ -468,7 +471,7 @@ describe('pick screen', () => {
 	});
 
 	it('still names the viewer "you" on their own pick', () => {
-		render(<PickScreen problems={pickPool.map((entry) => (entry.questionId === 1 ? { ...entry, pickedBy: { a: null, b: ADA_B } } : entry))} teamSize={2} myTeam="b" onPick={vi.fn()} />);
+		render(<PickScreen problems={pickPool.map((entry) => (entry.questionId === 1 ? { ...entry, pickedBy: { a: null, b: ADA_B } } : entry))} teamSize={2} myTeam="b" onPick={vi.fn()} onUnpick={vi.fn()} />);
 		expect(questionCard(1).textContent).toContain('Picked by you');
 	});
 });

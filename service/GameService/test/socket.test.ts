@@ -99,7 +99,7 @@ import { io } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
 import { gameServer, request, socketUrl } from './setup';
 import { pool } from '../src/db';
-import { matchResultReport, pointsForSubmission, resultOnTime } from '../src/server';
+import { matchResultReport, pickLimit, pointsForSubmission, resultOnTime } from '../src/server';
 import { FAKE_GRADING_MS, fakeCodeServiceFetch, fakeTags, sixReadyPlayers } from './fixtures';
 import type { ReadyPlayer } from './fixtures';
 
@@ -272,6 +272,17 @@ interface PickResponse {
 // Picks `questionId` for the player on `socket` and resolves with GameService's answer.
 function pick(socket: Socket, questionId: number): Promise<PickResponse> {
 	return socket.timeout(2_000).emitWithAck('game:pick', { questionId });
+}
+
+// What GameService answers a `game:unpick` with: ok, or why it was refused (US-8-2).
+interface UnpickResponse {
+	ok?: boolean;
+	error?: string;
+}
+
+// Gives back `questionId` for the player on `socket` and resolves with GameService's answer.
+function unpick(socket: Socket, questionId: number): Promise<UnpickResponse> {
+	return socket.timeout(2_000).emitWithAck('game:unpick', { questionId });
 }
 
 // A fresh game with every player connected, resolved once the bans have
@@ -997,14 +1008,6 @@ describe('picking a problem', () => {
 		expect(response.ok).toBe(true);
 	});
 
-	it('rejects a player\'s second pick with "already-picked"', async () => {
-		const { sockets, remaining } = await pickingGame(2, 2);
-		await pick(sockets[0], remaining[0].questionId);
-		// The other players haven't picked yet, so the picks are still going on.
-		const response = await pick(sockets[0], remaining[1].questionId);
-		expect(response.error).toBe('already-picked');
-	});
-
 	it('rejects picking a problem that isn\'t in the match pool with "unknown-problem"', async () => {
 		const { sockets } = await pickingGame(2, 2);
 		const response = await pick(sockets[0], -1);
@@ -1427,123 +1430,281 @@ describe('saving scored submissions', () => {
 	});
 });
 
-// US-7-T-1 GameService reports each match's result to AuthService
-// (AuthService is replaced with a stand-in; no test calls the real service.)
-// Reporting the result when a match ends (AC6)
-//  - When a match ends with a winner, GameService should send one POST to AuthService's /internal/match-results
-//  - The report should carry the internal key as "Authorization: Bearer <INTERNAL_API_KEY>"
-//  - The report should name the winning team ("a" or "b")
-//  - The report should list every player on the roster with their team
-//  - A player who left mid-match should still be listed in the report
-//  - When a match ends on time with level scores, the report's winner should be null (a draw)
-// A failed report doesn't break the match
-//  - When AuthService answers with an error, the players should still receive "game:ended"
-//  - When AuthService can't be reached, the players should still receive "game:ended"
-describe('US-7-T-1 reporting the match result to AuthService', () => {
-	// Matches the AUTH_SERVICE_URL fallback in src/server.ts (AuthService's own default port).
-	const AUTH_SERVICE_URL = 'http://localhost:4002';
-	const INTERNAL_KEY = 'test-internal-api-key';
+// ---------------------------------------------------------------------------
+// US-8-2: questions a player picks are assigned directly to that player
+// (exclusively -- no two teammates ever end up with the same one), instead
+// of every player being handed the whole shared pool. A player may now pick
+// more than one problem, up to CEIL(pool size / team size); whoever picks
+// nothing is assigned the pool's leftovers sequentially, in pool order, once
+// the pick window ends -- same idea as the single-pick auto-assign tested
+// above ("auto-assigns whoever hasn't picked..."), just capped per player at
+// their own limit instead of exactly one.
+// ---------------------------------------------------------------------------
 
-	interface MatchReport { gameId: string; winner: 'a' | 'b' | null; players: { userId: string; team: 'a' | 'b' }[] }
-	interface SentReport { request: string; authorization: string | undefined; body: MatchReport }
-
-	let reports: SentReport[];
-	// How the AuthService stand-in answers a report; a test can make it fail.
-	let answerReport: () => Promise<Response>;
-
-	// Every fetch still reaches the CodeService stand-in, except calls to
-	// AuthService, which are recorded and answered by answerReport.
-	beforeEach(() => {
-		process.env.INTERNAL_API_KEY = INTERNAL_KEY;
-		reports = [];
-		answerReport = async () => new Response(JSON.stringify({ players: [] }), { status: 200 });
-		vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
-			if (!String(url).startsWith(AUTH_SERVICE_URL)) return codeService(url, init);
-			reports.push({
-				request: `${init?.method ?? 'GET'} ${String(url)}`,
-				authorization: (init?.headers as Record<string, string> | undefined)?.Authorization,
-				body: JSON.parse(String(init?.body)),
-			});
-			return answerReport();
-		}));
+describe('the pick limit a player may select up to (US-8-2)', () => {
+	it('is the pool size divided by the team size when it divides evenly', () => {
+		expect(pickLimit(3, 3)).toBe(1);
 	});
 
-	afterEach(() => {
-		vi.stubGlobal('fetch', codeService);
+	it('rounds up when the pool does not divide evenly across the team', () => {
+		expect(pickLimit(5, 2)).toBe(3);
 	});
 
-	// Other games in this file (e.g. the spare one beforeEach creates) can end
-	// and report during a test, so each test only looks at its own game's
-	// reports, waiting until at least one has been sent.
-	const reportsFor = (gameId: string) => reports.filter((report) => report.body.gameId === gameId);
-	async function reportFor(gameId: string): Promise<SentReport> {
-		await vi.waitFor(() => {
-			if (reportsFor(gameId).length === 0) throw new Error('no report sent yet');
+	it('rounds up the same way for a different uneven pool', () => {
+		expect(pickLimit(4, 3)).toBe(2);
+	});
+});
+
+// A picking-phase scenario where only one of the four players banned before
+// the ban window ran out (same trick as "starts picking with the bans made
+// so far when the ban window runs out" above), so a 2v2 is left with 5
+// problems instead of 2 -- enough for the pick limit (CEIL(5 / 2) = 3) to
+// come out above 1, which the single-pick scenarios above never exercise.
+async function overflowPickingGame(teamA: number, teamB: number) {
+	const { game, sockets, pool: matchPool } = await banningGame(teamA, teamB);
+	await ban(sockets[0], matchPool[0].questionId);
+	const state = await nextState(sockets[0], (next) => next.phase === 'picking');
+	return { game, sockets, remaining: state.problemPool };
+}
+
+describe('picking more than one problem (US-8-2)', () => {
+	it('lets a player pick a second, different problem when they are still under their limit', async () => {
+		const { sockets, remaining } = await overflowPickingGame(2, 2);
+		await pick(sockets[0], remaining[0].questionId);
+		// The overflowed pool gives sockets[0] a limit of 3 (CEIL(5 / 2)).
+		const response = await pick(sockets[0], remaining[1].questionId);
+		expect(response.ok).toBe(true);
+	});
+
+	it('rejects a pick once a player has claimed as many problems as their limit allows', async () => {
+		const { sockets, remaining } = await overflowPickingGame(2, 2);
+		await pick(sockets[0], remaining[0].questionId);
+		await pick(sockets[0], remaining[1].questionId);
+		await pick(sockets[0], remaining[2].questionId);
+		// sockets[0]'s limit is 3; a fourth pick is one too many.
+		const response = await pick(sockets[0], remaining[3].questionId);
+		expect(response.error).toBe('pick-limit-reached');
+	});
+
+	it('shows every problem a player picked as picked by them, not just the first', async () => {
+		const { game, sockets, remaining } = await overflowPickingGame(2, 2);
+		const bothPicked = nextState(sockets[0], (state) => [remaining[0].questionId, remaining[1].questionId]
+			.every((questionId) => state.problemPool.find((problem) => problem.questionId === questionId)?.pickedBy.a));
+		await pick(sockets[0], remaining[0].questionId);
+		await pick(sockets[0], remaining[1].questionId);
+		const state = await bothPicked;
+		expect([remaining[0].questionId, remaining[1].questionId].map((questionId) =>
+			state.problemPool.find((problem) => problem.questionId === questionId)?.pickedBy.a?.userId))
+			.toEqual([game.players[0].userId, game.players[0].userId]);
+	});
+
+	it('never lets a teammate claim a problem another teammate already picked', async () => {
+		const { sockets, remaining } = await overflowPickingGame(2, 2);
+		await pick(sockets[0], remaining[0].questionId);
+		// sockets[1] is sockets[0]'s teammate; the problem is already theirs.
+		const response = await pick(sockets[1], remaining[0].questionId);
+		expect(response.error).toBe('problem-picked');
+	});
+});
+
+describe('auto-assigning leftover problems sequentially (US-8-2)', () => {
+	it('gives a player who picked nothing the pool\'s leftovers in order, up to their own limit', async () => {
+		const { game, sockets, remaining } = await overflowPickingGame(2, 2);
+		// sockets[0] claims one of team a's five problems; sockets[1] (team a's
+		// other player) never picks at all, so once the pick window runs out
+		// they should be auto-assigned the next problems left in pool order,
+		// up to their own limit of 3 (CEIL(5 / 2)) -- not everything left over.
+		await pick(sockets[0], remaining[0].questionId);
+		const state = await nextState(sockets[0], (next) => next.phase === 'playing');
+		const assignedToSocket1 = state.problemPool
+			.filter((problem) => problem.pickedBy.a?.userId === game.players[1].userId)
+			.map((problem) => problem.questionId);
+		expect(assignedToSocket1).toEqual([remaining[1].questionId, remaining[2].questionId, remaining[3].questionId]);
+	});
+
+	it('leaves a problem unassigned once every active player on a team has reached their limit', async () => {
+		const { sockets, remaining } = await overflowPickingGame(2, 2);
+		await pick(sockets[0], remaining[0].questionId);
+		const state = await nextState(sockets[0], (next) => next.phase === 'playing');
+		// Team a's limit is 3 per player (6 total capacity) but the pool only
+		// overflowed to 5, so with sockets[0] holding just 1 and sockets[1]
+		// capped at 3, the fifth problem (remaining[4]) is never claimed by team a.
+		const unclaimedByTeamA = state.problemPool.find((problem) => problem.questionId === remaining[4].questionId);
+		expect(unclaimedByTeamA?.pickedBy.a).toBeNull();
+	});
+});
+
+// A player can change their mind about a pick before the window closes,
+// giving it back so a teammate can claim it, or so they can pick something
+// else instead without ever exceeding their own limit (US-8-2).
+describe('deselecting a pick (US-8-2)', () => {
+	it('shows the problem as no longer picked by the player once they give it back', async () => {
+		const { sockets, remaining } = await pickingGame(2, 2);
+		await pick(sockets[0], remaining[0].questionId);
+		const freed = nextState(sockets[0], (state) =>
+			!state.problemPool.find((problem) => problem.questionId === remaining[0].questionId)?.pickedBy.a);
+		await unpick(sockets[0], remaining[0].questionId);
+		const state = await freed;
+		expect(state.problemPool.find((problem) => problem.questionId === remaining[0].questionId)?.pickedBy.a).toBeNull();
+	});
+
+	it('frees the problem for a teammate to pick once it has been given back', async () => {
+		const { sockets, remaining } = await pickingGame(2, 2);
+		await pick(sockets[0], remaining[0].questionId);
+		await unpick(sockets[0], remaining[0].questionId);
+		// sockets[1] is sockets[0]'s teammate; the problem is open again.
+		const response = await pick(sockets[1], remaining[0].questionId);
+		expect(response.ok).toBe(true);
+	});
+
+	it('lets the player claim a different problem after giving one back once they were at their limit', async () => {
+		const { sockets, remaining } = await overflowPickingGame(2, 2);
+		await pick(sockets[0], remaining[0].questionId);
+		await pick(sockets[0], remaining[1].questionId);
+		await pick(sockets[0], remaining[2].questionId);
+		// sockets[0]'s limit is 3, so this would otherwise be "pick-limit-reached".
+		await unpick(sockets[0], remaining[0].questionId);
+		const response = await pick(sockets[0], remaining[3].questionId);
+		expect(response.ok).toBe(true);
+	});
+
+	it('rejects giving back a problem the player never picked with "not-picked"', async () => {
+		const { sockets, remaining } = await pickingGame(2, 2);
+		const response = await unpick(sockets[0], remaining[0].questionId);
+		expect(response.error).toBe('not-picked');
+	});
+
+	it('rejects giving back a problem that isn\'t in the match pool with "unknown-problem"', async () => {
+		const { sockets } = await pickingGame(2, 2);
+		const response = await unpick(sockets[0], -1);
+		expect(response.error).toBe('unknown-problem');
+	});
+
+	it('rejects giving back a pick once play has started with "not-picking"', async () => {
+		const { sockets, remaining } = await pickingGame(2, 2);
+		await pickEveryone(sockets, remaining);
+		const response = await unpick(sockets[0], remaining[0].questionId);
+		expect(response.error).toBe('not-picking');
+	
+	});
+	// US-7-T-1 GameService reports each match's result to AuthService
+	// (AuthService is replaced with a stand-in; no test calls the real service.)
+	// Reporting the result when a match ends (AC6)
+	//  - When a match ends with a winner, GameService should send one POST to AuthService's /internal/match-results
+	//  - The report should carry the internal key as "Authorization: Bearer <INTERNAL_API_KEY>"
+	//  - The report should name the winning team ("a" or "b")
+	//  - The report should list every player on the roster with their team
+	//  - A player who left mid-match should still be listed in the report
+	//  - When a match ends on time with level scores, the report's winner should be null (a draw)
+	// A failed report doesn't break the match
+	//  - When AuthService answers with an error, the players should still receive "game:ended"
+	//  - When AuthService can't be reached, the players should still receive "game:ended"
+	describe('US-7-T-1 reporting the match result to AuthService', () => {
+		// Matches the AUTH_SERVICE_URL fallback in src/server.ts (AuthService's own default port).
+		const AUTH_SERVICE_URL = 'http://localhost:4002';
+		const INTERNAL_KEY = 'test-internal-api-key';
+
+		interface MatchReport { gameId: string; winner: 'a' | 'b' | null; players: { userId: string; team: 'a' | 'b' }[] }
+		interface SentReport { request: string; authorization: string | undefined; body: MatchReport }
+
+		let reports: SentReport[];
+		// How the AuthService stand-in answers a report; a test can make it fail.
+		let answerReport: () => Promise<Response>;
+
+		// Every fetch still reaches the CodeService stand-in, except calls to
+		// AuthService, which are recorded and answered by answerReport.
+		beforeEach(() => {
+			process.env.INTERNAL_API_KEY = INTERNAL_KEY;
+			reports = [];
+			answerReport = async () => new Response(JSON.stringify({ players: [] }), { status: 200 });
+			vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+				if (!String(url).startsWith(AUTH_SERVICE_URL)) return codeService(url, init);
+				reports.push({
+					request: `${init?.method ?? 'GET'} ${String(url)}`,
+					authorization: (init?.headers as Record<string, string> | undefined)?.Authorization,
+					body: JSON.parse(String(init?.body)),
+				});
+				return answerReport();
+			}));
 		});
-		return reportsFor(gameId)[0];
-	}
 
-	const byUserId = (players: { userId: string; team: string }[]) =>
-		[...players].map(({ userId, team }) => ({ userId, team })).sort((x, y) => x.userId.localeCompare(y.userId));
+		afterEach(() => {
+			vi.stubGlobal('fetch', codeService);
+		});
 
-	// A 1v1 that team a forfeits, so team b wins. Resolves once the players hear it ended.
-	async function forfeitedOneVsOne() {
-		const { game, sockets } = await playingGame(1, 1);
-		const ended = nextEvent<GameResult>(sockets[1], 'game:ended');
-		sockets[0].emit('game:forfeit');
-		return { game, ended };
-	}
+		// Other games in this file (e.g. the spare one beforeEach creates) can end
+		// and report during a test, so each test only looks at its own game's
+		// reports, waiting until at least one has been sent.
+		const reportsFor = (gameId: string) => reports.filter((report) => report.body.gameId === gameId);
+		async function reportFor(gameId: string): Promise<SentReport> {
+			await vi.waitFor(() => {
+				if (reportsFor(gameId).length === 0) throw new Error('no report sent yet');
+			});
+			return reportsFor(gameId)[0];
+		}
 
-	it('US-7-T-1 sends one POST to AuthService\'s /internal/match-results when a match ends', async () => {
-		const { game, ended } = await forfeitedOneVsOne();
-		await ended;
-		await reportFor(game.gameId);
-		expect(reportsFor(game.gameId).map((report) => report.request)).toEqual([`POST ${AUTH_SERVICE_URL}/internal/match-results`]);
-	});
+		const byUserId = (players: { userId: string; team: string }[]) =>
+			[...players].map(({ userId, team }) => ({ userId, team })).sort((x, y) => x.userId.localeCompare(y.userId));
 
-	it('US-7-T-1 sends the internal key with the report', async () => {
-		const { game, ended } = await forfeitedOneVsOne();
-		await ended;
-		expect((await reportFor(game.gameId)).authorization).toBe(`Bearer ${INTERNAL_KEY}`);
-	});
+		// A 1v1 that team a forfeits, so team b wins. Resolves once the players hear it ended.
+		async function forfeitedOneVsOne() {
+			const { game, sockets } = await playingGame(1, 1);
+			const ended = nextEvent<GameResult>(sockets[1], 'game:ended');
+			sockets[0].emit('game:forfeit');
+			return { game, ended };
+		}
 
-	it('US-7-T-1 names the winning team in the report', async () => {
-		const { game, ended } = await forfeitedOneVsOne();
-		await ended;
-		expect((await reportFor(game.gameId)).body.winner).toBe('b');
-	});
+		it('US-7-T-1 sends one POST to AuthService\'s /internal/match-results when a match ends', async () => {
+			const { game, ended } = await forfeitedOneVsOne();
+			await ended;
+			await reportFor(game.gameId);
+			expect(reportsFor(game.gameId).map((report) => report.request)).toEqual([`POST ${AUTH_SERVICE_URL}/internal/match-results`]);
+		});
 
-	it('US-7-T-1 lists every player on the roster with their team', async () => {
-		const { game, ended } = await forfeitedOneVsOne();
-		await ended;
-		expect(byUserId((await reportFor(game.gameId)).body.players)).toEqual(byUserId(game.players));
-	});
+		it('US-7-T-1 sends the internal key with the report', async () => {
+			const { game, ended } = await forfeitedOneVsOne();
+			await ended;
+			expect((await reportFor(game.gameId)).authorization).toBe(`Bearer ${INTERNAL_KEY}`);
+		});
 
-	// Team b's only player drops and never comes back, so team a wins by disconnect.
-	it('US-7-T-1 still lists a player who left mid-match', async () => {
-		const { game, sockets: [teamA, teamB] } = await playingGame(1, 1);
-		const ended = nextEvent<GameResult>(teamA, 'game:ended');
-		teamB.disconnect();
-		await ended;
-		expect((await reportFor(game.gameId)).body.players.map((player) => player.userId)).toContain(game.players[1].userId);
-	});
+		it('US-7-T-1 names the winning team in the report', async () => {
+			const { game, ended } = await forfeitedOneVsOne();
+			await ended;
+			expect((await reportFor(game.gameId)).body.winner).toBe('b');
+		});
 
-	// A match only ends on time after 20 minutes, so the report is built directly
-	// from a finished game here.
-	it('US-7-T-1 reports a draw as winner null when time runs out with level scores', () => {
-		const game = { gameId: 'drawn-game', players: new Map([['u1', { userId: 'u1', team: 'a' }], ['u2', { userId: 'u2', team: 'b' }]]) };
-		expect(matchResultReport(game as never, resultOnTime({ a: 2, b: 2 })).winner).toBeNull();
-	});
+		it('US-7-T-1 lists every player on the roster with their team', async () => {
+			const { game, ended } = await forfeitedOneVsOne();
+			await ended;
+			expect(byUserId((await reportFor(game.gameId)).body.players)).toEqual(byUserId(game.players));
+		});
 
-	it('US-7-T-1 still ends the match for the players when AuthService answers with an error', async () => {
-		answerReport = async () => new Response(JSON.stringify({ error: 'down' }), { status: 500 });
-		const { ended } = await forfeitedOneVsOne();
-		expect(await ended).toEqual({ winner: 'b', reason: 'forfeit' });
-	});
+		// Team b's only player drops and never comes back, so team a wins by disconnect.
+		it('US-7-T-1 still lists a player who left mid-match', async () => {
+			const { game, sockets: [teamA, teamB] } = await playingGame(1, 1);
+			const ended = nextEvent<GameResult>(teamA, 'game:ended');
+			teamB.disconnect();
+			await ended;
+			expect((await reportFor(game.gameId)).body.players.map((player) => player.userId)).toContain(game.players[1].userId);
+		});
 
-	it('US-7-T-1 still ends the match for the players when AuthService can\'t be reached', async () => {
-		answerReport = () => Promise.reject(new TypeError('fetch failed'));
-		const { ended } = await forfeitedOneVsOne();
-		expect(await ended).toEqual({ winner: 'b', reason: 'forfeit' });
+		// A match only ends on time after 20 minutes, so the report is built directly
+		// from a finished game here.
+		it('US-7-T-1 reports a draw as winner null when time runs out with level scores', () => {
+			const game = { gameId: 'drawn-game', players: new Map([['u1', { userId: 'u1', team: 'a' }], ['u2', { userId: 'u2', team: 'b' }]]) };
+			expect(matchResultReport(game as never, resultOnTime({ a: 2, b: 2 })).winner).toBeNull();
+		});
+
+		it('US-7-T-1 still ends the match for the players when AuthService answers with an error', async () => {
+			answerReport = async () => new Response(JSON.stringify({ error: 'down' }), { status: 500 });
+			const { ended } = await forfeitedOneVsOne();
+			expect(await ended).toEqual({ winner: 'b', reason: 'forfeit' });
+		});
+
+		it('US-7-T-1 still ends the match for the players when AuthService can\'t be reached', async () => {
+			answerReport = () => Promise.reject(new TypeError('fetch failed'));
+			const { ended } = await forfeitedOneVsOne();
+			expect(await ended).toEqual({ winner: 'b', reason: 'forfeit' });
+		});
 	});
 });

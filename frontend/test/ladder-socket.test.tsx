@@ -51,6 +51,7 @@ function Consumer() {
 		<>
 			<span data-testid="queue">{queue?.queue ?? ''}</span>
 			<span data-testid="game-id">{matched?.gameId ?? ''}</span>
+			<span data-testid="rivals">{matched?.rivals?.join(',') ?? ''}</span>
 			<span data-testid="error">{error?.code ?? ''}</span>
 		</>
 	);
@@ -121,6 +122,14 @@ describe('US-7-T-2 server events', () => {
 		act(() => sockets[0].fire('queue:matched', { gameId: 'game-1' }));
 
 		expect(screen.getByTestId('game-id').textContent).toBe('game-1');
+	});
+
+	it('US-10-T-10 exposes the team names from queue:matched', () => {
+		renderConsumer();
+		// The names are optional extras on queue:matched; the page needs them for the team columns.
+		act(() => sockets[0].fire('queue:matched', { gameId: 'game-1', yourTeam: ['Ada', 'Linus'], rivals: ['Ken', 'Barbara'] }));
+
+		expect(screen.getByTestId('rivals').textContent).toBe('Ken,Barbara');
 	});
 
 	it('US-7-T-2 exposes the error from queue:error (criterion 11)', () => {
