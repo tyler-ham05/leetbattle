@@ -1,14 +1,14 @@
 'use client';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import PageLoader from '../../_shared/page-loader';
 import HomeTopBar from '../../_home/components/topbar';
-import { useCountUp } from '../../_shared/use-count-up';
 import type { PublicProfile } from '../../login/controller';
-import PlayerCard, { COUNT_AT_MS, COUNT_FOR_MS } from './player-card';
+import PlayerCard, { useProfileCount } from './player-card';
 import type { CardEditor } from './player-card';
 import DescriptionSlot from './description-editor';
-import Odometer from './odometer';
-import { leagueLook, leagueProgress } from './league';
+import LeagueRow from './league-row';
+import RecentMatches from './recent-matches';
+import { leagueLook } from './league';
 
 // Everything your own profile can change; absent on someone else's.
 export interface ProfileEditor extends CardEditor {
@@ -45,7 +45,7 @@ function Name({ name }: { name: string }) {
 // One stat box. The detail line fades in on hover or focus, in space that is
 // always reserved, so nothing moves.
 function Stat({ label, value, suffix = '', detail }: { label: string; value: number; suffix?: string; detail: string }) {
-	const shown = useCountUp(value, COUNT_AT_MS, COUNT_FOR_MS);
+	const shown = useProfileCount(value);
 	return (
 		<div role="group" aria-label={label} tabIndex={0} className="lb-pc-stat">
 			<span className="lb-pc-cap">{label}</span>
@@ -55,41 +55,9 @@ function Stat({ label, value, suffix = '', detail }: { label: string; value: num
 	);
 }
 
-// The league in its metal colour, the rating, and a bar from the league's
-// lowest rating to the next league (full, with "Top league", in Platinum).
-function LeagueRow({ profile }: { profile: PublicProfile }) {
-	const league = profile.league ?? 'Bronze I';
-	const rating = profile.rating ?? 0;
-	const min = profile.leagueMin ?? rating;
-	const next = profile.nextLeague ?? null;
-	const pct = leagueProgress(rating, min, next);
-	return (
-		<section aria-label="League" className="lb-pc-league">
-			<div className="lb-pc-league-head">
-				<div className="flex flex-col gap-2.5">
-					<span className="lb-pc-cap">League</span>
-					<span className="lb-pc-league-name">{league}</span>
-				</div>
-				<div className="lb-pc-rating-big">
-					<span className="lb-pc-cap">Rating</span>
-					<Odometer value={rating} />
-					<span className="sr-only">Rating {rating}</span>
-				</div>
-			</div>
-			<div role="progressbar" aria-label="Progress to the next league" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)} className="lb-pc-track">
-				<div className="lb-pc-fill" style={{ '--lb-pc-w': `${pct.toFixed(1)}%` } as CSSProperties} />
-			</div>
-			<div className="lb-pc-ends">
-				<span data-testid="league-from">{league} <b>{min}</b></span>
-				<span data-testid="league-to">{next ? <>{next.name} <b>{next.at}</b></> : 'Top league'}</span>
-			</div>
-		</section>
-	);
-}
-
 // US-7-T-5: a player profile. The card fills the left 30%; the right 70% has
-// when they joined, the name with the description beside it, the four stats
-// and the league row. `edit` is only given on your own profile.
+// when they joined, the name with the description beside it, the four stats,
+// the league row and the last 10 matches. `edit` is only given on your own profile.
 export default function ProfileView({ profile, edit }: { profile: PublicProfile; edit?: ProfileEditor }) {
 	const wins = profile.wins ?? 0;
 	const losses = profile.losses ?? 0;
@@ -115,6 +83,7 @@ export default function ProfileView({ profile, edit }: { profile: PublicProfile;
 					</div>
 				</div>
 				<LeagueRow profile={profile} />
+				<RecentMatches matches={profile.recentMatches} />
 			</section>
 		</main>
 	);

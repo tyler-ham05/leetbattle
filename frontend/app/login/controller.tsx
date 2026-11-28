@@ -22,6 +22,20 @@ export interface User {
 	picture?: string | null;
 	leagueMin?: number;
 	nextLeague?: NextLeague | null;
+	// The player's last ranked matches, oldest first (up to 10). Older
+	// AuthService versions don't send it; treat it as none.
+	recentMatches?: RecentMatch[];
+}
+
+// One ranked match on the profile's "Last 10 matches" line.
+export interface RecentMatch {
+	result: 'W' | 'L' | 'D';
+	// The rating change from this match, and the rating after it.
+	change: number;
+	ratingAfter: number;
+	// 1 for 1v1, 2 for 2v2, 3 for 3v3.
+	teamSize: number;
+	playedAt: string;
 }
 
 // The league after the player's, and the rating it starts at (null in Platinum).

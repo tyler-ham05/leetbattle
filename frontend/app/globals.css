@@ -1166,7 +1166,7 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 .lb-pc-cap { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--lb-muted); }
 
 /* ---------- The card ---------- */
-.lb-pc-zone { perspective: 1400px; width: 100%; display: flex; align-self: stretch; margin-block: calc(var(--lb-pc-pad-y) * -0.28); min-height: 0; }
+.lb-pc-zone { position: relative; perspective: 1400px; width: 100%; display: flex; align-self: stretch; margin-block: calc(var(--lb-pc-pad-y) * -0.28); min-height: 0; }
 .lb-pc-card {
   /* A fixed height (the window minus the page's top and bottom space), whatever the right side does. */
   position: relative; flex: 1; min-height: 0; border-radius: 12px; padding: clamp(24px, 3vw, 52px); display: flex; flex-direction: column;
@@ -1183,6 +1183,24 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 }
 .lb-pc-card.lb-pc-tracking { transition: transform 0.08s linear, box-shadow 0.6s ease; }
 @keyframes lb-pc-card-in { from { opacity: 0; transform: translateY(24px) rotateX(18deg) scale(0.96); } }
+/* Depth between the card and the page (the card's own look is unchanged):
+   the page darkens a little right around the card's edges, and a soft, wide
+   shadow is cast on the page behind it, sliding opposite the tilt with the
+   pointer's light offset (--lb-pc-lx/ly, set on the page). No glow. */
+.lb-pc-zone { --lb-pc-cast-a: 0.42; --lb-pc-ao-a: 0.3; }
+[data-mode="light"] .lb-pc-zone { --lb-pc-cast-a: 0.2; --lb-pc-ao-a: 0.12; }
+.lb-pc-zone::before {
+  content: ""; position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / calc(var(--lb-pc-ao-a) * 0.4)), 0 6px 22px 4px rgb(0 0 0 / var(--lb-pc-ao-a));
+  animation: lb-pc-fade 1s var(--lb-pc-out) backwards;
+}
+.lb-pc-cast {
+  position: absolute; inset: 4% 3% 0; border-radius: 12px; pointer-events: none;
+  background: rgb(0 0 0 / var(--lb-pc-cast-a)); filter: blur(48px);
+  transform: translate(calc(var(--lb-pc-lx, 0px) * 0.6), calc(40px + var(--lb-pc-ly, 0px) * 0.6));
+  transition: transform 0.9s var(--lb-pc-out);
+  animation: lb-pc-fade 1.2s ease 0.2s backwards;
+}
 
 /* Shine, in layers, all following the pointer (--lb-pc-gx/gy, --lb-pc-hx/hy):
    brushed metal, an iridescent foil, glitter where the light falls, a soft
@@ -1329,7 +1347,46 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 .lb-pc-league { display: flex; flex-direction: column; gap: 14px; }
 .lb-pc-league-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .lb-pc-league-name { font-size: clamp(36px, 3.2vw, 52px); font-weight: 900; letter-spacing: -0.05em; line-height: 1; color: var(--lb-pc-metal); }
-.lb-pc-rating-big { display: flex; align-items: baseline; gap: 10px; }
+.lb-pc-rating-big { position: relative; display: flex; align-items: baseline; gap: 10px; }
+.lb-pc-league-name { perspective: 400px; }
+/* Promotion: the old name, in the old colour, peels off along a diagonal,
+   curling up as it goes, with a light line along the peel; the new name is
+   already underneath. --lb-pc-peel-a is where the peel line meets the bottom. */
+@property --lb-pc-peel-a { syntax: '<percentage>'; inherits: true; initial-value: -45%; }
+.lb-pc-peel { position: relative; display: inline-block; white-space: nowrap; animation: lb-pc-peel 1s cubic-bezier(0.55, 0, 0.25, 1) 0.2s forwards; }
+@keyframes lb-pc-peel { to { --lb-pc-peel-a: 120%; } }
+.lb-pc-peel-under { display: inline-block; clip-path: polygon(0 0, calc(var(--lb-pc-peel-a) + 45%) 0, var(--lb-pc-peel-a) 100%, 0 100%); }
+/* Decoration only, and gone once the peel ends (the page then shows the name plainly). */
+.lb-pc-peel-over {
+  position: absolute; left: 0; top: 0; transform-origin: 100% 0;
+  clip-path: polygon(calc(var(--lb-pc-peel-a) + 45%) 0, 200% 0, 200% 100%, var(--lb-pc-peel-a) 100%);
+  animation: lb-pc-curl 1s cubic-bezier(0.55, 0, 0.25, 1) 0.2s forwards;
+}
+@keyframes lb-pc-curl { 60% { transform: translate(3px, -3px) rotate(-1.5deg); } 100% { transform: translate(8px, -8px) rotate(-3deg); opacity: 0; } }
+.lb-pc-peel-crease {
+  position: absolute; left: 0; top: 0; color: transparent; pointer-events: none;
+  background: linear-gradient(115deg, transparent calc(var(--lb-pc-peel-a) + 14%), color-mix(in srgb, var(--lb-pc-metal) 35%, var(--lb-ink)) calc(var(--lb-pc-peel-a) + 22%), transparent calc(var(--lb-pc-peel-a) + 30%));
+  -webkit-background-clip: text; background-clip: text;
+}
+/* Demotion: the name shakes. It ends where it started, so nothing is held. */
+.lb-pc-shake { display: inline-block; animation: lb-pc-shake 0.5s ease; }
+@keyframes lb-pc-shake { 20% { transform: translateX(-8px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(2px); } }
+/* The change floats up by the rating. Hidden at rest, so the entrance fills backwards. */
+.lb-pc-delta { position: absolute; right: 0; bottom: 100%; font-weight: 800; font-size: 22px; pointer-events: none; opacity: 0; animation: lb-pc-float 1.4s var(--lb-pc-out) backwards; }
+@keyframes lb-pc-float { 0% { opacity: 0; transform: translateY(14px) scale(0.8); } 15% { opacity: 1; transform: translateY(0) scale(1.1); } 30% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-34px); } }
+.lb-pc-up { color: var(--lb-primary); }
+.lb-pc-down { color: var(--lb-danger); }
+/* "Promoted <league>" drops in near the top of the window, then fades. */
+.lb-pc-toast {
+  position: fixed; left: 50%; top: calc(88px + env(safe-area-inset-top, 0px)); translate: -50% 0; z-index: 40;
+  display: flex; align-items: baseline; gap: 14px; padding: 16px 26px; border-radius: 8px;
+  background: color-mix(in srgb, var(--lb-surface) 92%, transparent); border: 1px solid color-mix(in srgb, var(--lb-pc-metal) 50%, var(--lb-line));
+  box-shadow: 0 30px 60px -24px rgb(0 0 0 / 0.9); backdrop-filter: blur(12px);
+  opacity: 0; animation: lb-pc-toast 2.6s var(--lb-pc-out) backwards;
+}
+.lb-pc-toast .lb-pc-cap { color: var(--lb-pc-metal); }
+.lb-pc-toast b { font-size: 24px; font-weight: 900; letter-spacing: -0.04em; color: var(--lb-pc-metal); }
+@keyframes lb-pc-toast { 0% { opacity: 0; transform: translateY(-30px) scale(0.9); } 12% { opacity: 1; transform: scale(1.04); } 20% { opacity: 1; transform: none; } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(-12px); } }
 .lb-pc-rating-big .lb-pc-odo { font-size: clamp(36px, 3.2vw, 52px); font-weight: 800; }
 .lb-pc-track { position: relative; height: 12px; border-radius: 4px; background: var(--lb-raised); overflow: hidden; }
 /* The bar grows from the left as the page opens, with a slow shine along it. */
@@ -1348,6 +1405,56 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
 .lb-pc-ends { display: flex; justify-content: space-between; gap: 16px; font-size: 13px; color: var(--lb-muted); }
 .lb-pc-ends span { display: inline-flex; align-items: baseline; gap: 10px; }
 .lb-pc-ends b { font-weight: 600; color: var(--lb-ink); }
+
+/* Last 10 matches: the only part of the column that grows and shrinks. */
+.lb-pc-side > .lb-pc-form { flex: 1 1 0; }
+.lb-pc-form { display: flex; flex-direction: column; gap: 18px; }
+.lb-pc-form-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.lb-pc-form-sum { display: flex; align-items: baseline; gap: 24px; font-size: 13px; color: var(--lb-muted); }
+.lb-pc-form-sum b { font-weight: 800; font-size: 14px; margin-left: 4px; }
+.lb-pc-form-empty { margin: 0; font-size: 14px; color: var(--lb-muted); }
+.lb-pc-line { position: relative; flex: 1 1 0; min-height: 90px; max-height: 260px; }
+/* Room on the left for the rating labels, on the right for the current
+   rating, and below for "10 matches ago" and "Now". */
+.lb-pc-plot { position: absolute; inset: 6px 56px 26px 46px; }
+.lb-pc-grid { position: absolute; left: 0; right: 0; height: 1px; background: color-mix(in srgb, var(--lb-line) 60%, transparent); }
+.lb-pc-grid.lb-pc-base { top: 100%; background: var(--lb-line); }
+.lb-pc-ylab { position: absolute; left: -46px; width: 34px; text-align: right; translate: 0 -50%; font-size: 11px; color: var(--lb-muted); }
+.lb-pc-xlab { position: absolute; top: calc(100% + 9px); left: 0; font-size: 11px; color: var(--lb-muted); letter-spacing: 0.04em; }
+.lb-pc-xlab.lb-pc-xlab-now { left: auto; right: 0; }
+.lb-pc-plot svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.lb-pc-seg { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.lb-pc-seg.W { stroke: var(--lb-primary); }
+.lb-pc-seg.L { stroke: var(--lb-danger); }
+.lb-pc-seg.D { stroke: var(--lb-muted); }
+/* Each segment draws itself in (pathLength is 1); backwards, so it rests drawn. */
+.lb-pc-seg-draw { stroke-dasharray: 1; stroke-dashoffset: 0; animation: lb-pc-draw 0.32s linear backwards; }
+@keyframes lb-pc-draw { from { stroke-dashoffset: 1; } }
+.lb-pc-cursor { stroke: var(--lb-line); stroke-width: 1; }
+.lb-pc-now { position: absolute; left: calc(100% + 12px); translate: 0 -50%; font-weight: 800; font-size: 14px; color: var(--lb-ink); animation: lb-pc-fade 0.6s ease 0.9s backwards; }
+.lb-pc-hits { position: absolute; inset: 0; }
+.lb-pc-hit { position: absolute; top: 0; bottom: 0; border-radius: 4px; cursor: default; }
+.lb-pc-wrap .lb-pc-hit:focus-visible { outline-offset: -2px; }
+.lb-pc-tip {
+  position: absolute; top: -6px; translate: -50% -100%; z-index: 5; display: flex; flex-direction: column; gap: 3px;
+  padding: 9px 12px; border-radius: 8px; background: var(--lb-surface); border: 1px solid var(--lb-line); white-space: nowrap;
+  font-size: 12px; color: var(--lb-muted); box-shadow: 0 14px 30px -14px rgb(0 0 0 / 0.8); pointer-events: none;
+  animation: lb-pc-fade 0.15s ease backwards;
+}
+.lb-pc-tip b { font-size: 13px; font-weight: 700; color: var(--lb-ink); }
+
+/* Dev only: the demo controls, centred at the top of the window. */
+.lb-pc-demo {
+  position: fixed; left: 50%; translate: -50% 0; top: calc(12px + env(safe-area-inset-top, 0px)); z-index: 30; max-width: calc(100vw - 32px);
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; padding: 6px 14px 6px 14px; border-radius: 10px;
+  background: color-mix(in srgb, var(--lb-surface) 94%, transparent); border: 1px solid var(--lb-line); backdrop-filter: blur(10px);
+  font-size: 12px; color: var(--lb-muted);
+}
+.lb-pc-demo button { height: 32px; padding: 0 12px; border: 0; border-radius: 7px; background: transparent; font-size: 12px; font-weight: 700; cursor: pointer; transition: background 0.2s ease; }
+.lb-pc-demo button:hover { background: var(--lb-raised); }
+.lb-pc-demo .lb-pc-demo-win { color: var(--lb-primary); }
+.lb-pc-demo .lb-pc-demo-lose { color: var(--lb-danger); }
+.lb-pc-demo-note { margin-left: 6px; }
 
 /* ---------- Background: a pool of the metal colour behind the card, and film grain ---------- */
 .lb-pc-bg { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
@@ -1383,6 +1490,8 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
   .lb-pc-name-row { flex-wrap: wrap; }
   .lb-pc-avatar { width: 150px; height: 150px; }
   .lb-pc-pool { left: 50%; top: 300px; }
+  /* The column has no fixed height here, so the chart takes a set one. */
+  .lb-pc-line { flex: none; height: 180px; }
 }
 
 /* Reduced motion: no tilt (pointer code skips it), no shine moving, no
@@ -1395,4 +1504,16 @@ html.lb-intro-seen { --lb-intro-delay: 0.1s; }
   .lb-pc-card, .lb-pc-holo, .lb-pc-glitter, .lb-pc-glare, .lb-pc-edge, .lb-pc-metal-layer, .lb-pc-pool { transition: none; }
   .lb-pc-avatar, .lb-pc-picker button, .lb-pc-pencil, .lb-pc-stat, .lb-pc-sub { transition: none; }
   .lb-pc-avatar-button:hover, .lb-pc-picker button:hover, .lb-pc-pencil:hover, .lb-pc-stat:hover { transform: none; }
+  /* A promotion just shows the new name; a demotion doesn't shake. */
+  .lb-pc-peel, .lb-pc-peel-over, .lb-pc-shake { animation: none; }
+  .lb-pc-peel-over, .lb-pc-peel-crease { display: none; }
+  .lb-pc-peel-under { clip-path: none; }
+  /* The banner and the change by the rating show still, until they go. */
+  .lb-pc-toast, .lb-pc-delta { animation: none; opacity: 1; }
+  /* The rating line is there at once. */
+  .lb-pc-seg, .lb-pc-seg-draw, .lb-pc-now, .lb-pc-tip { animation: none; }
+  .lb-pc-demo button { transition: none; }
+  /* The shadow on the page stays put. */
+  .lb-pc-cast, .lb-pc-zone::before { animation: none; transition: none; }
+  .lb-pc-cast { transform: translateY(40px); }
 }

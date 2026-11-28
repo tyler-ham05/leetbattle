@@ -6,6 +6,8 @@ import { AuthAPIService } from '../login/controller';
 import type { User } from '../login/controller';
 import ProfileView, { ProfileScreen } from './components/profile-view';
 import type { ProfileEditor } from './components/profile-view';
+import DemoPanel, { playDemo } from './components/demo-panel';
+import type { DemoChange } from './components/demo-panel';
 
 // US-7-T-5: the signed-in player's own profile, from GET /me. Every change
 // goes to AuthService with the player's own token, and the page then shows
@@ -13,6 +15,8 @@ import type { ProfileEditor } from './components/profile-view';
 function OwnProfile() {
 	const { user, refresh } = useAuth();
 	const [saved, setSaved] = useState<User | null>(null);
+	// Dev only: what the demo panel's pretend matches changed, shown on top.
+	const [demo, setDemo] = useState<DemoChange | null>(null);
 
 	// The signed-in user is loaded once when the app opens, so a match played
 	// since then wouldn't show; reload GET /me whenever the page opens.
@@ -39,8 +43,16 @@ function OwnProfile() {
 		};
 	}, []);
 
-	const profile = saved ?? user;
-	return profile ? <ProfileView profile={profile} edit={edit} /> : null;
+	const base = saved ?? user;
+	if (!base) return null;
+	const profile = { ...base, ...demo };
+	return (
+		<>
+			{/* Read at render time: `next build` makes this false, and tests set it with vi.stubEnv. */}
+			{process.env.NODE_ENV === 'development' && <DemoPanel onPlay={(won) => setDemo(playDemo(profile, won))} />}
+			<ProfileView profile={profile} edit={edit} />
+		</>
+	);
 }
 
 export default function ProfilePage() {

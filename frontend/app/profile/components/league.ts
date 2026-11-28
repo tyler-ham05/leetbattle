@@ -13,14 +13,23 @@ const LEAGUE_NAMES = [
 ];
 const METALS = ['bronze', 'silver', 'gold', 'diamond', 'platinum'];
 
+// Where a league sits, 0 (Bronze I) to 12 (Platinum); unknown names count as Bronze I.
+export function leaguePlace(league: string): number {
+	return Math.max(0, LEAGUE_NAMES.indexOf(league));
+}
+
+// The CSS colour of a league's metal.
+export function metalColour(league: string): string {
+	const metal = league.split(' ')[0].toLowerCase();
+	return `var(--lb-metal-${METALS.includes(metal) ? metal : 'bronze'})`;
+}
+
 // The card's metal colour and how much it shines: Bronze I is nearly matte
 // (0) and Platinum is full foil (1). Set as CSS variables on the page.
 export function leagueLook(league: string): CSSProperties {
-	const metal = league.split(' ')[0].toLowerCase();
-	const place = Math.max(0, LEAGUE_NAMES.indexOf(league));
 	return {
-		'--lb-pc-metal': `var(--lb-metal-${METALS.includes(metal) ? metal : 'bronze'})`,
-		'--lb-pc-shine': (place / (LEAGUE_NAMES.length - 1)).toFixed(3),
+		'--lb-pc-metal': metalColour(league),
+		'--lb-pc-shine': (leaguePlace(league) / (LEAGUE_NAMES.length - 1)).toFixed(3),
 	} as CSSProperties;
 }
 

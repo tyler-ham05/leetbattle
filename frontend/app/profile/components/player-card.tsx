@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent } from 'react';
 import Wordmark from '../../_shared/wordmark';
 import { prefersReducedMotion } from '../../_shared/motion';
-import { useCountUp } from '../../_shared/use-count-up';
+import { useCountTo, useCountUp } from '../../_shared/use-count-up';
 import { PROFILE_ICONS, PROFILE_ICON_KEYS, ProfileIcon } from '../../_shared/profile-icons';
 import type { ProfileIconKey } from '../../_shared/profile-icons';
 import type { PublicProfile } from '../../login/controller';
@@ -21,8 +21,19 @@ export interface CardEditor {
 export const COUNT_AT_MS = 450;
 export const COUNT_FOR_MS = 900;
 
+// Counts up from 0 as the page opens; a later change (a new match) counts on
+// from the number shown instead of starting again at 0.
+export function useProfileCount(value: number) {
+	const [first] = useState(value);
+	const moved = useRef(false);
+	if (value !== first) moved.current = true;
+	const opening = useCountUp(first, COUNT_AT_MS, COUNT_FOR_MS);
+	const later = useCountTo(value, COUNT_FOR_MS);
+	return moved.current ? later : opening;
+}
+
 function Counted({ value }: { value: number }) {
-	return <>{useCountUp(value, COUNT_AT_MS, COUNT_FOR_MS)}</>;
+	return <>{useProfileCount(value)}</>;
 }
 
 // The round picture where there is one, otherwise the chosen icon. Whatever
@@ -142,6 +153,8 @@ export default function PlayerCard({ profile, edit }: { profile: PublicProfile; 
 	return (
 		<>
 			<div className="lb-pc-zone" onPointerMove={move} onPointerLeave={leave}>
+				{/* The card's soft shadow on the page, falling opposite the tilt. */}
+				<div className="lb-pc-cast" aria-hidden="true" />
 				<article ref={card} aria-label="Player card" className="lb-pc-card">
 					<div className="lb-pc-metal-layer" aria-hidden="true" />
 					<div className="lb-pc-holo" aria-hidden="true" />
