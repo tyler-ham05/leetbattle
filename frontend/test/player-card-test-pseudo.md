@@ -102,3 +102,62 @@
 - `test/profile.test.tsx` "US-7-T-1 shows the player's rating": now reads the rating from the screen-reader text, since the visible rating is an odometer.
 - `test/profile.test.tsx` "US-7-T-1 shows the player's wins", "losses", "draws": now read the counted-up number from the stat boxes (with fake timers so the count finishes).
 - `test/profile.test.tsx` "US-7-T-1 shows the date the player joined": the details now read "Joined January 2026" (month and year, per the US-7-T-5 spec), not "January 1, 2026".
+
+## Last 10 matches (`recentMatches`, oldest first, up to 10) [AC7, AC9]
+- The own profile should have a section "Last 10 matches"
+- With W, L, W, W, W last, the header should read "3 wins in a row"
+- With one loss last, the header should read "1 loss in a row"
+- With a draw last, the header should read "Last match a draw"
+- The header should show the net change of the matches ("Net +62" for +16, −15, +20, +25, +16)
+- A negative net should use a real minus sign ("Net −14")
+- The chart should draw one line segment per match (5 matches, 5 segments)
+- A win's segment should be the win colour (class W), a loss's L, a draw's D
+- The line should have no fill under it (no area path)
+- The chart should label the current rating at the right end (the last match's ratingAfter)
+- The chart should say "10 matches ago" and "Now" under the baseline
+- The chart should label round rating values on the left
+- Each match should be focusable and named for screen readers ("Win in 2v2, +16, 702 rating, today")
+- Focusing a match should show a tooltip reading "Win in 2v2 +16"
+- The tooltip's second line should read "<rating> rating, <when>" ("702 rating, today")
+- Hovering a match should show the same tooltip
+- Leaving the chart should hide the tooltip
+- A match played yesterday should read "yesterday"; three days ago "3 days ago"
+- teamSize 1 should read "1v1", 3 should read "3v3"
+- With no matches (empty, or a backend that sends no `recentMatches`), the section should say "No ranked matches yet" and draw no chart
+- Another player's profile should show their last matches too
+
+## Demo panel (own profile, development only)
+- With NODE_ENV "test", there should be no Demo panel
+- With NODE_ENV "production", there should be no Demo panel
+- With NODE_ENV stubbed to "development", the own profile should show the Demo panel
+- Another player's profile should never show the Demo panel, even in development
+- The panel should say "Local only, nothing is saved"
+- Win should raise the shown rating (684 becomes 698 to 702)
+- Win should not call any AuthAPIService method
+- Lose should lower the shown rating
+- Win should add one win to the Wins stat's detail ("of 45 matches")
+- Win should add a match to the Last 10 matches chart
+- After 10 matches, a Win should keep the chart at 10 (the oldest drops off)
+- Win from 695 (Gold I, next Gold II at 700) should show the "Promoted Gold II" toast
+- The promotion should peel the old league name off (lb-pc-peel) on the league row
+- Lose from 602 (Gold I, from 600) should shake the league name (lb-pc-shake) and show Silver III
+- Win should float the change by the rating ("+16" style, lb-pc-delta)
+- After a promotion the card's shine should follow the new league (Gold II is 7 / 12 = 0.583)
+- The demo league table should match AuthService's (Bronze I from 1, Gold II from 700, Platinum from 2000, nothing above Platinum)
+
+## Card depth (between the card and the page; the card itself looks as before)
+- A cast shadow (lb-pc-cast) should sit on the page right behind the card (the element just before the card)
+- The cast shadow should be hidden from screen readers
+- The cast shadow should move with the pointer's light offset (--lb-pc-lx / --lb-pc-ly), opposite the tilt
+- The page close to the card's edges should darken a little (an ambient-occlusion ring around the card's spot, lb-pc-zone::before, which doesn't move)
+- The card's own look should be unchanged: it still sets overflow: hidden and its original box-shadow
+
+## Motion rules for the new parts (globals.css)
+- The cast shadow (lb-pc-cast) should have a reduced-motion override (it stays put)
+- The peel (lb-pc-peel) should have a reduced-motion override
+- The shake (lb-pc-shake) should have a reduced-motion override
+- The toast (lb-pc-toast) should have a reduced-motion override
+- The floating change (lb-pc-delta) should have a reduced-motion override
+- The chart's line drawing itself in (lb-pc-seg) should have a reduced-motion override
+- The shake should not hold its end state (no forwards or both fill)
+- The line drawing in should fill backwards

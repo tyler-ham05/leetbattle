@@ -54,6 +54,57 @@ describe('US-7-T-5 motion rules (AC11)', () => {
 		expect(rule('.lb-pc-card')).toMatch(/animation:[^;]*backwards/);
 	});
 
+	// Pseudocode: "Card depth" and "Motion rules for the new parts".
+	// The depth is between the card and the page; the card keeps its look.
+	it('US-7-T-5 moves the cast shadow with the pointer\'s light offset', () => {
+		expect(rule('.lb-pc-cast')).toMatch(/--lb-pc-lx[\s\S]*--lb-pc-ly/);
+	});
+
+	it('US-7-T-5 darkens the page close to the card\'s edges', () => {
+		expect(rule('.lb-pc-zone::before')).toMatch(/box-shadow:/);
+	});
+
+	it('US-7-T-5 keeps the card itself clipped as before', () => {
+		expect(rule('.lb-pc-card')).toMatch(/overflow:\s*hidden/);
+	});
+
+	it('US-7-T-5 keeps the card\'s original drop shadow', () => {
+		expect(rule('.lb-pc-card')).toContain('box-shadow: 0 40px 80px -40px rgb(0 0 0 / 0.8), 0 30px 120px -50px color-mix(in srgb, var(--lb-pc-metal) 45%, transparent);');
+	});
+
+	it('US-7-T-5 holds the cast shadow still (lb-pc-cast) under reduced motion', () => {
+		expect(reducedMotionRules()).toContain('.lb-pc-cast');
+	});
+
+	it('US-7-T-5 stops the league name peeling (lb-pc-peel) under reduced motion', () => {
+		expect(reducedMotionRules()).toContain('.lb-pc-peel');
+	});
+
+	it('US-7-T-5 stops the league name shaking (lb-pc-shake) under reduced motion', () => {
+		expect(reducedMotionRules()).toContain('.lb-pc-shake');
+	});
+
+	it('US-7-T-5 stops the promotion toast moving (lb-pc-toast) under reduced motion', () => {
+		expect(reducedMotionRules()).toContain('.lb-pc-toast');
+	});
+
+	it('US-7-T-5 stops the rating change floating (lb-pc-delta) under reduced motion', () => {
+		expect(reducedMotionRules()).toContain('.lb-pc-delta');
+	});
+
+	it('US-7-T-5 stops the rating line drawing itself in (lb-pc-seg) under reduced motion', () => {
+		expect(reducedMotionRules()).toContain('.lb-pc-seg');
+	});
+
+	// The shake ends where it started, so it never needs to hold its end.
+	it('US-7-T-5 lets the shake end without holding its last frame', () => {
+		expect(rule('.lb-pc-shake')).toMatch(/animation:(?![^;]*(forwards|both))[^;]*lb-pc-shake/);
+	});
+
+	it('US-7-T-5 fills the line drawing in backwards', () => {
+		expect(rule('.lb-pc-seg-draw')).toMatch(/animation:[^;]*backwards/);
+	});
+
 	it('US-7-T-5 defines the metal colours for light mode too', () => {
 		expect(css).toMatch(/\[data-mode="light"\][^{]*\{[^}]*--lb-metal-gold/);
 	});
