@@ -384,13 +384,6 @@ describe('US-7-T-5 the crop dialog (AC8)', () => {
 		expect(mocks.setPicture).toHaveBeenCalledWith('data:image/webp;base64,WEBP');
 	});
 
-	// A browser that can't make WebP hands back a PNG from toDataURL('image/webp').
-	it('US-7-T-5 uploads a PNG export where WebP isn\'t supported', async () => {
-		stubCanvas(false);
-		openCrop();
-		await userEvent.click(screen.getByRole('button', { name: 'Use picture' }));
-		expect(mocks.setPicture).toHaveBeenCalledWith('data:image/png;base64,PNG');
-	});
 });
 
 describe('US-7-T-5 description editing (AC3, AC8)', () => {
@@ -505,5 +498,50 @@ describe('US-7-T-5 another player\'s profile (AC9)', () => {
 		mocks.getUser.mockResolvedValue(null);
 		render(<OtherProfilePage />);
 		expect(await screen.findByText('Player not found')).toBeTruthy();
+	});
+});
+
+// Code review fixes.
+describe('US-7-T-5 fixes from the code review', () => {
+	// A player who never set a name: AuthService sends displayName (the lobby's name for them).
+	it('shows the display name as the heading when there is no name', () => {
+		openOwn({ name: null as unknown as string, displayName: 'ada' } as Partial<typeof goldUser>);
+		expect(screen.getByRole('heading', { level: 1 }).getAttribute('aria-label')).toBe('ada');
+	});
+
+	// An older AuthService without displayName: the part of the email before the @.
+	it('falls back to the email before the @ when there is no display name', () => {
+		openOwn({ name: null as unknown as string } as Partial<typeof goldUser>);
+		expect(screen.getByRole('heading', { level: 1 }).getAttribute('aria-label')).toBe(fakeUser.email.split('@')[0]);
+	});
+
+	it('shows the same name on the card', () => {
+		openOwn({ name: null as unknown as string, displayName: 'ada' } as Partial<typeof goldUser>);
+		expect(within(card()).getByText('ada')).toBeTruthy();
+	});
+
+	// A full-size PNG of a photo can be over AuthService's 200 KB limit; JPEG stays well under.
+	it('exports JPEG where the browser cannot export WebP', async () => {
+		HTMLCanvasElement.prototype.getContext = vi.fn(() => ({ drawImage: vi.fn() })) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+		HTMLCanvasElement.prototype.toDataURL = vi.fn((type?: string) => (type === 'image/jpeg' ? 'data:image/jpeg;base64,JPG' : 'data:image/png;base64,PNG'));
+		mocks.setPicture.mockResolvedValue({ ...goldUser });
+		openOwn();
+		choose(fakeFile('me.png', 'image/png'));
+		const img = screen.getByRole('dialog', { name: 'Crop your picture' }).querySelector('img') as HTMLImageElement;
+		Object.defineProperty(img, 'naturalWidth', { value: 512 });
+		Object.defineProperty(img, 'naturalHeight', { value: 384 });
+		fireEvent.load(img);
+		await userEvent.click(screen.getByRole('button', { name: 'Use picture' }));
+		expect(mocks.setPicture).toHaveBeenCalledWith('data:image/jpeg;base64,JPG');
+	});
+
+	// The page re-reads GET /me after a save, so a later refresh (say, after a match) isn't hidden.
+	it('reloads the account after saving a change', async () => {
+		mocks.updateProfile.mockResolvedValue({ ...goldUser, icon: 'bolt' });
+		openOwn();
+		mocks.refresh.mockClear();
+		await userEvent.click(avatar());
+		await userEvent.click(screen.getByRole('button', { name: 'Bolt' }));
+		await waitFor(() => expect(mocks.refresh).toHaveBeenCalledTimes(1));
 	});
 });

@@ -58,7 +58,6 @@
 - Pressing Escape should close the dialog
 - Pressing Escape should not upload anything
 - "Use picture" should upload the 256x256 WebP export with setPicture
-- Where WebP isn't supported, "Use picture" should upload a PNG export instead
 
 ## Description editing [AC3, AC8]
 - An empty description should show "Add a short description"
@@ -101,6 +100,13 @@
 - If saving a chosen icon fails, the card should say "Couldn't save your icon. Try again."
 - If removing the picture fails, the card should say "Couldn't remove your picture. Try again."
 - Opening the picker again should clear the message
+
+## Fixes from the code review (AC7, AC8)
+- A player without a name should show their displayName (from AuthService) as the profile heading
+- If there's no displayName either, the heading should fall back to the part of the email before the @
+- The player card should show the same name
+- Where the browser can't export WebP, the crop should export JPEG (not PNG, which can go over 200 KB)
+- After saving a change, the page should reload the account from AuthService so it never shows stale data
 
 ## Reaching the profile (AC7)
 - The account menu should list only Profile and Settings (then Log out): Home, Practice and Lobby are on the home screen, and the LeetBattle logo goes home from any page
@@ -170,3 +176,4 @@
 - The shake should not hold its end state (no forwards or both fill)
 - The line drawing in should fill backwards
 - navigation.test.tsx "links to Home, Practice, Lobby, Profile and Settings" becomes "links to Profile and Settings": the account menu no longer repeats the home screen's pages
+- player-card.test.tsx "uploads a PNG export where WebP isn't supported" is replaced by "exports JPEG where the browser cannot export WebP" (code review: a full-size PNG can go over the 200 KB limit)
