@@ -52,3 +52,31 @@ docker compose up
 3. Run `npm install` inside the new folder (it has its own `node_modules`).
 4. Update the service-wide `docker-compose.yml` with any new data tables
 5. Include the new build command within the project-wide `package.json` (or ask claude to do it, i dont really care)
+
+## AuthService: player profiles (US-7-T-5)
+
+Signed in (`Authorization: Bearer <token>`):
+- `GET /me`: your account, including `icon`, `description`, `picture` (a `data:` URL or `null`), `rating`, `league`, `leagueMin`, `nextLeague` and `recentMatches` (your last 10 matches, oldest first).
+- `PATCH /account`: change any of `name`, `icon` (one of 8 keys) and `description` (80 characters at most).
+- `PUT /account/picture` with `{ "image": "data:image/...;base64,..." }`: PNG, JPEG or WebP, 200 KB at most, checked by its bytes. `DELETE /account/picture` removes it.
+- `GET /users/:id`: another player's public profile, never their email. 404 if there's no such player.
+
+Match history is written by `POST /internal/match-results` (GameService only, with `INTERNAL_API_KEY`).
+
+### Updating an existing database
+`sql/schema.sql` is safe to run again: it only adds what's missing. To bring an existing local database up to date without wiping it (unlike `docker compose down -v`):
+```
+docker exec -i leetbattle sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < service/AuthService/sql/schema.sql
+```
+The deployed database needs the same before code that uses new columns goes live.
+
+### Running the AuthService tests safely
+The tests start by emptying the `users` table (`sql/data.sql`), so never point them at the database the app uses. Create a test database once, then run them against it:
+```
+docker exec leetbattle sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "CREATE DATABASE auth_service_test"'
+cd service/AuthService && AUTH_POSTGRES_DB=auth_service_test npx vitest run
+```
+Add `POSTGRES_PORT=5433` (or whichever port) if your local Postgres isn't on 5432.
+
+### Local profile demo
+`npm run seed-demo` (from the repo root, with the database running) creates or resets a Platinum demo player in your local database only: **demo@leetbattle.local** / **demo-password**. Under `npm run dev`, your own profile also shows a Win / Lose demo panel that changes only what's on screen. See the Demo section of `docs/tasks/sprint-4/US-7-T-5.md`.
