@@ -33,6 +33,12 @@ describe('US-10-T-10 motion rules', () => {
 		expect(reducedMotionRules()).toMatch(/\.lb-ms-cut[^{]*\{[^}]*display:\s*none/);
 	});
 
+	// A finished animation that still holds transform overrides :hover, which
+	// cancelled PLAY's lift. Filling backwards keeps the start state, not the end.
+	it('US-10-T-10 lets lb-enter release the element once it ends', () => {
+		expect(css).toMatch(/\.lb-enter\s*\{\s*animation:\s*lb-enter\s+160ms\s+ease-out\s+backwards;/);
+	});
+
 	it('US-10-T-10 shows only the whole VS under reduced motion', () => {
 		// The two cut halves are hidden, so the VS never splits.
 		expect(reducedMotionRules()).toMatch(/\.lb-ms-half[^{]*\{[^}]*display:\s*none/);

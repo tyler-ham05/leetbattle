@@ -8,14 +8,23 @@
 - The Gamemode dropdown should show Classic
 - Opening Gamemode should offer only Classic
 - The Team size and Gamemode tiles should center their label and value
+- The launcher (tiles, rank card, PLAY) should be at most 440px wide, so it stays compact between the team columns
+- Before queueing, the space for the queue count should be folded shut, so there is no empty gap between the rank card and PLAY
+- Each tile's chevron should sit right after its label, not alone in the corner
 - There should be a section named "Rank"
 - There should be one button named "PLAY"
+- PLAY, a filled button, should lift a little on hover like the app's other filled buttons (lb-press-lift)
 - While not connected, PLAY should be disabled
-- There should be no YOUR TEAM column
-- There should be no RIVALS column
+- There should be a YOUR TEAM column before queueing, so the player sees the teams they are about to fill
+- There should be a RIVALS column before queueing
+- Before queueing, the player's own seat should show their name
+- Before queueing, an open seat should read "Open" (nothing is being searched yet)
+- Before queueing, picking 3v3 should show 3 seats under YOUR TEAM
+- Before queueing, YOUR TEAM should read 1 / 2 (only the player) even when others are waiting
 - There should be no "Leave" button
 
 ## Ladder: queueing
+- While queued, the space for the queue count should be open
 - Clicking PLAY should send queue:join "2v2"
 - After picking 3v3, clicking PLAY should send queue:join "3v3"
 - A queued player should see "WAITING" instead of PLAY
@@ -28,6 +37,7 @@
 - With 3 players waiting in 2v2, a queued player should see "3" in queue
 
 ## Ladder: team columns
+- Each team column should be at most 300px wide and keep at least 8vw clear of the window edge, so the seats never run to the sides
 - A player queued for 2v2 should see a YOUR TEAM column
 - A player queued for 2v2 should see a RIVALS column
 - A player queued for 2v2 should see 2 seats under YOUR TEAM
@@ -64,6 +74,7 @@
 - The VS spin should have a reduced-motion override
 - The VS blade should be hidden under reduced motion
 - Under reduced motion, only the whole VS shows (no halves)
+- The entrance animation (lb-enter) should let go of the element when it ends (fill backwards), so it doesn't block a hover lift on PLAY
 
 ## Existing tests this task changes
 - ladder-arena.test.tsx (US-10-T-9, ours) is deleted: every test in it checks the arena cards, which are gone. The sections above replace it.

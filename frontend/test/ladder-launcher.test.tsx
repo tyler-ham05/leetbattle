@@ -124,17 +124,47 @@ describe('US-10-T-10 Ladder before queueing', () => {
 		expect((screen.getByRole('button', { name: 'PLAY' }) as HTMLButtonElement).disabled).toBe(true);
 	});
 
-	it('US-10-T-10 shows no YOUR TEAM column before queueing', () => {
+	// The team columns show before Play too, so the player sees the teams they
+	// are about to fill.
+	it('US-10-T-10 shows a YOUR TEAM column before queueing', () => {
 		render(<LadderPage />);
 
-		// The team columns only appear once the player presses Play.
-		expect(screen.queryByRole('complementary', { name: 'Your team' })).toBeNull();
+		expect(screen.getByRole('complementary', { name: 'Your team' })).toBeTruthy();
 	});
 
-	it('US-10-T-10 shows no RIVALS column before queueing', () => {
+	it('US-10-T-10 shows a RIVALS column before queueing', () => {
 		render(<LadderPage />);
 
-		expect(screen.queryByRole('complementary', { name: 'Rivals' })).toBeNull();
+		expect(screen.getByRole('complementary', { name: 'Rivals' })).toBeTruthy();
+	});
+
+	it('US-10-T-10 shows the player\'s name on their own seat before queueing', () => {
+		render(<LadderPage />);
+
+		// fakeUser is Ada.
+		expect(seatName('Your team', 0)).toBe('Ada');
+	});
+
+	// Nothing is being searched yet, so an open seat says Open (no counting dots).
+	it('US-10-T-10 reads Open on an open seat before queueing', () => {
+		render(<LadderPage />);
+
+		expect(seatName('Rivals', 0)).toBe('Open');
+	});
+
+	it('US-10-T-10 shows 3 seats under YOUR TEAM after picking 3v3 before queueing', async () => {
+		render(<LadderPage />);
+		await pickSize('3v3');
+
+		expect(seats('Your team').length).toBe(3);
+	});
+
+	// Other players waiting don't sit in the player's team until the player joins.
+	it('US-10-T-10 reads 1 / 2 under YOUR TEAM before queueing, even with others waiting', () => {
+		setQueue(null, { '2v2': 3 });
+		render(<LadderPage />);
+
+		expect(screen.getByTestId('your-team-count').textContent).toBe('1 / 2');
 	});
 
 	// The tiles sit under a centered heading, so their label and value are centered
@@ -154,6 +184,38 @@ describe('US-10-T-10 Ladder before queueing', () => {
 		expect([...values].every((value) => value.classList.contains('text-center'))).toBe(true);
 	});
 
+	// The chevron belongs to the label, so it sits right after it (the two are
+	// centered as one) instead of floating alone in the tile's top-right corner.
+	it.each(['Team size', 'Gamemode'])('US-10-T-10 puts the %s chevron right after its label', (label) => {
+		render(<LadderPage />);
+		const chevron = screen.getByRole('button', { name: new RegExp(`^${label} `) }).querySelector('svg');
+
+		expect(chevron?.parentElement?.textContent).toBe(label.toUpperCase());
+	});
+
+	// The launcher stays compact between the team columns. Checked by class, since
+	// jsdom doesn't lay anything out.
+	it('US-10-T-10 keeps the launcher at most 440px wide', () => {
+		render(<LadderPage />);
+
+		expect(screen.getByRole('main').className).toContain('max-w-[440px]');
+	});
+
+	// The queue count only shows while queued; before that its space folds shut so
+	// the rank card and PLAY sit at the page's usual gap.
+	it('US-10-T-10 folds the queue count space shut before queueing', () => {
+		render(<LadderPage />);
+
+		expect(screen.getByTestId('queue-count-slot').getAttribute('data-collapsed')).toBe('true');
+	});
+
+	// Filled buttons rise 1px on hover across the app (lb-press-lift in globals.css).
+	it('US-10-T-10 lifts PLAY on hover like the other filled buttons', () => {
+		render(<LadderPage />);
+
+		expect(screen.getByRole('button', { name: 'PLAY' }).classList.contains('lb-press-lift')).toBe(true);
+	});
+
 	it('US-10-T-10 shows no Leave button before queueing', () => {
 		render(<LadderPage />);
 
@@ -162,6 +224,13 @@ describe('US-10-T-10 Ladder before queueing', () => {
 });
 
 describe('US-10-T-10 Ladder queueing', () => {
+	it('US-10-T-10 opens the queue count space while queued', () => {
+		setQueue('2v2', { '2v2': 1 });
+		render(<LadderPage />);
+
+		expect(screen.getByTestId('queue-count-slot').getAttribute('data-collapsed')).toBe('false');
+	});
+
 	it('US-10-T-10 sends queue:join "2v2" when PLAY is clicked', async () => {
 		render(<LadderPage />);
 		await userEvent.click(screen.getByRole('button', { name: 'PLAY' }));
@@ -240,6 +309,16 @@ describe('US-10-T-10 Ladder queueing', () => {
 });
 
 describe('US-10-T-10 Ladder team columns', () => {
+	// The columns share the row with the centered launcher, so they stay short and
+	// leave breathing room at the window edges. Checked by class, since jsdom
+	// doesn't lay anything out: the width is capped at 300px and keeps 8vw clear.
+	it.each(['Your team', 'Rivals'])('US-10-T-10 keeps the %s column at most 300px wide with room at the edge', (column) => {
+		setQueue('2v2', { '2v2': 1 });
+		render(<LadderPage />);
+
+		expect(screen.getByRole('complementary', { name: column, hidden: true }).className).toContain('w-[clamp(220px,calc(50vw-50%-48px-8vw),300px)]');
+	});
+
 	it('US-10-T-10 shows a YOUR TEAM column while queued', () => {
 		setQueue('2v2', { '2v2': 1 });
 		render(<LadderPage />);
